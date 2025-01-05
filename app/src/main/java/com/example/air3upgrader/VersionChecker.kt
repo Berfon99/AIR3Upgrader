@@ -5,6 +5,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import java.io.IOException
 import java.lang.reflect.Type
 
@@ -33,6 +34,37 @@ class VersionChecker {
         return appInfo.latestVersion
     }
 
+    fun getAppInfo(packageName: String): AppInfo? {
+        val appsData = getAppsData() ?: return null
+        return appsData.apps.find { it.`package` == packageName }
+    }
+
+    fun isServerVersionHigher(installedVersion: String?, serverVersion: String?, packageName: String): Boolean {
+        if (installedVersion == null || serverVersion == null) {
+            return false
+        }
+        val installedParts = when (packageName) {
+            "org.xcontest.XCTrack" -> installedVersion.split(".", "-")
+            "indysoft.xc_guide" -> listOf(installedVersion)
+            else -> listOf(installedVersion)
+        }
+        val serverParts = serverVersion.split(".")
+
+        val maxLength = maxOf(installedParts.size, serverParts.size)
+
+        for (i in 0 until maxLength) {
+            val installedPart = installedParts.getOrElse(i) { "0" }.toIntOrNull() ?: 0
+            val serverPart = serverParts.getOrElse(i) { "0" }.toIntOrNull() ?: 0
+
+            if (serverPart > installedPart) {
+                return true
+            } else if (serverPart < installedPart) {
+                return false
+            }
+        }
+        return false
+    }
+
     private fun getAppsData(): AppsData? {
         val request = Request.Builder()
             .url(versionsUrl)
@@ -49,6 +81,28 @@ class VersionChecker {
         } catch (e: IOException) {
             Log.e("VersionChecker", "Error getting versions.json", e)
             return null
+        }
+    }
+
+    fun downloadApk(appInfo: AppInfo, apkFile: File) {
+        val apkUrl = appInfo.apkPath
+        val request = Request.Builder()
+            .url(apkUrl)
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw Exception("Failed to download APK: ${response.code}")
+
+                response.body?.byteStream()?.use { input ->
+                    apkFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("VersionChecker", "Error downloading APK", e)
+            throw e
         }
     }
 }

@@ -57,6 +57,13 @@
                         android:text="N/A"
                         android:textSize="16sp" />
                 </LinearLayout>
+
+                <CheckBox
+                    android:id="@+id/xctrack_checkbox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Upgrade" />
             </LinearLayout>
 
             <LinearLayout
@@ -100,6 +107,13 @@
                         android:text="N/A"
                         android:textSize="16sp" />
                 </LinearLayout>
+
+                <CheckBox
+                    android:id="@+id/xcguide_checkbox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Upgrade" />
             </LinearLayout>
 
             <LinearLayout
@@ -129,6 +143,14 @@
                     android:textSize="16sp" />
             </LinearLayout>
         </LinearLayout>
+
+        <Button
+            android:id="@+id/upgrade_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:text="Upgrade" />
 
         <Button
             android:id="@+id/close_button"
