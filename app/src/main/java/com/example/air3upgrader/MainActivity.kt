@@ -11,7 +11,6 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.example.air3upgrader.R
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,7 +18,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xcguideName: TextView
     private lateinit var air3managerName: TextView
     private lateinit var closeButton: Button
-    private lateinit var deviceInfoTextView: TextView
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -35,7 +33,6 @@ class MainActivity : AppCompatActivity() {
         xcguideName = findViewById(R.id.xcguide_name)
         air3managerName = findViewById(R.id.air3manager_name)
         closeButton = findViewById(R.id.close_button)
-        deviceInfoTextView = findViewById(R.id.device_info_text_view)
 
         // Check if the apps are installed and update the UI
         checkAppInstallation(xctrackPackageName, xctrackName)
@@ -46,9 +43,6 @@ class MainActivity : AppCompatActivity() {
         closeButton.setOnClickListener {
             finish() // Close the app
         }
-
-        // Get device information
-        getDeviceInfo()
     }
 
     private fun checkAppInstallation(packageName: String, nameTextView: TextView) {
@@ -114,23 +108,6 @@ class MainActivity : AppCompatActivity() {
                 else -> "Unknown App"
             }
         }
-    }
-
-    private fun getDeviceInfo() {
-        val deviceInfo = StringBuilder()
-
-        deviceInfo.append("Device Information:\n")
-        deviceInfo.append("--------------------\n")
-
-        // Device
-        deviceInfo.append("Device: ${Build.DEVICE}\n")
-        deviceInfo.append("Product: ${Build.PRODUCT}\n")
-
-        // Display the information in Logcat
-        Log.i("DeviceInfo", deviceInfo.toString())
-
-        // Display the information in the TextView
-        deviceInfoTextView.text = deviceInfo.toString()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

@@ -98,13 +98,6 @@
             </LinearLayout>
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/device_info_text_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Device Information:\n--------------------\nDevice: \nProduct: "
-            android:textSize="16sp" />
 
         <Button
             android:id="@+id/close_button"

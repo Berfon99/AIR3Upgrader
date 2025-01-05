@@ -8,11 +8,13 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var modelSpinner: Spinner
+    private lateinit var deviceInfoTextView: TextView
 
     // List of allowed models
     private val allowedModels = listOf(
@@ -31,6 +33,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         modelSpinner = findViewById(R.id.model_spinner)
+        deviceInfoTextView = findViewById(R.id.device_info_text_view)
 
         // Initialize the model list
         modelList = allowedModels.toMutableList()
@@ -65,9 +68,25 @@ class SettingsActivity : AppCompatActivity() {
                 // Another interface callback
             }
         }
+        // Get device information
+        getDeviceInfo()
     }
 
     private fun getDeviceName(): String {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: "Unknown Device"
+    }
+
+    private fun getDeviceInfo() {
+        val deviceInfo = StringBuilder()
+
+        deviceInfo.append("Device Information:\n")
+        deviceInfo.append("--------------------\n")
+
+        // Device
+        deviceInfo.append("Device: ${Build.DEVICE}\n")
+        deviceInfo.append("Product: ${Build.PRODUCT}\n")
+
+        // Display the information in the TextView
+        deviceInfoTextView.text = deviceInfo.toString()
     }
 }
