@@ -33,14 +33,30 @@
                     android:text="XCTrack"
                     android:textSize="16sp" />
 
-                <TextView
-                    android:id="@+id/xctrack_version"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:gravity="center"
-                    android:text="v0.0"
-                    android:textSize="16sp" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/xctrack_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="v0.0"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/xctrack_server_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="N/A"
+                        android:textSize="16sp" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -60,14 +76,30 @@
                     android:text="XC Guide"
                     android:textSize="16sp" />
 
-                <TextView
-                    android:id="@+id/xcguide_version"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:gravity="center"
-                    android:text="v0.0"
-                    android:textSize="16sp" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/xcguide_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="v0.0"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/xcguide_server_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="N/A"
+                        android:textSize="16sp" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -97,7 +129,6 @@
                     android:textSize="16sp" />
             </LinearLayout>
         </LinearLayout>
-
 
         <Button
             android:id="@+id/close_button"

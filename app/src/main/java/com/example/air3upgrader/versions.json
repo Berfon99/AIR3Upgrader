@@ -1,0 +1,46 @@
+{
+  "apps": [
+    {
+      "name": "XCTrack",
+      "package": "org.xcontest.XCTrack",
+      "latestVersion": "0.9.11.11-5",
+      "apkPath": "/Latest_Software_Download/XCTrack&XCGuide/XCTrack_0.9.11.11.5.apk",
+      "compatibleModels": [
+        "AIR3-7.2",
+        "AIR3-7.3",
+        "AIR3-7.3+",
+        "AIR3-7.35",
+        "AIR3-7.35+"
+      ],
+      "minAndroidVersion": "8.1"
+    },
+    {
+      "name": "XC Guide",
+      "package": "indysoft.xc_guide",
+      "latestVersion": "604",
+      "apkPath": "/Latest_Software_Download/XCTrack&XCGuide/XCGuide_604.apk",
+      "compatibleModels": [
+        "AIR3-7.2",
+        "AIR3-7.3",
+        "AIR3-7.3+",
+        "AIR3-7.35",
+        "AIR3-7.35+"
+      ],
+      "minAndroidVersion": "8.1"
+    },
+    {
+      "name": "AIR³ Manager",
+      "package": "com.xc.r3",
+      "latestVersion": "1.0.0",
+      "apkPath": "/Latest_Software_Download/Air3_Manager/AIR3Manager-1.0.0.apk",
+      "compatibleModels": [
+        "AIR3-7.2",
+        "AIR3-7.3",
+        "AIR3-7.3+",
+        "AIR3-7.35",
+        "AIR3-7.35+"
+      ],
+      "minAndroidVersion": "8.1"
+    }
+  ]
+}
