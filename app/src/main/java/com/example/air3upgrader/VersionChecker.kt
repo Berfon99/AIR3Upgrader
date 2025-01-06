@@ -3,28 +3,13 @@ package com.example.air3upgrader
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Type
-
-data class AppInfo(
-    val name: String,
-    val `package`: String,
-    val latestVersion: String,
-    val apkPath: String,
-    val compatibleModels: List<String>,
-    val minAndroidVersion: String
-) {
-    override fun toString(): String {
-        return "AppInfo(name='$name', package='$`package`', latestVersion='$latestVersion', apkPath='$apkPath', compatibleModels=$compatibleModels, minAndroidVersion='$minAndroidVersion')"
-    }
-}
-
-data class AppsData(
-    val apps: List<AppInfo>
-)
 
 class VersionChecker {
 
@@ -32,99 +17,38 @@ class VersionChecker {
     private val gson = Gson()
     private val versionsUrl = "https://ftp.fly-air3.com/Latest_Software_Download/versions.json"
 
-    fun getLatestVersion(packageName: String): String? {
+    suspend fun getLatestVersion(packageName: String): String? {
         val appsData = getAppsData() ?: return null
         val appInfo = appsData.apps.find { it.`package` == packageName } ?: return null
         return appInfo.latestVersion
     }
 
-    fun getAppInfo(packageName: String): AppInfo? {
+    suspend fun getAppInfo(packageName: String): AppInfo? {
         val appsData = getAppsData() ?: return null
         return appsData.apps.find { it.`package` == packageName }
     }
 
-    fun isServerVersionHigher(
-        installedVersion: String?,
-        serverVersion: String?,
-        packageName: String
-    ): Boolean {
-        if (installedVersion == null || serverVersion == null) {
-            return false
-        }
-
-        val installedParts = when (packageName) {
-            "org.xcontest.XCTrack" -> installedVersion.split(".", "-")
-            "indysoft.xc_guide" -> listOf(installedVersion)
-            else -> listOf(installedVersion)
-        }
-        val serverParts = serverVersion.split(".", "-")
-
-        val maxLength = maxOf(installedParts.size, serverParts.size)
-
-        for (i in 0 until maxLength) {
-            val installedPart = installedParts.getOrElse(i) { "0" }
-            val serverPart = serverParts.getOrElse(i) { "0" }
-
-            val installedNum = installedPart.toIntOrNull() ?: 0
-            val serverNum = serverPart.toIntOrNull() ?: 0
-
-            if (serverNum > installedNum) {
-                return true
-            } else if (serverNum < installedNum) {
-                return false
-            }
-            if (installedPart.contains("-") && !serverPart.contains("-")) {
-                return false
-            } else if (!installedPart.contains("-") && serverPart.contains("-")) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun getAppsData(): AppsData? {
+    private suspend fun getAppsData(): AppsData? {
         val request = Request.Builder()
             .url(versionsUrl)
             .build()
 
-        try {
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) throw IOException("Unexpected code $response")
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = client.newCall(request).execute()
+                if (!response.isSuccessful) throw IOException("Unexpected code $response")
 
-            val body = response.body?.string() ?: return null
-            val listType: Type = object : TypeToken<AppsData>() {}.type
-            return gson.fromJson(body, listType)
-        } catch (e: IOException) {
-            Log.e("VersionChecker", "Error getting versions.json", e)
-            return null
+                val body = response.body?.string() ?: return@withContext null
+                val listType: Type = object : TypeToken<AppsData>() {}.type
+                return@withContext gson.fromJson(body, listType)
+            } catch (e: IOException) {
+                Log.e("VersionChecker", "Error getting versions.json", e)
+                return@withContext null
+            }
         }
     }
 
     fun downloadApk(appInfo: AppInfo, apkFile: File) {
-        val baseUrl = "https://ftp.fly-air3.com" // Add the base URL
-        val apkUrl = if (appInfo.apkPath.startsWith("http")) {
-            appInfo.apkPath
-        } else {
-            baseUrl + appInfo.apkPath
-        }
-        val request = Request.Builder()
-            .url(apkUrl)
-            .build()
-
-        try {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw Exception("Failed to download APK: ${response.code}")
-
-                val body = response.body ?: throw Exception("Response body is null")
-                body.byteStream().use { input ->
-                    apkFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("VersionChecker", "Error downloading APK", e)
-            throw e
-        }
+        ApkDownloader.downloadApk(client, appInfo, apkFile)
     }
 }

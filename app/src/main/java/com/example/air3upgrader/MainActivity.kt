@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         val packageManager: PackageManager = this.packageManager
         try {
             val packageInfo = packageManager.getPackageInfo(packageName, PackageManager.GET_META_DATA)
-            if (packageInfo != null) {
+            val versionName: String = if (packageInfo != null) {
                 Log.i("AppCheck", "$packageName: getPackageInfo() returned a result")
                 // App is installed
                 nameTextView.text = getAppName(packageName)
@@ -106,31 +106,31 @@ class MainActivity : AppCompatActivity() {
                     xcguidePackageName -> parseXCGuideVersion(versionName)
                     else -> versionName
                 }
-
+                versionName ?: "N/A"
+            } else {
+                Log.i("AppCheck", "$packageName: getPackageInfo() returned null")
+                // App is not installed
+                nameTextView.text = getAppName(packageName)
+                nameTextView.background = ContextCompat.getDrawable(this, R.drawable.circle_background_black)
+                "N/A"
+            }
+            // Set the background color
+            CoroutineScope(Dispatchers.Main).launch {
+                AppUtils.setAppBackgroundColor(this@MainActivity, packageName, nameTextView, versionName)
+            }
+            if (versionTextView != null && packageInfo != null) {
                 // Get the version code
                 val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     packageInfo.longVersionCode
                 } else {
                     packageInfo.versionCode.toLong()
                 }
-
                 // Display the version
-                if (versionTextView != null) {
-                    if (packageName == air3managerPackageName) {
-                        versionTextView.text = "v$versionName ($versionCode)"
-                    } else {
-                        versionTextView.text = versionName ?: "N/A"
-                    }
+                if (packageName == air3managerPackageName) {
+                    versionTextView.text = "v$versionName ($versionCode)"
+                } else {
+                    versionTextView.text = versionName
                 }
-                // Set the background color
-                CoroutineScope(Dispatchers.Main).launch {
-                    setAppBackgroundColor(packageName, nameTextView, versionName)
-                }
-            } else {
-                Log.i("AppCheck", "$packageName: getPackageInfo() returned null")
-                // App is not installed
-                nameTextView.text = getAppName(packageName)
-                nameTextView.background = ContextCompat.getDrawable(this, R.drawable.circle_background_black)
             }
         } catch (e: PackageManager.NameNotFoundException) {
             Log.e("AppCheck", "$packageName: NameNotFoundException", e)
@@ -165,17 +165,19 @@ class MainActivity : AppCompatActivity() {
                 xctrackServerVersion.text = xctrackLatestVersion ?: "N/A"
                 xcguideServerVersion.text = xcguideLatestVersion ?: "N/A"
                 launch {
-                    setAppBackgroundColor(
+                    AppUtils.setAppBackgroundColor(
+                        this@MainActivity,
                         xctrackPackageName,
                         xctrackName,
-                        xctrackVersion.text.toString()
+                        xctrackVersion.text.toString() ?: "N/A" // Provide a default value
                     )
                 }
                 launch {
-                    setAppBackgroundColor(
+                    AppUtils.setAppBackgroundColor(
+                        this@MainActivity,
                         xcguidePackageName,
                         xcguideName,
-                        xcguideVersion.text.toString()
+                        xcguideVersion.text.toString() ?: "N/A" // Provide a default value
                     )
                 }
                 setCheckboxState(
@@ -201,32 +203,13 @@ class MainActivity : AppCompatActivity() {
     private fun parseXCGuideVersion(version: String?): String? {
         return version?.removePrefix("v")?.substringAfter("1.", "")
     }
-
-    private suspend fun setAppBackgroundColor(packageName: String, nameTextView: TextView, installedVersion: String?) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val latestVersion = versionChecker.getLatestVersion(packageName)
-            withContext(Dispatchers.Main) {
-                if (latestVersion != null && installedVersion != null) {
-                    if (packageName == air3managerPackageName) {
-                        nameTextView.background = ContextCompat.getDrawable(nameTextView.context, R.drawable.circle_background_green)
-                    } else if (versionChecker.isServerVersionHigher(installedVersion, latestVersion, packageName)) {
-                        nameTextView.background = ContextCompat.getDrawable(nameTextView.context, R.drawable.circle_background_orange)
-                    } else {
-                        nameTextView.background = ContextCompat.getDrawable(nameTextView.context, R.drawable.circle_background_green)
-                    }
-                }
-            }
-        }
-    }
-
     private fun setCheckboxState(packageName: String, checkBox: CheckBox, installedVersion: String, serverVersion: String?) {
         if (serverVersion != null) {
-            checkBox.isChecked = versionChecker.isServerVersionHigher(installedVersion, serverVersion, packageName)
+            checkBox.isChecked = VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)
         } else {
             checkBox.isChecked = false
         }
     }
-
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -293,41 +276,20 @@ class MainActivity : AppCompatActivity() {
         intent.setDataAndType(uri, "application/vnd.android.package-archive")
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
-        val packageName = getPackageNameFromApk(apkFile)
+        val packageName = AppUtils.getPackageNameFromApk(this, apkFile)
         if (packageName != null) {
-            val newVersion = getAppVersion(packageName)
+            val newVersion = AppUtils.getAppVersion(this, packageName)
             if (packageName == xctrackPackageName) {
                 xctrackVersion.text = newVersion
                 CoroutineScope(Dispatchers.Main).launch {
-                    setAppBackgroundColor(xctrackPackageName, xctrackName, xctrackVersion.text.toString())
+                    AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, xctrackVersion.text.toString())
                 }
             } else if (packageName == xcguidePackageName) {
                 xcguideVersion.text = newVersion
                 CoroutineScope(Dispatchers.Main).launch {
-                    setAppBackgroundColor(xcguidePackageName, xcguideName, xcguideVersion.text.toString())
+                    AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, xcguideVersion.text.toString())
                 }
             }
-        }
-    }
-
-    private fun getAppVersion(packageName: String): String {
-        return try {
-            val packageInfo = packageManager.getPackageInfo(packageName, 0)
-            packageInfo.versionName ?: "N/A" // Use the elvis operator to provide a default value
-        } catch (e: PackageManager.NameNotFoundException) {
-            Log.e("MainActivity", "Error getting app version", e)
-            "N/A"
-        }
-    }
-
-    private fun getPackageNameFromApk(apkFile: File): String? {
-        return try {
-            val packageManager = packageManager
-            val packageInfo = packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)
-            packageInfo?.packageName
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error getting package name from APK", e)
-            null
         }
     }
 
@@ -344,32 +306,13 @@ class MainActivity : AppCompatActivity() {
     private fun showPermissionDialog() {
         AlertDialog.Builder(this)
             .setTitle("Permission Required")
-            .setMessage("To install apps, you need to allow this app to install unknown apps.")
-            .setPositiveButton("Allow") { _, _ ->
+            .setMessage("To install apps from unknown sources, you need to grant permission.")
+            .setPositiveButton("Settings") { _, _ ->
                 val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
                 intent.data = Uri.parse("package:$packageName")
                 requestPermissionLauncher.launch(intent)
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
+            .setNegativeButton("Cancel", null)
             .show()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                // Open the settings window
-                val intent = Intent(this, SettingsActivity::class.java)
-                startActivity(intent)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
 }
