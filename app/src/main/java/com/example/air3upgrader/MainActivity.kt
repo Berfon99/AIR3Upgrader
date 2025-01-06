@@ -1,22 +1,17 @@
 package com.example.air3upgrader
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,70 +85,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAppInstallation(packageName: String, nameTextView: TextView, versionTextView: TextView?) {
-        val packageManager: PackageManager = this.packageManager
-        try {
-            val packageInfo = packageManager.getPackageInfo(packageName, PackageManager.GET_META_DATA)
-            val versionName: String = if (packageInfo != null) {
-                Log.i("AppCheck", "$packageName: getPackageInfo() returned a result")
-                // App is installed
-                nameTextView.text = getAppName(packageName)
-                // Get the version name
-                var versionName: String? = packageInfo.versionName
-
-                // Parse the version name
-                versionName = when (packageName) {
-                    xctrackPackageName -> parseXCTrackVersion(versionName)
-                    xcguidePackageName -> parseXCGuideVersion(versionName)
-                    else -> versionName
-                }
-                versionName ?: "N/A"
-            } else {
-                Log.i("AppCheck", "$packageName: getPackageInfo() returned null")
-                // App is not installed
-                nameTextView.text = getAppName(packageName)
-                nameTextView.background = ContextCompat.getDrawable(this, R.drawable.circle_background_black)
-                "N/A"
-            }
-            // Set the background color
-            CoroutineScope(Dispatchers.Main).launch {
-                AppUtils.setAppBackgroundColor(this@MainActivity, packageName, nameTextView, versionName)
-            }
-            if (versionTextView != null && packageInfo != null) {
-                // Get the version code
-                val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    packageInfo.longVersionCode
-                } else {
-                    packageInfo.versionCode.toLong()
-                }
-                // Display the version
-                if (packageName == air3managerPackageName) {
-                    versionTextView.text = "v$versionName ($versionCode)"
-                } else {
-                    versionTextView.text = versionName
-                }
-            }
-        } catch (e: PackageManager.NameNotFoundException) {
-            Log.e("AppCheck", "$packageName: NameNotFoundException", e)
-            // App is not installed
-            nameTextView.text = getAppName(packageName)
-            nameTextView.background = ContextCompat.getDrawable(this, R.drawable.circle_background_black)
+        val versionName = AppManager.getAppVersionName(this, packageName)
+        val versionCode = AppManager.getAppVersionCode(this, packageName)
+        val parsedVersionName = when (packageName) {
+            xctrackPackageName -> AppManager.parseXCTrackVersion(versionName)
+            xcguidePackageName -> AppManager.parseXCGuideVersion(versionName)
+            else -> versionName
         }
-    }
-
-    private fun getAppName(packageName: String): String {
-        val packageManager = packageManager
-        return try {
-            val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(applicationInfo).toString()
-        } catch (e: PackageManager.NameNotFoundException) {
-            // Handle the case where the app is not found
-            when (packageName) {
-                xctrackPackageName -> "XCTrack"
-                xcguidePackageName -> "XC Guide"
-                air3managerPackageName -> "AIR³ Manager"
-                else -> "Unknown App"
-            }
-        }
+        UiUpdater.updateAppInfo(this, packageName, nameTextView, versionTextView, parsedVersionName, versionCode)
     }
 
     private fun getLatestVersionFromServer() {
@@ -162,14 +101,13 @@ class MainActivity : AppCompatActivity() {
             val xcguideLatestVersion = versionChecker.getLatestVersion(xcguidePackageName)
 
             withContext(Dispatchers.Main) {
-                xctrackServerVersion.text = xctrackLatestVersion ?: "N/A"
-                xcguideServerVersion.text = xcguideLatestVersion ?: "N/A"
+                UiUpdater.updateServerVersion(xctrackServerVersion, xcguideServerVersion, xctrackLatestVersion, xcguideLatestVersion)
                 launch {
                     AppUtils.setAppBackgroundColor(
                         this@MainActivity,
                         xctrackPackageName,
                         xctrackName,
-                        xctrackVersion.text.toString() ?: "N/A" // Provide a default value
+                        xctrackVersion.text.toString() ?: "N/A"
                     )
                 }
                 launch {
@@ -177,16 +115,16 @@ class MainActivity : AppCompatActivity() {
                         this@MainActivity,
                         xcguidePackageName,
                         xcguideName,
-                        xcguideVersion.text.toString() ?: "N/A" // Provide a default value
+                        xcguideVersion.text.toString() ?: "N/A"
                     )
                 }
-                setCheckboxState(
+                UiUpdater.updateCheckboxState(
                     xctrackPackageName,
                     xctrackCheckbox,
                     xctrackVersion.text.toString(),
                     xctrackLatestVersion
                 )
-                setCheckboxState(
+                UiUpdater.updateCheckboxState(
                     xcguidePackageName,
                     xcguideCheckbox,
                     xcguideVersion.text.toString(),
@@ -196,13 +134,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun parseXCTrackVersion(version: String?): String? {
-        return version?.removePrefix("v")?.split("-")?.take(2)?.joinToString("-")
-    }
-
-    private fun parseXCGuideVersion(version: String?): String? {
-        return version?.removePrefix("v")?.substringAfter("1.", "")
-    }
     private fun setCheckboxState(packageName: String, checkBox: CheckBox, installedVersion: String, serverVersion: String?) {
         if (serverVersion != null) {
             checkBox.isChecked = VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)
