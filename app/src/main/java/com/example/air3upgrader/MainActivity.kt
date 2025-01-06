@@ -81,6 +81,14 @@ class MainActivity : AppCompatActivity() {
         getLatestVersionFromServer()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Refresh the app information
+        checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion)
+        checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion)
+        getLatestVersionFromServer()
+    }
+
     private fun checkAppInstallation(packageName: String, nameTextView: TextView, versionTextView: TextView?) {
         val packageManager: PackageManager = this.packageManager
         try {
@@ -285,6 +293,42 @@ class MainActivity : AppCompatActivity() {
         intent.setDataAndType(uri, "application/vnd.android.package-archive")
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
+        val packageName = getPackageNameFromApk(apkFile)
+        if (packageName != null) {
+            val newVersion = getAppVersion(packageName)
+            if (packageName == xctrackPackageName) {
+                xctrackVersion.text = newVersion
+                CoroutineScope(Dispatchers.Main).launch {
+                    setAppBackgroundColor(xctrackPackageName, xctrackName, xctrackVersion.text.toString())
+                }
+            } else if (packageName == xcguidePackageName) {
+                xcguideVersion.text = newVersion
+                CoroutineScope(Dispatchers.Main).launch {
+                    setAppBackgroundColor(xcguidePackageName, xcguideName, xcguideVersion.text.toString())
+                }
+            }
+        }
+    }
+
+    private fun getAppVersion(packageName: String): String {
+        return try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            packageInfo.versionName ?: "N/A" // Use the elvis operator to provide a default value
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e("MainActivity", "Error getting app version", e)
+            "N/A"
+        }
+    }
+
+    private fun getPackageNameFromApk(apkFile: File): String? {
+        return try {
+            val packageManager = packageManager
+            val packageInfo = packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)
+            packageInfo?.packageName
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error getting package name from APK", e)
+            null
+        }
     }
 
     private fun checkInstallPermission(): Boolean {
