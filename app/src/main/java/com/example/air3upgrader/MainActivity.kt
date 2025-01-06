@@ -16,7 +16,6 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -150,16 +149,40 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getLatestVersionFromServer() {
-        CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             val xctrackLatestVersion = versionChecker.getLatestVersion(xctrackPackageName)
             val xcguideLatestVersion = versionChecker.getLatestVersion(xcguidePackageName)
 
-            xctrackServerVersion.text = xctrackLatestVersion ?: "N/A"
-            xcguideServerVersion.text = xcguideLatestVersion ?: "N/A"
-            launch { setAppBackgroundColor(xctrackPackageName, xctrackName, xctrackVersion.text.toString()) }
-            launch { setAppBackgroundColor(xcguidePackageName, xcguideName, xcguideVersion.text.toString()) }
-            setCheckboxState(xctrackPackageName, xctrackCheckbox, xctrackVersion.text.toString(), xctrackLatestVersion)
-            setCheckboxState(xcguidePackageName, xcguideCheckbox, xcguideVersion.text.toString(), xcguideLatestVersion)
+            withContext(Dispatchers.Main) {
+                xctrackServerVersion.text = xctrackLatestVersion ?: "N/A"
+                xcguideServerVersion.text = xcguideLatestVersion ?: "N/A"
+                launch {
+                    setAppBackgroundColor(
+                        xctrackPackageName,
+                        xctrackName,
+                        xctrackVersion.text.toString()
+                    )
+                }
+                launch {
+                    setAppBackgroundColor(
+                        xcguidePackageName,
+                        xcguideName,
+                        xcguideVersion.text.toString()
+                    )
+                }
+                setCheckboxState(
+                    xctrackPackageName,
+                    xctrackCheckbox,
+                    xctrackVersion.text.toString(),
+                    xctrackLatestVersion
+                )
+                setCheckboxState(
+                    xcguidePackageName,
+                    xcguideCheckbox,
+                    xcguideVersion.text.toString(),
+                    xcguideLatestVersion
+                )
+            }
         }
     }
 
@@ -187,6 +210,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun setCheckboxState(packageName: String, checkBox: CheckBox, installedVersion: String, serverVersion: String?) {
         if (serverVersion != null) {
             checkBox.isChecked = versionChecker.isServerVersionHigher(installedVersion, serverVersion, packageName)
@@ -233,6 +257,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun downloadAndInstallApk(appInfo: AppInfo) {
+        Log.i("MainActivity", "downloadAndInstallApk: $appInfo")
         val apkName = appInfo.name + ".apk"
         val apkFile = File(getExternalFilesDir(null), apkName)
         try {

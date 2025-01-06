@@ -16,7 +16,11 @@ data class AppInfo(
     val apkPath: String,
     val compatibleModels: List<String>,
     val minAndroidVersion: String
-)
+) {
+    override fun toString(): String {
+        return "AppInfo(name='$name', package='$`package`', latestVersion='$latestVersion', apkPath='$apkPath', compatibleModels=$compatibleModels, minAndroidVersion='$minAndroidVersion')"
+    }
+}
 
 data class AppsData(
     val apps: List<AppInfo>
@@ -24,7 +28,7 @@ data class AppsData(
 
 class VersionChecker {
 
-    private val client = OkHttpClient()
+    val client = OkHttpClient()
     private val gson = Gson()
     private val versionsUrl = "https://ftp.fly-air3.com/Latest_Software_Download/versions.json"
 
@@ -70,17 +74,19 @@ class VersionChecker {
             .url(versionsUrl)
             .build()
 
+        val call = client.newCall(request)
+        val response = call.execute()
         try {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
+            if (!response.isSuccessful) throw IOException("Unexpected code $response")
 
-                val body = response.body?.string() ?: return null
-                val listType: Type = object : TypeToken<AppsData>() {}.type
-                return gson.fromJson(body, listType)
-            }
+            val body = response.body?.string() ?: return null
+            val listType: Type = object : TypeToken<AppsData>() {}.type
+            return gson.fromJson(body, listType)
         } catch (e: IOException) {
             Log.e("VersionChecker", "Error getting versions.json", e)
             return null
+        } finally {
+            response.close()
         }
     }
 
@@ -94,7 +100,8 @@ class VersionChecker {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) throw Exception("Failed to download APK: ${response.code}")
 
-                response.body?.byteStream()?.use { input ->
+                val body = response.body ?: throw Exception("Response body is null")
+                body.byteStream().use { input ->
                     apkFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
