@@ -74,9 +74,8 @@ class VersionChecker {
             .url(versionsUrl)
             .build()
 
-        val call = client.newCall(request)
-        val response = call.execute()
         try {
+            val response = client.newCall(request).execute()
             if (!response.isSuccessful) throw IOException("Unexpected code $response")
 
             val body = response.body?.string() ?: return null
@@ -85,13 +84,16 @@ class VersionChecker {
         } catch (e: IOException) {
             Log.e("VersionChecker", "Error getting versions.json", e)
             return null
-        } finally {
-            response.close()
         }
     }
 
     fun downloadApk(appInfo: AppInfo, apkFile: File) {
-        val apkUrl = appInfo.apkPath
+        val baseUrl = "https://ftp.fly-air3.com" // Add the base URL
+        val apkUrl = if (appInfo.apkPath.startsWith("http")) {
+            appInfo.apkPath
+        } else {
+            baseUrl + appInfo.apkPath
+        }
         val request = Request.Builder()
             .url(apkUrl)
             .build()

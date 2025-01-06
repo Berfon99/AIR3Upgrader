@@ -233,28 +233,29 @@ class MainActivity : AppCompatActivity() {
     private fun handleUpgradeButtonClick() {
         val appsToUpgrade = mutableListOf<AppInfo>()
 
-        if (xctrackCheckbox.isChecked) {
-            val xctrackInfo = versionChecker.getAppInfo(xctrackPackageName)
-            if (xctrackInfo != null) {
-                appsToUpgrade.add(xctrackInfo)
+        CoroutineScope(Dispatchers.IO).launch {
+            if (xctrackCheckbox.isChecked) {
+                val xctrackInfo = versionChecker.getAppInfo(xctrackPackageName)
+                if (xctrackInfo != null) {
+                    appsToUpgrade.add(xctrackInfo)
+                }
             }
-        }
 
-        if (xcguideCheckbox.isChecked) {
-            val xcguideInfo = versionChecker.getAppInfo(xcguidePackageName)
-            if (xcguideInfo != null) {
-                appsToUpgrade.add(xcguideInfo)
+            if (xcguideCheckbox.isChecked) {
+                val xcguideInfo = versionChecker.getAppInfo(xcguidePackageName)
+                if (xcguideInfo != null) {
+                    appsToUpgrade.add(xcguideInfo)
+                }
             }
-        }
 
-        if (appsToUpgrade.isNotEmpty()) {
-            CoroutineScope(Dispatchers.IO).launch {
+            if (appsToUpgrade.isNotEmpty()) {
                 for (appInfo in appsToUpgrade) {
                     downloadAndInstallApk(appInfo)
                 }
             }
         }
     }
+
 
     private suspend fun downloadAndInstallApk(appInfo: AppInfo) {
         Log.i("MainActivity", "downloadAndInstallApk: $appInfo")
