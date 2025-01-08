@@ -115,8 +115,9 @@ class MainActivity : AppCompatActivity() {
                 true
             }
             R.id.action_about -> {
-                // Handle "About" action (e.g., show an about dialog)
-                //Toast.makeText(this, "About", Toast.LENGTH_SHORT).show()
+                // Navigate to AboutActivity
+                val intent = Intent(this, AboutActivity::class.java)
+                startActivity(intent)
                 true
             }
             else -> super.onOptionsItemSelected(item)
