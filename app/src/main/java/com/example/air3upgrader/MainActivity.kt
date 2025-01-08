@@ -45,6 +45,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Set the action bar title with device info
+        setActionBarTitle()
+
         // Initialize TextViews and Checkboxes
         xctrackName = findViewById(R.id.xctrack_name)
         xcguideName = findViewById(R.id.xcguide_name)
@@ -76,6 +79,12 @@ class MainActivity : AppCompatActivity() {
 
         // Get the latest version from the server
         getLatestVersionFromServer()
+    }
+
+    private fun setActionBarTitle() {
+        val deviceModel = Build.MODEL
+        val androidVersion = Build.VERSION.RELEASE
+        supportActionBar?.title = "$deviceModel (Android $androidVersion)"
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

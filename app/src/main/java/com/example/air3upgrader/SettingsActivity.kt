@@ -79,12 +79,8 @@ class SettingsActivity : AppCompatActivity() {
     private fun getDeviceInfo() {
         val deviceInfo = StringBuilder()
 
-        deviceInfo.append("Device Information:\n")
-        deviceInfo.append("--------------------\n")
-
         // Device
         deviceInfo.append("Device: ${Build.DEVICE}\n")
-        deviceInfo.append("Product: ${Build.PRODUCT}\n")
 
         // Display the information in the TextView
         deviceInfoTextView.text = deviceInfo.toString()
