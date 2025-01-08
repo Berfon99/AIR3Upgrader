@@ -17,10 +17,14 @@ class DataStoreManager(private val context: Context) {
         val SELECTED_MODEL = stringPreferencesKey("selected_model")
     }
 
-    // Save the selected model
-    suspend fun saveSelectedModel(model: String) {
+    // Save the selected model (now accepts a nullable String)
+    suspend fun saveSelectedModel(model: String?) {
         context.dataStore.edit { preferences ->
-            preferences[SELECTED_MODEL] = model
+            if (model != null) {
+                preferences[SELECTED_MODEL] = model
+            } else {
+                preferences.remove(SELECTED_MODEL)
+            }
         }
     }
 

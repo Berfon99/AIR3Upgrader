@@ -31,6 +31,10 @@ class SettingsActivity : AppCompatActivity() {
 
     // List of models for the spinner
     private lateinit var modelList: MutableList<String>
+    // List of models for the spinner display
+    private lateinit var modelDisplayList: MutableList<String>
+    // Map to link display strings to models
+    private lateinit var modelDisplayMap: MutableMap<String, String?>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,8 +50,21 @@ class SettingsActivity : AppCompatActivity() {
         deviceName = getDeviceName()
         modelList.add(deviceName)
 
+        // Initialize the display list and map
+        modelDisplayList = mutableListOf()
+        modelDisplayMap = mutableMapOf()
+        for (model in modelList) {
+            val displayString = if (model == deviceName) {
+                "Device name: $deviceName"
+            } else {
+                model
+            }
+            modelDisplayList.add(displayString)
+            modelDisplayMap[displayString] = if (model == deviceName) null else model
+        }
+
         // Create an ArrayAdapter using the string array and a default spinner layout
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelList)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelDisplayList)
         // Specify the layout to use when the list of choices appears
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         // Apply the adapter to the spinner
@@ -65,16 +82,12 @@ class SettingsActivity : AppCompatActivity() {
         // Set a listener to respond to user selections
         modelSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                val selectedModel = parent.getItemAtPosition(position).toString()
+                val selectedDisplayString = parent.getItemAtPosition(position).toString()
+                val selectedModel = modelDisplayMap[selectedDisplayString]
                 Log.i("ModelSpinner", "Selected model: $selectedModel")
                 // Save the selected model
-                val modelToSave = if (selectedModel == deviceName) {
-                    null
-                } else {
-                    selectedModel
-                }
                 lifecycleScope.launch {
-                    dataStoreManager.saveSelectedModel(modelToSave ?: selectedModel)
+                    dataStoreManager.saveSelectedModel(selectedModel)
                 }
             }
 
