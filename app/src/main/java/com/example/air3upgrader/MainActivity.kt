@@ -19,6 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -33,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xcguideServerVersion: TextView
     private lateinit var xctrackCheckbox: CheckBox
     private lateinit var xcguideCheckbox: CheckBox
+    private lateinit var dataStoreManager: DataStoreManager
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -45,8 +49,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        dataStoreManager = DataStoreManager(this)
+
         // Set the action bar title with device info
-        setActionBarTitle()
+        setActionBarTitleWithSelectedModel()
 
         // Initialize TextViews and Checkboxes
         xctrackName = findViewById(R.id.xctrack_name)
@@ -81,11 +87,16 @@ class MainActivity : AppCompatActivity() {
         getLatestVersionFromServer()
     }
 
-    private fun setActionBarTitle() {
-        val deviceModel = Build.MODEL
-        val androidVersion = Build.VERSION.RELEASE
-        supportActionBar?.title = "$deviceModel (Android $androidVersion)"
+    private fun setActionBarTitleWithSelectedModel() {
+        lifecycleScope.launch {
+            dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
+                val model = selectedModel ?: Build.MODEL
+                val androidVersion = Build.VERSION.RELEASE
+                supportActionBar?.title = "$model (Android $androidVersion)"
+            }
+        }
     }
+
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)

@@ -10,11 +10,14 @@ import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var modelSpinner: Spinner
     private lateinit var deviceInfoTextView: TextView
+    private lateinit var dataStoreManager: DataStoreManager
 
     // List of allowed models
     private val allowedModels = listOf(
@@ -31,6 +34,8 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+
+        dataStoreManager = DataStoreManager(this)
 
         modelSpinner = findViewById(R.id.model_spinner)
         deviceInfoTextView = findViewById(R.id.device_info_text_view)
@@ -61,7 +66,10 @@ class SettingsActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 val selectedModel = parent.getItemAtPosition(position).toString()
                 Log.i("ModelSpinner", "Selected model: $selectedModel")
-                // You can add code here to handle the selected model if needed
+                // Save the selected model
+                lifecycleScope.launch {
+                    dataStoreManager.saveSelectedModel(selectedModel)
+                }
             }
 
             override fun onNothingSelected(parent: AdapterView<*>) {
@@ -78,9 +86,20 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun getDeviceInfo() {
         val deviceInfo = StringBuilder()
-
         // Device
         deviceInfo.append("Device: ${Build.DEVICE}\n")
+        // Product
+        deviceInfo.append("Product: ${Build.PRODUCT}\n")
+        // Model
+        deviceInfo.append("Model: ${Build.MODEL}\n")
+        // Brand
+        deviceInfo.append("Brand: ${Build.BRAND}\n")
+        // Manufacturer
+        deviceInfo.append("Manufacturer: ${Build.MANUFACTURER}\n")
+        // Android Version
+        deviceInfo.append("Android Version: ${Build.VERSION.RELEASE}\n")
+        // SDK Version
+        deviceInfo.append("SDK Version: ${Build.VERSION.SDK_INT}\n")
 
         // Display the information in the TextView
         deviceInfoTextView.text = deviceInfo.toString()
