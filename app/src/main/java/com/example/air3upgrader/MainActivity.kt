@@ -90,13 +90,16 @@ class MainActivity : AppCompatActivity() {
     private fun setActionBarTitleWithSelectedModel() {
         lifecycleScope.launch {
             dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
-                val model = selectedModel ?: Build.MODEL
+                val model = selectedModel ?: getDeviceName()
                 val androidVersion = Build.VERSION.RELEASE
                 supportActionBar?.title = "$model (Android $androidVersion)"
             }
         }
     }
 
+    private fun getDeviceName(): String {
+        return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
+    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)

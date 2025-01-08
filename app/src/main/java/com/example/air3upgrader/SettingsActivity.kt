@@ -18,6 +18,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var modelSpinner: Spinner
     private lateinit var deviceInfoTextView: TextView
     private lateinit var dataStoreManager: DataStoreManager
+    private lateinit var deviceName: String
 
     // List of allowed models
     private val allowedModels = listOf(
@@ -42,8 +43,8 @@ class SettingsActivity : AppCompatActivity() {
 
         // Initialize the model list
         modelList = allowedModels.toMutableList()
-        val deviceName = getDeviceName()
-        modelList.add("use device name: $deviceName")
+        deviceName = getDeviceName()
+        modelList.add(deviceName)
 
         // Create an ArrayAdapter using the string array and a default spinner layout
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelList)
@@ -57,7 +58,7 @@ class SettingsActivity : AppCompatActivity() {
         val defaultSelection = if (allowedModels.contains(deviceModel)) {
             deviceModel
         } else {
-            "use device name: $deviceName"
+            deviceName
         }
         modelSpinner.setSelection(modelList.indexOf(defaultSelection))
 
@@ -67,8 +68,13 @@ class SettingsActivity : AppCompatActivity() {
                 val selectedModel = parent.getItemAtPosition(position).toString()
                 Log.i("ModelSpinner", "Selected model: $selectedModel")
                 // Save the selected model
+                val modelToSave = if (selectedModel == deviceName) {
+                    null
+                } else {
+                    selectedModel
+                }
                 lifecycleScope.launch {
-                    dataStoreManager.saveSelectedModel(selectedModel)
+                    dataStoreManager.saveSelectedModel(modelToSave ?: selectedModel)
                 }
             }
 
