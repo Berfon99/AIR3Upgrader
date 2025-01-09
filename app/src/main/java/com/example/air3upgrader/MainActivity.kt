@@ -251,7 +251,7 @@ class MainActivity : AppCompatActivity() {
             dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
                 val currentSelectedModel = selectedModel ?: getDeviceName()
                 val androidVersion = Build.VERSION.RELEASE // Get the Android version
-                supportActionBar?.title = "$currentSelectedModel - Android $androidVersion" // Set the title correctly
+                supportActionBar?.title = "AIR³ Upgrader - $currentSelectedModel - Android $androidVersion" // Set the title correctly
             }
         }
     }
