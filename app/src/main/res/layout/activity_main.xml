@@ -4,148 +4,167 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="16dp"
     tools:context=".MainActivity">
 
     <LinearLayout
-        android:id="@+id/linearLayout"
+        android:id="@+id/apps_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <!-- XCTrack -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/xctrack_layout"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/xctrack_name"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="XCTrack"
                 android:textSize="18sp" />
 
-            <TextView
-                android:id="@+id/xctrack_version"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="v1.0.0"
-                android:textSize="18sp" />
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/xctrack_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="v1.0.0"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/xctrack_server_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="v1.0.0"
+                    android:textSize="18sp" />
+
+                <CheckBox
+                    android:id="@+id/xctrack_checkbox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/xctrack_server_version"
+                android:id="@+id/xctrack_apk_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="v1.0.0"
-                android:textSize="18sp" />
-
-            <CheckBox
-                android:id="@+id/xctrack_checkbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp" />
+                android:text="xctrack.apk"
+                android:visibility="gone" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/xctrack_apk_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="xctrack.apk"
-            android:visibility="gone" />
 
         <!-- XCGuide -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/xcguide_layout"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/xcguide_name"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="XCGuide"
                 android:textSize="18sp" />
 
-            <TextView
-                android:id="@+id/xcguide_version"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="v1.0.0"
-                android:textSize="18sp" />
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/xcguide_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="v1.0.0"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/xcguide_server_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="v1.0.0"
+                    android:textSize="18sp" />
+
+                <CheckBox
+                    android:id="@+id/xcguide_checkbox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/xcguide_server_version"
+                android:id="@+id/xcguide_apk_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="v1.0.0"
-                android:textSize="18sp" />
-
-            <CheckBox
-                android:id="@+id/xcguide_checkbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp" />
+                android:text="xcguide.apk"
+                android:visibility="gone" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/xcguide_apk_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="xcguide.apk"
-            android:visibility="gone" />
 
         <!-- AIR3Manager -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/air3manager_layout"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/air3manager_name"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="AIR3Manager"
                 android:textSize="18sp" />
 
-            <TextView
-                android:id="@+id/air3manager_version"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="v1.0.0"
-                android:textSize="18sp" />
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/air3manager_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="v1.0.0"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/air3manager_server_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="v1.0.0"
+                    android:textSize="18sp" />
+
+                <CheckBox
+                    android:id="@+id/air3manager_checkbox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/air3manager_server_version"
+                android:id="@+id/air3manager_apk_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="v1.0.0"
-                android:textSize="18sp" />
-
-            <CheckBox
-                android:id="@+id/air3manager_checkbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp" />
+                android:text="air3manager.apk"
+                android:visibility="gone" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/air3manager_apk_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="air3manager.apk"
-            android:visibility="gone" />
     </LinearLayout>
 
     <LinearLayout
@@ -153,14 +172,13 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:orientation="horizontal"
-        android:padding="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
         <Button
             android:id="@+id/close_button"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Close"
@@ -168,7 +186,7 @@
 
         <Button
             android:id="@+id/upgrade_button"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_weight="1"
