@@ -177,6 +177,7 @@ class MainActivity : AppCompatActivity() {
             AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, AppUtils.getAppVersion(this@MainActivity, xcguidePackageName), finalSelectedModel)
             AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, AppUtils.getAppVersion(this@MainActivity, air3managerPackageName), finalSelectedModel)
         }
+        startNextDownload()
     }
 
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
@@ -337,7 +338,6 @@ class MainActivity : AppCompatActivity() {
         intent.setDataAndType(uri, "application/vnd.android.package-archive")
         intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
         startActivity(intent)
-        startNextDownload()
     }
 
     private fun checkInstallPermission(): Boolean {
