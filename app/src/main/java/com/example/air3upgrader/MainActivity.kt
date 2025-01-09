@@ -11,7 +11,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log // Add this import statement
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -29,9 +29,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import java.io.File
 import kotlinx.coroutines.flow.firstOrNull
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -50,7 +49,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xcguideCheckbox: CheckBox
     private lateinit var air3managerCheckbox: CheckBox
     private lateinit var dataStoreManager: DataStoreManager
-    // ... other code ...
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
@@ -58,6 +56,8 @@ class MainActivity : AppCompatActivity() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
     private var appInfos: List<VersionChecker.AppInfo> = emptyList()
+    private var downloadQueue: MutableList<VersionChecker.AppInfo> = mutableListOf()
+    private var downloadIdToAppInfo: MutableMap<Long, VersionChecker.AppInfo> = mutableMapOf()
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -182,7 +182,9 @@ class MainActivity : AppCompatActivity() {
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-            if (downloadID == id) {
+            val appInfo = downloadIdToAppInfo[id]
+            if (appInfo != null) {
+                downloadIdToAppInfo.remove(id)
                 val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                 val query = DownloadManager.Query()
                 query.setFilterById(id)
@@ -300,27 +302,33 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "No apps selected for upgrade", Toast.LENGTH_SHORT).show()
             return
         }
+        downloadQueue.addAll(appsToUpgrade)
+        startNextDownload()
+    }
 
-        for (appInfo in appsToUpgrade) {
+    private fun startNextDownload() {
+        if (downloadQueue.isNotEmpty()) {
+            val appInfo = downloadQueue.removeAt(0)
             val fullApkUrl = "https://ftp.fly-air3.com${appInfo.apkPath}"
-            downloadAndInstallApk(fullApkUrl, appInfo.packageName)
+            downloadAndInstallApk(fullApkUrl, appInfo)
         }
     }
 
-    private fun downloadAndInstallApk(apkUrl: String, packageName: String) {
+    private fun downloadAndInstallApk(apkUrl: String, appInfo: VersionChecker.AppInfo) {
         if (!checkInstallPermission()) {
             showPermissionDialog()
             return
         }
 
         val request = DownloadManager.Request(Uri.parse(apkUrl))
-            .setTitle("Downloading $packageName")
-            .setDescription("Downloading the latest version of $packageName")
+            .setTitle("Downloading ${appInfo.packageName}")
+            .setDescription("Downloading the latest version of ${appInfo.packageName}")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "$packageName.apk")
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "${appInfo.packageName}.apk")
 
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         downloadID = downloadManager.enqueue(request)
+        downloadIdToAppInfo[downloadID] = appInfo
     }
 
     private fun installApk(file: File) {
@@ -329,6 +337,7 @@ class MainActivity : AppCompatActivity() {
         intent.setDataAndType(uri, "application/vnd.android.package-archive")
         intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
         startActivity(intent)
+        startNextDownload()
     }
 
     private fun checkInstallPermission(): Boolean {
@@ -341,21 +350,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPermissionDialog() {
         val builder = AlertDialog.Builder(this)
-        builder.setTitle("Install Permission Required")
-            .setMessage("To install apps, you need to allow installation from unknown sources.")
+        builder.setTitle("Install Unknown Apps Permission")
+            .setMessage("To install apps from unknown sources, you need to allow this permission in your device settings.")
             .setPositiveButton("Settings") { _, _ ->
-                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                permissionLauncher.launch(intent)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                    intent.data = Uri.parse("package:$packageName")
+                    permissionLauncher.launch(intent)
+                }
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if (checkInstallPermission()) {
-            Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show()
+            startNextDownload()
         } else {
             Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
         }
