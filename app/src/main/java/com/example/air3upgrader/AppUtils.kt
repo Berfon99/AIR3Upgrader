@@ -35,18 +35,10 @@ object AppUtils {
         }
     }
 
-    fun checkAppInstallation(context: Context, packageName: String, appName: TextView, appVersion: TextView?) {
-        val installedVersion = getAppVersion(context, packageName)
-        if (appVersion != null) {
-            appVersion.text = installedVersion
-        }
-        CoroutineScope(Dispatchers.Main).launch {
-            setAppBackgroundColor(context, packageName, appName, installedVersion)
-        }
-    }
 
-    suspend fun setAppBackgroundColor(context: Context, packageName: String, appName: TextView, installedVersion: String) {
-        val serverVersion = VersionChecker().getLatestVersion(packageName)
+    suspend fun setAppBackgroundColor(context: Context, packageName: String, appName: TextView, installedVersion: String, selectedModel: String) {
+        val serverAppInfo = VersionChecker().getLatestVersionFromServer(selectedModel).find { it.packageName == packageName }
+        val serverVersion = serverAppInfo?.latestVersion ?: "N/A"
         val isHigher = VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)
         val backgroundDrawable = when {
             isHigher -> ContextCompat.getDrawable(context, R.drawable.circle_background_orange)

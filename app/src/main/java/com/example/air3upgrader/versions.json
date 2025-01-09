@@ -31,16 +31,82 @@
     {
       "name": "AIR³ Manager",
       "package": "com.xc.r3",
-      "latestVersion": "1.0.0",
-      "apkPath": "/Latest_Software_Download/Air3_Manager/AIR3Manager-1.0.0.apk",
+      "latestVersion": "2.0.4",
+      "apkPath": "/Latest_Software_Download/AIR3_Manager/AIR3_7.1/AIR3Manager_2.04.2_for_7.1.apk",
       "compatibleModels": [
-        "AIR3-7.2",
-        "AIR3-7.3",
-        "AIR3-7.3+",
-        "AIR3-7.35",
+        "AIR3-7.1"
+      ],
+      "minAndroidVersion": "5"
+    },
+    {
+      "name": "AIR³ Manager",
+      "package": "com.xc.r3",
+      "latestVersion": "2.10.2",
+      "apkPath": "/Latest_Software_Download/AIR3_Manager/AIR3_7.2/AIR3Manager_2.10.2_for_72.apk",
+      "compatibleModels": [
+        "AIR3-7.2"
+      ],
+      "minAndroidVersion": "8"
+    },
+    {
+      "name": "AIR³ Manager",
+      "package": "com.xc.r3",
+      "latestVersion": "2.12",
+      "apkPath": "/Latest_Software_Download/AIR3_Manager/AIR3_7.3/AIR3Manager_2.12_Android_10&11_for_7.3.apk",
+      "compatibleModels": [
+        "AIR3-7.3"
+      ],
+      "minAndroidVersion": "10"
+    },
+    {
+      "name": "AIR³ Manager",
+      "package": "com.xc.r3",
+      "latestVersion": "2.12",
+      "apkPath": "/Latest_Software_Download/AIR3_Manager/AIR3_7.3/AIR3Manager_2.12_Android_10&11_for_7.3.apk",
+      "compatibleModels": [
+        "AIR3-7.3+"
+      ],
+      "minAndroidVersion": "10"
+    },
+    {
+      "name": "AIR³ Manager",
+      "package": "com.xc.r3",
+      "latestVersion": "2.15",
+      "apkPath": "/Latest_Software_Download/AIR3_Manager/AIR3_7.3/AIR3Manager_2.15_Android13_for_7.3.apk",
+      "compatibleModels": [
+        "AIR3-7.3"
+      ],
+      "minAndroidVersion": "13"
+    },
+    {
+      "name": "AIR³ Manager",
+      "package": "com.xc.r3",
+      "latestVersion": "2.15",
+      "apkPath": "/Latest_Software_Download/AIR3_Manager/AIR3_7.3/AIR3Manager_2.15_Android13_for_7.3+.apk",
+      "compatibleModels": [
+        "AIR3-7.3+"
+      ],
+      "minAndroidVersion": "13"
+    },
+    {
+      "name": "AIR³ Manager",
+      "package": "com.xc.r3",
+      "latestVersion": "2.15",
+      "apkPath": "/Latest_Software_Download/AIR3_Manager/AIR3_7.35/AIR3Manager_2.15_Android13_for_7.35.apk",
+      "compatibleModels": [
+        "AIR3-7.35"
+      ],
+      "minAndroidVersion": "13"
+    },
+    {
+      "name": "AIR³ Manager",
+      "package": "com.xc.r3",
+      "latestVersion": "2.15",
+      "apkPath": "/Latest_Software_Download/AIR3_Manager/AIR3_7.35/AIR3Manager_2.15_Android13_for_7.35+.apk",
+      "compatibleModels": [
         "AIR3-7.35+"
       ],
-      "minAndroidVersion": "8.1"
+      "minAndroidVersion": "13"
     }
   ]
 }

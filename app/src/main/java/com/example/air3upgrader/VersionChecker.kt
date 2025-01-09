@@ -1,54 +1,97 @@
 package com.example.air3upgrader
 
+import android.os.Build
 import android.util.Log
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.io.File
-import java.io.IOException
-import java.lang.reflect.Type
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 
 class VersionChecker {
 
-    val client = OkHttpClient()
-    private val gson = Gson()
-    private val versionsUrl = "https://ftp.fly-air3.com/Latest_Software_Download/versions.json"
+    data class AppInfo(
+        val name: String,
+        val packageName: String,
+        val latestVersion: String,
+        val apkPath: String,
+        val compatibleModels: List<String>,
+        val minAndroidVersion: String
+    )
 
-    suspend fun getLatestVersion(packageName: String): String? {
-        val appsData = getAppsData() ?: return null
-        val appInfo = appsData.apps.find { it.`package` == packageName } ?: return null
-        return appInfo.latestVersion
+    suspend fun getLatestVersionFromServer(selectedModel: String): List<AppInfo> = withContext(Dispatchers.IO) {
+        val jsonString = downloadJson("https://ftp.fly-air3.com/Latest_Software_Download/versions.json")
+        val appInfos = parseJson(jsonString)
+        filterAppInfo(appInfos, selectedModel)
     }
 
-    suspend fun getAppInfo(packageName: String): AppInfo? {
-        val appsData = getAppsData() ?: return null
-        return appsData.apps.find { it.`package` == packageName }
-    }
-
-    private suspend fun getAppsData(): AppsData? {
-        val request = Request.Builder()
-            .url(versionsUrl)
-            .build()
-
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = client.newCall(request).execute()
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
-
-                val body = response.body?.string() ?: return@withContext null
-                val listType: Type = object : TypeToken<AppsData>() {}.type
-                return@withContext gson.fromJson(body, listType)
-            } catch (e: IOException) {
-                Log.e("VersionChecker", "Error getting versions.json", e)
-                return@withContext null
+    private fun filterAppInfo(appInfos: List<AppInfo>, selectedModel: String): List<AppInfo> {
+        return appInfos.map { appInfo ->
+            if (appInfo.packageName == "com.xc.r3") {
+                val isModelCompatible = appInfo.compatibleModels.contains(selectedModel)
+                val isAndroidVersionCompatible = Build.VERSION.SDK_INT >= appInfo.minAndroidVersion.toInt()
+                if (isModelCompatible && isAndroidVersionCompatible) {
+                    appInfo
+                } else {
+                    null
+                }
+            } else {
+                appInfo
             }
-        }
+        }.filterNotNull()
     }
 
-    fun downloadApk(appInfo: AppInfo, apkFile: File) {
-        ApkDownloader.downloadApk(client, appInfo, apkFile)
+    private fun parseJson(jsonString: String): List<AppInfo> {
+        val appInfos = mutableListOf<AppInfo>()
+        try {
+            val jsonObject = JSONObject(jsonString)
+            val appsArray: JSONArray = jsonObject.getJSONArray("apps")
+
+            for (i in 0 until appsArray.length()) {
+                val appObject: JSONObject = appsArray.getJSONObject(i)
+                val name = appObject.getString("name")
+                val packageName = appObject.getString("package")
+                val latestVersion = appObject.getString("latestVersion")
+                val apkPath = appObject.getString("apkPath")
+                val compatibleModels = appObject.getJSONArray("compatibleModels").let { array ->
+                    List(array.length()) { array.getString(it) }
+                }
+                val minAndroidVersion = appObject.getString("minAndroidVersion")
+
+                val appInfo = AppInfo(name, packageName, latestVersion, apkPath, compatibleModels, minAndroidVersion)
+                appInfos.add(appInfo)
+            }
+        } catch (e: Exception) {
+            Log.e("VersionChecker", "Error parsing JSON", e)
+        }
+        return appInfos
+    }
+
+    private fun downloadJson(urlString: String): String {
+        var result = ""
+        var urlConnection: HttpURLConnection? = null
+        try {
+            val url = URL(urlString)
+            urlConnection = url.openConnection() as HttpURLConnection
+            urlConnection.requestMethod = "GET"
+            urlConnection.connect()
+
+            val inputStream = urlConnection.inputStream
+            val reader = BufferedReader(InputStreamReader(inputStream))
+            val stringBuilder = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                stringBuilder.append(line)
+            }
+            result = stringBuilder.toString()
+        } catch (e: Exception) {
+            Log.e("VersionChecker", "Error downloading JSON", e)
+        } finally {
+            urlConnection?.disconnect()
+        }
+        return result
     }
 }

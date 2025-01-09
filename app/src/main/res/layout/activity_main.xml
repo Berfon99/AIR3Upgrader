@@ -133,14 +133,35 @@
                     android:text="AIR³ Manager"
                     android:textSize="16sp" />
 
-                <TextView
-                    android:id="@+id/air3manager_version"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:gravity="center"
-                    android:text="v0.0 (0)"
-                    android:textSize="16sp" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/air3manager_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="v0.0 (0)"
+                        android:textSize="16sp" />
+                    <TextView
+                        android:id="@+id/air3manager_server_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="N/A"
+                        android:textSize="16sp" />
+                </LinearLayout>
+                <CheckBox
+                    android:id="@+id/air3manager_checkbox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Upgrade" />
             </LinearLayout>
         </LinearLayout>
 

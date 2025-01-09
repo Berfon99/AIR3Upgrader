@@ -1,27 +1,28 @@
 package com.example.air3upgrader
 
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,11 +33,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var upgradeButton: Button
     private lateinit var xctrackVersion: TextView
     private lateinit var xcguideVersion: TextView
+    private lateinit var air3managerVersion: TextView
     private lateinit var xctrackServerVersion: TextView
     private lateinit var xcguideServerVersion: TextView
+    private lateinit var air3managerServerVersion: TextView
     private lateinit var xctrackCheckbox: CheckBox
     private lateinit var xcguideCheckbox: CheckBox
+    private lateinit var air3managerCheckbox: CheckBox
     private lateinit var dataStoreManager: DataStoreManager
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var selectedModel: String = ""
+    private var appInfos: List<VersionChecker.AppInfo> = emptyList()
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -44,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     private val air3managerPackageName = "com.xc.r3"
 
     private val versionChecker = VersionChecker()
+    private var downloadID: Long = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,15 +70,13 @@ class MainActivity : AppCompatActivity() {
         upgradeButton = findViewById(R.id.upgrade_button)
         xctrackVersion = findViewById(R.id.xctrack_version)
         xcguideVersion = findViewById(R.id.xcguide_version)
+        air3managerVersion = findViewById(R.id.air3manager_version)
         xctrackServerVersion = findViewById(R.id.xctrack_server_version)
         xcguideServerVersion = findViewById(R.id.xcguide_server_version)
+        air3managerServerVersion = findViewById(R.id.air3manager_server_version)
         xctrackCheckbox = findViewById(R.id.xctrack_checkbox)
         xcguideCheckbox = findViewById(R.id.xcguide_checkbox)
-
-        // Check if the apps are installed and update the UI
-        checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion)
-        checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion)
-        checkAppInstallation(air3managerPackageName, air3managerName, null)
+        air3managerCheckbox = findViewById(R.id.air3manager_checkbox)
 
         // Set onClick listener for the close button
         closeButton.setOnClickListener {
@@ -85,14 +91,71 @@ class MainActivity : AppCompatActivity() {
 
         // Get the latest version from the server
         getLatestVersionFromServer()
+
+        // Keep the screen on
+        acquireWakeLock()
+
+        registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Release the wake lock
+        releaseWakeLock()
+        unregisterReceiver(onDownloadComplete)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Check if the apps are installed and update the UI
+        checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel)
+        checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel)
+        checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel)
+    }
+
+    private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            if (downloadID == id) {
+                val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                val query = DownloadManager.Query()
+                query.setFilterById(id)
+                val cursor = dm.query(query)
+                if (cursor.moveToFirst()) {
+                    val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                    if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(columnIndex)) {
+                        val uriString = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI))
+                        val file = File(Uri.parse(uriString).path!!)
+                        installApk(file)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun acquireWakeLock() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "AIR3Upgrader:KeepScreenOn"
+        )
+        wakeLock?.acquire()
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
+        wakeLock = null
     }
 
     private fun setActionBarTitleWithSelectedModel() {
         lifecycleScope.launch {
             dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
-                val model = selectedModel ?: getDeviceName()
-                val androidVersion = Build.VERSION.RELEASE
-                supportActionBar?.title = "$model (Android $androidVersion)"
+                this@MainActivity.selectedModel = selectedModel ?: getDeviceName()
+                supportActionBar?.title = "AIR³ Upgrader - $this@MainActivity.selectedModel"
             }
         }
     }
@@ -101,197 +164,108 @@ class MainActivity : AppCompatActivity() {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                // Navigate to SettingsActivity
-                val intent = Intent(this, SettingsActivity::class.java)
-                startActivity(intent)
-                true
-            }
-            R.id.action_about -> {
-                // Navigate to AboutActivity
-                val intent = Intent(this, AboutActivity::class.java)
-                startActivity(intent)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Refresh the app information
-        checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion)
-        checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion)
-        getLatestVersionFromServer()
-    }
-
-    private fun checkAppInstallation(packageName: String, nameTextView: TextView, versionTextView: TextView?) {
-        val versionName = AppManager.getAppVersionName(this, packageName)
-        val versionCode = AppManager.getAppVersionCode(this, packageName)
-        val parsedVersionName = when (packageName) {
-            xctrackPackageName -> AppManager.parseXCTrackVersion(versionName)
-            xcguidePackageName -> AppManager.parseXCGuideVersion(versionName)
-            else -> versionName
-        }
-        UiUpdater.updateAppInfo(this, packageName, nameTextView, versionTextView, parsedVersionName, versionCode)
-    }
-
     private fun getLatestVersionFromServer() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val xctrackLatestVersion = versionChecker.getLatestVersion(xctrackPackageName)
-            val xcguideLatestVersion = versionChecker.getLatestVersion(xcguidePackageName)
-
-            withContext(Dispatchers.Main) {
-                UiUpdater.updateServerVersion(xctrackServerVersion, xcguideServerVersion, xctrackLatestVersion, xcguideLatestVersion)
-                launch {
-                    AppUtils.setAppBackgroundColor(
-                        this@MainActivity,
-                        xctrackPackageName,
-                        xctrackName,
-                        xctrackVersion.text.toString() ?: "N/A"
-                    )
-                }
-                launch {
-                    AppUtils.setAppBackgroundColor(
-                        this@MainActivity,
-                        xcguidePackageName,
-                        xcguideName,
-                        xcguideVersion.text.toString() ?: "N/A"
-                    )
-                }
-                UiUpdater.updateCheckboxState(
-                    xctrackPackageName,
-                    xctrackCheckbox,
-                    xctrackVersion.text.toString(),
-                    xctrackLatestVersion
-                )
-                UiUpdater.updateCheckboxState(
-                    xcguidePackageName,
-                    xcguideCheckbox,
-                    xcguideVersion.text.toString(),
-                    xcguideLatestVersion
-                )
+        lifecycleScope.launch {
+            dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
+                this@MainActivity.selectedModel = selectedModel ?: getDeviceName()
+                appInfos = versionChecker.getLatestVersionFromServer(this@MainActivity.selectedModel)
+                val xctrackAppInfo = appInfos.find { it.packageName == xctrackPackageName }
+                val xcguideAppInfo = appInfos.find { it.packageName == xcguidePackageName }
+                val air3managerAppInfo = appInfos.find { it.packageName == air3managerPackageName }
+                xctrackAppInfo?.let { UiUpdater.updateAppInfo(it, xctrackServerVersion) }
+                xcguideAppInfo?.let { UiUpdater.updateAppInfo(it, xcguideServerVersion) }
+                air3managerAppInfo?.let { UiUpdater.updateAppInfo(it, air3managerServerVersion) }
+                xctrackName.text = xctrackAppInfo?.name ?: "XCTrack"
+                xcguideName.text = xcguideAppInfo?.name ?: "XC Guide"
+                air3managerName.text = air3managerAppInfo?.name ?: "AIR³ Manager"
             }
         }
     }
-
-    private fun setCheckboxState(packageName: String, checkBox: CheckBox, installedVersion: String, serverVersion: String?) {
-        if (serverVersion != null) {
-            checkBox.isChecked = VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)
-        } else {
-            checkBox.isChecked = false
-        }
-    }
-    private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (packageManager.canRequestPackageInstalls()) {
-                    Log.i("Permission", "Permission granted")
-                } else {
-                    Log.i("Permission", "Permission denied")
-                }
-            }
-        }
 
     private fun handleUpgradeButtonClick() {
-        val appsToUpgrade = mutableListOf<AppInfo>()
+        val appsToUpgrade = mutableListOf<VersionChecker.AppInfo>()
+        if (xctrackCheckbox.isChecked) {
+            appInfos.find { it.packageName == xctrackPackageName }?.let { appsToUpgrade.add(it) }
+        }
+        if (xcguideCheckbox.isChecked) {
+            appInfos.find { it.packageName == xcguidePackageName }?.let { appsToUpgrade.add(it) }
+        }
+        if (air3managerCheckbox.isChecked) {
+            appInfos.find { it.packageName == air3managerPackageName }?.let { appsToUpgrade.add(it) }
+        }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            if (xctrackCheckbox.isChecked) {
-                val xctrackInfo = versionChecker.getAppInfo(xctrackPackageName)
-                if (xctrackInfo != null) {
-                    appsToUpgrade.add(xctrackInfo)
-                }
-            }
+        if (appsToUpgrade.isEmpty()) {
+            Toast.makeText(this, "No apps selected for upgrade", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-            if (xcguideCheckbox.isChecked) {
-                val xcguideInfo = versionChecker.getAppInfo(xcguidePackageName)
-                if (xcguideInfo != null) {
-                    appsToUpgrade.add(xcguideInfo)
-                }
-            }
-
-            if (appsToUpgrade.isNotEmpty()) {
-                for (appInfo in appsToUpgrade) {
-                    downloadAndInstallApk(appInfo)
-                }
-            }
+        for (appInfo in appsToUpgrade) {
+            val fullApkUrl = "https://ftp.fly-air3.com${appInfo.apkPath}"
+            downloadAndInstallApk(fullApkUrl, appInfo.packageName)
         }
     }
 
-
-    private suspend fun downloadAndInstallApk(appInfo: AppInfo) {
-        Log.i("MainActivity", "downloadAndInstallApk: $appInfo")
-        val apkName = appInfo.name + ".apk"
-        val apkFile = File(getExternalFilesDir(null), apkName)
-        try {
-            versionChecker.downloadApk(appInfo, apkFile)
-            withContext(Dispatchers.Main) {
-                if (checkInstallPermission()) {
-                    installApk(apkFile)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error downloading or installing APK", e)
+    private fun downloadAndInstallApk(apkUrl: String, packageName: String) {
+        if (!checkInstallPermission()) {
+            showPermissionDialog()
+            return
         }
+
+        val request = DownloadManager.Request(Uri.parse(apkUrl))
+            .setTitle("Downloading $packageName")
+            .setDescription("Downloading the latest version of $packageName")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "$packageName.apk")
+
+        val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        downloadID = downloadManager.enqueue(request)
     }
 
-    private fun installApk(apkFile: File) {
+    private fun installApk(file: File) {
+        val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
         val intent = Intent(Intent.ACTION_VIEW)
-        val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val apkUri = androidx.core.content.FileProvider.getUriForFile(this, "${packageName}.provider", apkFile)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            apkUri
-        } else {
-            android.net.Uri.fromFile(apkFile)
-        }
         intent.setDataAndType(uri, "application/vnd.android.package-archive")
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
         startActivity(intent)
-        val packageName = AppUtils.getPackageNameFromApk(this, apkFile)
-        if (packageName != null) {
-            val newVersion = AppUtils.getAppVersion(this, packageName)
-            if (packageName == xctrackPackageName) {
-                xctrackVersion.text = newVersion
-                CoroutineScope(Dispatchers.Main).launch {
-                    AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, xctrackVersion.text.toString())
-                }
-            } else if (packageName == xcguidePackageName) {
-                xcguideVersion.text = newVersion
-                CoroutineScope(Dispatchers.Main).launch {
-                    AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, xcguideVersion.text.toString())
-                }
-            }
-        }
     }
 
     private fun checkInstallPermission(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (!packageManager.canRequestPackageInstalls()) {
-                showPermissionDialog()
-                return false
-            }
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            packageManager.canRequestPackageInstalls()
+        } else {
+            true
         }
-        return true
     }
 
     private fun showPermissionDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Permission Required")
-            .setMessage("To install apps from unknown sources, you need to grant permission.")
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Install Permission Required")
+            .setMessage("To install apps, you need to allow installation from unknown sources.")
             .setPositiveButton("Settings") { _, _ ->
                 val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                intent.data = Uri.parse("package:$packageName")
-                requestPermissionLauncher.launch(intent)
+                permissionLauncher.launch(intent)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
             .show()
+    }
+
+    private val permissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (checkInstallPermission()) {
+            Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun checkAppInstallation(packageName: String, nameTextView: TextView, versionTextView: TextView?, selectedModel: String) {
+        val installedVersion = AppUtils.getAppVersion(this, packageName)
+        if (versionTextView != null) {
+            versionTextView.text = if (installedVersion != "N/A") "Installed: $installedVersion" else "Not installed"
+        }
+        lifecycleScope.launch {
+            AppUtils.setAppBackgroundColor(this@MainActivity, packageName, nameTextView, installedVersion, selectedModel)
+        }
     }
 }
