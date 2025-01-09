@@ -77,8 +77,8 @@ class MainActivity : AppCompatActivity() {
         xctrackName = findViewById(R.id.xctrack_name)
         xcguideName = findViewById(R.id.xcguide_name)
         air3managerName = findViewById(R.id.air3manager_name)
-        closeButton = findViewById(R.id.close_button) as Button
-        upgradeButton = findViewById(R.id.upgrade_button) as Button
+        closeButton = findViewById(R.id.close_button)
+        upgradeButton = findViewById(R.id.upgrade_button)
         xctrackVersion = findViewById(R.id.xctrack_version)
         xcguideVersion = findViewById(R.id.xcguide_version)
         air3managerVersion = findViewById(R.id.air3manager_version)
@@ -110,6 +110,21 @@ class MainActivity : AppCompatActivity() {
         acquireWakeLock()
 
         registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+
+        // XCTrack Checkbox Listener
+        xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            xctrackApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+        // XCGuide Checkbox Listener
+        xcguideCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            xcguideApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+        // AIR3Manager Checkbox Listener
+        air3managerCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            air3managerApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
     }
 
     private fun extractApkName(apkPath: String): String {
