@@ -12,6 +12,8 @@ import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log // Add this import statement
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
@@ -99,6 +101,29 @@ class MainActivity : AppCompatActivity() {
         registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                // Handle settings item click
+                val intent = Intent(this, SettingsActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            R.id.action_about -> {
+                // Handle about item click
+                val intent = Intent(this, AboutActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         // Release the wake lock
@@ -155,8 +180,9 @@ class MainActivity : AppCompatActivity() {
     private fun setActionBarTitleWithSelectedModel() {
         lifecycleScope.launch {
             dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
-                this@MainActivity.selectedModel = selectedModel ?: getDeviceName()
-                supportActionBar?.title = "AIR³ Upgrader - $this@MainActivity.selectedModel"
+                val currentSelectedModel = selectedModel ?: getDeviceName()
+                val androidVersion = Build.VERSION.RELEASE // Get the Android version
+                supportActionBar?.title = "$currentSelectedModel - Android $androidVersion" // Set the title correctly
             }
         }
     }
