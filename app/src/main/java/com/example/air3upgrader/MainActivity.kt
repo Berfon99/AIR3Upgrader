@@ -177,7 +177,32 @@ class MainActivity : AppCompatActivity() {
             AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, AppUtils.getAppVersion(this@MainActivity, xcguidePackageName), finalSelectedModel)
             AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, AppUtils.getAppVersion(this@MainActivity, air3managerPackageName), finalSelectedModel)
         }
+        // Update checkbox states after installation
+        updateCheckboxStates()
         startNextDownload()
+    }
+
+    private fun updateCheckboxStates() {
+        lifecycleScope.launch {
+            val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
+            val finalSelectedModel = selectedModel ?: getDeviceName()
+            appInfos.forEach { appInfo ->
+                when (appInfo.packageName) {
+                    xctrackPackageName -> {
+                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, xctrackPackageName)
+                        UiUpdater.updateCheckboxState(xctrackPackageName, xctrackCheckbox, installedVersion, appInfo.latestVersion)
+                    }
+                    xcguidePackageName -> {
+                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, xcguidePackageName)
+                        UiUpdater.updateCheckboxState(xcguidePackageName, xcguideCheckbox, installedVersion, appInfo.latestVersion)
+                    }
+                    air3managerPackageName -> {
+                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, air3managerPackageName)
+                        UiUpdater.updateCheckboxState(air3managerPackageName, air3managerCheckbox, installedVersion, appInfo.latestVersion)
+                    }
+                }
+            }
+        }
     }
 
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
