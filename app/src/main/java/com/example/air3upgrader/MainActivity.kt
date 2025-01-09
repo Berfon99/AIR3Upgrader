@@ -20,10 +20,13 @@ import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -280,6 +283,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleUpgradeButtonClick() {
+        // Display a Toast message
+        Toast.makeText(this, "APK download started...", Toast.LENGTH_SHORT).show()
         val appsToUpgrade = mutableListOf<VersionChecker.AppInfo>()
         if (xctrackCheckbox.isChecked) {
             appInfos.find { it.packageName == xctrackPackageName }?.let { appsToUpgrade.add(it) }
@@ -358,12 +363,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkAppInstallation(packageName: String, nameTextView: TextView, versionTextView: TextView?, selectedModel: String) {
         val installedVersion = AppUtils.getAppVersion(this, packageName)
-        if (versionTextView != null) {
-            versionTextView.text = if (installedVersion != "N/A") "Installed: $installedVersion" else "Not installed"
+        val displayedVersion = if (packageName == air3managerPackageName && installedVersion != "N/A") {
+            val parts = installedVersion.split(".")
+            if (parts.size >= 3) {
+                val major = parts[0]
+                val minor = parts[1]
+                "$major.$minor"
+            } else {
+                installedVersion
+            }
+        } else {
+            installedVersion
         }
-        lifecycleScope.launch {
+        if (versionTextView != null) {
+            versionTextView.text = if (displayedVersion != "N/A") "Installed: $displayedVersion" else "Not installed"
+        }
+        CoroutineScope(Dispatchers.Main).launch {
             try {
-                AppUtils.setAppBackgroundColor(this@MainActivity, packageName, nameTextView, installedVersion, selectedModel)
+                AppUtils.setAppBackgroundColor(this@MainActivity, packageName, nameTextView, displayedVersion, selectedModel)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
