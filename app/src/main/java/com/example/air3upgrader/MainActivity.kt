@@ -25,7 +25,9 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
+import kotlinx.coroutines.flow.firstOrNull
 
 class MainActivity : AppCompatActivity() {
 
@@ -137,6 +139,11 @@ class MainActivity : AppCompatActivity() {
         checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel)
         checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel)
         checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel)
+        lifecycleScope.launch {
+            AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, AppUtils.getAppVersion(this@MainActivity, xctrackPackageName), selectedModel)
+            AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, AppUtils.getAppVersion(this@MainActivity, xcguidePackageName), selectedModel)
+            AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, AppUtils.getAppVersion(this@MainActivity, air3managerPackageName), selectedModel)
+        }
     }
 
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
@@ -193,54 +200,29 @@ class MainActivity : AppCompatActivity() {
 
     private fun getLatestVersionFromServer() {
         lifecycleScope.launch {
-            dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
-                this@MainActivity.selectedModel = selectedModel ?: getDeviceName()
-                try {
-                    appInfos = versionChecker.getLatestVersionFromServer(this@MainActivity.selectedModel)
-
-                    // Update UI for XCTrack
-                    val xctrackAppInfo = appInfos.find { it.packageName == xctrackPackageName }
-                    xctrackAppInfo?.let {
-                        UiUpdater.updateAppInfo(
-                            context = this@MainActivity,
-                            packageName = it.packageName,
-                            nameTextView = xctrackName,
-                            versionTextView = xctrackServerVersion,
-                            versionName = it.latestVersion,
-                            versionCode = null, // `AppInfo` does not provide versionCode
-                            selectedModel = this@MainActivity.selectedModel // Pass selectedModel
-                        )
+            val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
+            val finalSelectedModel = selectedModel ?: getDeviceName()
+            appInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
+            appInfos.forEach { appInfo ->
+                when (appInfo.packageName) {
+                    xctrackPackageName -> {
+                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, xctrackPackageName)
+                        UiUpdater.updateAppInfo(this@MainActivity, xctrackPackageName, xctrackName, xctrackServerVersion, appInfo.latestVersion, null, finalSelectedModel)
+                        AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, installedVersion, finalSelectedModel)
+                        UiUpdater.updateCheckboxState(xctrackPackageName, xctrackCheckbox, installedVersion, appInfo.latestVersion)
                     }
-
-                    // Update UI for XCGuide
-                    val xcguideAppInfo = appInfos.find { it.packageName == xcguidePackageName }
-                    xcguideAppInfo?.let {
-                        UiUpdater.updateAppInfo(
-                            context = this@MainActivity,
-                            packageName = it.packageName,
-                            nameTextView = xcguideName,
-                            versionTextView = xcguideServerVersion,
-                            versionName = it.latestVersion,
-                            versionCode = null,
-                            selectedModel = this@MainActivity.selectedModel // Pass selectedModel
-                        )
+                    xcguidePackageName -> {
+                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, xcguidePackageName)
+                        UiUpdater.updateAppInfo(this@MainActivity, xcguidePackageName, xcguideName, xcguideServerVersion, appInfo.latestVersion, null, finalSelectedModel)
+                        AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, installedVersion, finalSelectedModel)
+                        UiUpdater.updateCheckboxState(xcguidePackageName, xcguideCheckbox, installedVersion, appInfo.latestVersion)
                     }
-
-                    // Update UI for AIR3Manager
-                    val air3managerAppInfo = appInfos.find { it.packageName == air3managerPackageName }
-                    air3managerAppInfo?.let {
-                        UiUpdater.updateAppInfo(
-                            context = this@MainActivity,
-                            packageName = it.packageName,
-                            nameTextView = air3managerName,
-                            versionTextView = air3managerServerVersion,
-                            versionName = it.latestVersion,
-                            versionCode = null,
-                            selectedModel = this@MainActivity.selectedModel // Pass selectedModel
-                        )
+                    air3managerPackageName -> {
+                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, air3managerPackageName)
+                        UiUpdater.updateAppInfo(this@MainActivity, air3managerPackageName, air3managerName, air3managerServerVersion, appInfo.latestVersion, null, finalSelectedModel)
+                        AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, installedVersion, finalSelectedModel)
+                        UiUpdater.updateCheckboxState(air3managerPackageName, air3managerCheckbox, installedVersion, appInfo.latestVersion)
                     }
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "Error getting latest version from server", e)
                 }
             }
         }
