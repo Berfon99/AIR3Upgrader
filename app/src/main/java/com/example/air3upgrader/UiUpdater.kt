@@ -26,11 +26,7 @@ object UiUpdater {
             }
         }
         if (versionTextView != null) {
-            if (packageName == "com.xc.r3") {
-                versionTextView.text = "v$versionName ($versionCode)"
-            } else {
-                versionTextView.text = versionName ?: "N/A"
-            }
+            versionTextView.text = "Server: ${versionName ?: "N/A"}"
         }
     }
 

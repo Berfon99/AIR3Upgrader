@@ -17,8 +17,29 @@ object AppUtils {
             if (fullVersionName != null) {
                 when (packageName) {
                     "org.xcontest.XCTrack" -> {
-                        // Remove everything after the first hyphen
-                        fullVersionName.substringBefore("-")
+                        // Split by . and - and take the first 5 parts
+                        val parts = fullVersionName.split(".", "-").take(5)
+                        // Reconstruct the version string with the original separators
+                        val reconstructedVersion = buildString {
+                            var partIndex = 0
+                            var charIndex = 0
+                            while (partIndex < parts.size && charIndex < fullVersionName.length) {
+                                val currentPart = parts[partIndex]
+                                append(currentPart)
+                                charIndex += currentPart.length
+                                partIndex++
+                                if (partIndex < parts.size) {
+                                    while (charIndex < fullVersionName.length && fullVersionName[charIndex] != '.' && fullVersionName[charIndex] != '-') {
+                                        charIndex++
+                                    }
+                                    if (charIndex < fullVersionName.length) {
+                                        append(fullVersionName[charIndex])
+                                        charIndex++
+                                    }
+                                }
+                            }
+                        }
+                        reconstructedVersion
                     }
                     "indysoft.xc_guide" -> {
                         // Remove everything before the last dot
