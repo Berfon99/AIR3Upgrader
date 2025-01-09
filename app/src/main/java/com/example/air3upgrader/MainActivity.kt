@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private var appInfos: List<VersionChecker.AppInfo> = emptyList()
     private var downloadQueue: MutableList<VersionChecker.AppInfo> = mutableListOf()
     private var downloadIdToAppInfo: MutableMap<Long, VersionChecker.AppInfo> = mutableMapOf()
+    private var isFirstDownload = true
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -334,6 +335,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun startNextDownload() {
         if (downloadQueue.isNotEmpty()) {
+            if (!isFirstDownload) {
+                // Display a Toast message
+                Toast.makeText(this, "Wait for next download...", Toast.LENGTH_SHORT).show()
+            } else {
+                isFirstDownload = false
+            }
             val appInfo = downloadQueue.removeAt(0)
             val fullApkUrl = "https://ftp.fly-air3.com${appInfo.apkPath}"
             downloadAndInstallApk(fullApkUrl, appInfo)
