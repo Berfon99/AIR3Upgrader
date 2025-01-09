@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 object AppUtils {
@@ -59,7 +60,7 @@ object AppUtils {
         }
     }
 
-    suspend fun setAppBackgroundColor(context: Context, packageName: String, nameTextView: TextView, installedVersion: String?, selectedModel: String?) {
+    fun setAppBackgroundColor(context: Context, packageName: String, nameTextView: TextView, installedVersion: String?, selectedModel: String?) {
         val serverVersion = getServerVersion(packageName, selectedModel)
         if (serverVersion != null && installedVersion != null) {
             if (VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)) {
@@ -72,8 +73,14 @@ object AppUtils {
         }
     }
 
-    private suspend fun getServerVersion(packageName: String, selectedModel: String?): String? = withContext(Dispatchers.IO) {
-        val appInfos = VersionChecker().getLatestVersionFromServer(selectedModel ?: "")
-        return@withContext appInfos.find { it.packageName == packageName }?.latestVersion
+    private fun getServerVersion(packageName: String, selectedModel: String?): String? {
+        var result: String? = null
+        runBlocking {
+            result = withContext(Dispatchers.IO) {
+                val appInfos = VersionChecker().getLatestVersionFromServer(selectedModel ?: "")
+                appInfos.find { it.packageName == packageName }?.latestVersion
+            }
+        }
+        return result
     }
 }

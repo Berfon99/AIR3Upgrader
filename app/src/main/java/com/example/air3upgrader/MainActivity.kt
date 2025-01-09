@@ -14,6 +14,7 @@ import android.provider.Settings
 import android.util.Log // Add this import statement
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
@@ -46,6 +47,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xcguideCheckbox: CheckBox
     private lateinit var air3managerCheckbox: CheckBox
     private lateinit var dataStoreManager: DataStoreManager
+    // ... other code ...
+    private lateinit var xctrackApkName: TextView
+    private lateinit var xcguideApkName: TextView
+    private lateinit var air3managerApkName: TextView
+
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
     private var appInfos: List<VersionChecker.AppInfo> = emptyList()
@@ -71,8 +77,8 @@ class MainActivity : AppCompatActivity() {
         xctrackName = findViewById(R.id.xctrack_name)
         xcguideName = findViewById(R.id.xcguide_name)
         air3managerName = findViewById(R.id.air3manager_name)
-        closeButton = findViewById(R.id.close_button)
-        upgradeButton = findViewById(R.id.upgrade_button)
+        closeButton = findViewById(R.id.close_button) as Button
+        upgradeButton = findViewById(R.id.upgrade_button) as Button
         xctrackVersion = findViewById(R.id.xctrack_version)
         xcguideVersion = findViewById(R.id.xcguide_version)
         air3managerVersion = findViewById(R.id.air3manager_version)
@@ -82,6 +88,9 @@ class MainActivity : AppCompatActivity() {
         xctrackCheckbox = findViewById(R.id.xctrack_checkbox)
         xcguideCheckbox = findViewById(R.id.xcguide_checkbox)
         air3managerCheckbox = findViewById(R.id.air3manager_checkbox)
+        xctrackApkName = findViewById(R.id.xctrack_apk_name)
+        xcguideApkName = findViewById(R.id.xcguide_apk_name)
+        air3managerApkName = findViewById(R.id.air3manager_apk_name)
 
         // Set onClick listener for the close button
         closeButton.setOnClickListener {
@@ -101,6 +110,10 @@ class MainActivity : AppCompatActivity() {
         acquireWakeLock()
 
         registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+    }
+
+    private fun extractApkName(apkPath: String): String {
+        return apkPath.substringAfterLast("/")
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -210,20 +223,41 @@ class MainActivity : AppCompatActivity() {
                     xctrackPackageName -> {
                         val installedVersion = AppUtils.getAppVersion(this@MainActivity, xctrackPackageName)
                         UiUpdater.updateAppInfo(this@MainActivity, xctrackPackageName, xctrackName, xctrackServerVersion, appInfo.latestVersion, null, finalSelectedModel)
-                        AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, installedVersion, finalSelectedModel)
+                        launch { AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, installedVersion, finalSelectedModel) }
                         UiUpdater.updateCheckboxState(xctrackPackageName, xctrackCheckbox, installedVersion, appInfo.latestVersion)
+                        // Extract and set the APK name
+                        val apkName = extractApkName(appInfo.apkPath)
+                        xctrackApkName.text = apkName
+                        // Set the visibility of the TextView
+                        xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
+                            xctrackApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+                        }
                     }
                     xcguidePackageName -> {
                         val installedVersion = AppUtils.getAppVersion(this@MainActivity, xcguidePackageName)
                         UiUpdater.updateAppInfo(this@MainActivity, xcguidePackageName, xcguideName, xcguideServerVersion, appInfo.latestVersion, null, finalSelectedModel)
-                        AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, installedVersion, finalSelectedModel)
+                        launch { AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, installedVersion, finalSelectedModel) }
                         UiUpdater.updateCheckboxState(xcguidePackageName, xcguideCheckbox, installedVersion, appInfo.latestVersion)
+                        // Extract and set the APK name
+                        val apkName = extractApkName(appInfo.apkPath)
+                        xcguideApkName.text = apkName
+                        // Set the visibility of the TextView
+                        xcguideCheckbox.setOnCheckedChangeListener { _, isChecked ->
+                            xcguideApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+                        }
                     }
                     air3managerPackageName -> {
                         val installedVersion = AppUtils.getAppVersion(this@MainActivity, air3managerPackageName)
                         UiUpdater.updateAppInfo(this@MainActivity, air3managerPackageName, air3managerName, air3managerServerVersion, appInfo.latestVersion, null, finalSelectedModel)
-                        AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, installedVersion, finalSelectedModel)
+                        launch { AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, installedVersion, finalSelectedModel) }
                         UiUpdater.updateCheckboxState(air3managerPackageName, air3managerCheckbox, installedVersion, appInfo.latestVersion)
+                        // Extract and set the APK name
+                        val apkName = extractApkName(appInfo.apkPath)
+                        air3managerApkName.text = apkName
+                        // Set the visibility of the TextView
+                        air3managerCheckbox.setOnCheckedChangeListener { _, isChecked ->
+                            air3managerApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+                        }
                     }
                 }
             }
