@@ -87,7 +87,11 @@ class SettingsActivity : AppCompatActivity() {
                 Log.i("ModelSpinner", "Selected model: $selectedModel")
                 // Save the selected model
                 lifecycleScope.launch {
-                    dataStoreManager.saveSelectedModel(selectedModel)
+                    try {
+                        dataStoreManager.saveSelectedModel(selectedModel)
+                    } catch (e: Exception) {
+                        Log.e("SettingsActivity", "Error saving selected model", e)
+                    }
                 }
             }
 

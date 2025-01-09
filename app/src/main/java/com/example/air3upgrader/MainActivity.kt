@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
+import android.util.Log // Add this import statement
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
@@ -168,16 +169,53 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
                 this@MainActivity.selectedModel = selectedModel ?: getDeviceName()
-                appInfos = versionChecker.getLatestVersionFromServer(this@MainActivity.selectedModel)
-                val xctrackAppInfo = appInfos.find { it.packageName == xctrackPackageName }
-                val xcguideAppInfo = appInfos.find { it.packageName == xcguidePackageName }
-                val air3managerAppInfo = appInfos.find { it.packageName == air3managerPackageName }
-                xctrackAppInfo?.let { UiUpdater.updateAppInfo(it, xctrackServerVersion) }
-                xcguideAppInfo?.let { UiUpdater.updateAppInfo(it, xcguideServerVersion) }
-                air3managerAppInfo?.let { UiUpdater.updateAppInfo(it, air3managerServerVersion) }
-                xctrackName.text = xctrackAppInfo?.name ?: "XCTrack"
-                xcguideName.text = xcguideAppInfo?.name ?: "XC Guide"
-                air3managerName.text = air3managerAppInfo?.name ?: "AIR³ Manager"
+                try {
+                    appInfos = versionChecker.getLatestVersionFromServer(this@MainActivity.selectedModel)
+
+                    // Update UI for XCTrack
+                    val xctrackAppInfo = appInfos.find { it.packageName == xctrackPackageName }
+                    xctrackAppInfo?.let {
+                        UiUpdater.updateAppInfo(
+                            context = this@MainActivity,
+                            packageName = it.packageName,
+                            nameTextView = xctrackName,
+                            versionTextView = xctrackServerVersion,
+                            versionName = it.latestVersion,
+                            versionCode = null, // `AppInfo` does not provide versionCode
+                            selectedModel = this@MainActivity.selectedModel // Pass selectedModel
+                        )
+                    }
+
+                    // Update UI for XCGuide
+                    val xcguideAppInfo = appInfos.find { it.packageName == xcguidePackageName }
+                    xcguideAppInfo?.let {
+                        UiUpdater.updateAppInfo(
+                            context = this@MainActivity,
+                            packageName = it.packageName,
+                            nameTextView = xcguideName,
+                            versionTextView = xcguideServerVersion,
+                            versionName = it.latestVersion,
+                            versionCode = null,
+                            selectedModel = this@MainActivity.selectedModel // Pass selectedModel
+                        )
+                    }
+
+                    // Update UI for AIR3Manager
+                    val air3managerAppInfo = appInfos.find { it.packageName == air3managerPackageName }
+                    air3managerAppInfo?.let {
+                        UiUpdater.updateAppInfo(
+                            context = this@MainActivity,
+                            packageName = it.packageName,
+                            nameTextView = air3managerName,
+                            versionTextView = air3managerServerVersion,
+                            versionName = it.latestVersion,
+                            versionCode = null,
+                            selectedModel = this@MainActivity.selectedModel // Pass selectedModel
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error getting latest version from server", e)
+                }
             }
         }
     }
@@ -265,7 +303,11 @@ class MainActivity : AppCompatActivity() {
             versionTextView.text = if (installedVersion != "N/A") "Installed: $installedVersion" else "Not installed"
         }
         lifecycleScope.launch {
-            AppUtils.setAppBackgroundColor(this@MainActivity, packageName, nameTextView, installedVersion, selectedModel)
+            try {
+                AppUtils.setAppBackgroundColor(this@MainActivity, packageName, nameTextView, installedVersion, selectedModel)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }

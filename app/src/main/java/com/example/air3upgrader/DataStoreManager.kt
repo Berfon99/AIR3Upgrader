@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 
 class DataStoreManager(private val context: Context) {
@@ -30,8 +31,13 @@ class DataStoreManager(private val context: Context) {
 
     // Get the selected model
     fun getSelectedModel(): Flow<String?> {
-        return context.dataStore.data.map { preferences ->
-            preferences[SELECTED_MODEL]
-        }
+        return context.dataStore.data
+            .catch { e ->
+                // Handle the exception
+                e.printStackTrace()
+            }
+            .map { preferences ->
+                preferences[SELECTED_MODEL]
+            }
     }
 }

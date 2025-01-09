@@ -23,9 +23,14 @@ class VersionChecker {
     )
 
     suspend fun getLatestVersionFromServer(selectedModel: String): List<AppInfo> = withContext(Dispatchers.IO) {
-        val jsonString = downloadJson("https://ftp.fly-air3.com/Latest_Software_Download/versions.json")
-        val appInfos = parseJson(jsonString)
-        filterAppInfo(appInfos, selectedModel)
+        try {
+            val jsonString = downloadJson("https://ftp.fly-air3.com/Latest_Software_Download/versions.json")
+            val appInfos = parseJson(jsonString)
+            filterAppInfo(appInfos, selectedModel)
+        } catch (e: Exception) {
+            Log.e("VersionChecker", "Error getting latest version from server", e)
+            emptyList()
+        }
     }
 
     private fun filterAppInfo(appInfos: List<AppInfo>, selectedModel: String): List<AppInfo> {

@@ -14,11 +14,16 @@ object UiUpdater {
         nameTextView: TextView,
         versionTextView: TextView?,
         versionName: String?,
-        versionCode: Long?
+        versionCode: Long?,
+        selectedModel: String? // Add selectedModel as a parameter
     ) {
         nameTextView.text = AppManager.getAppName(context, packageName)
         CoroutineScope(Dispatchers.Main).launch {
-            AppUtils.setAppBackgroundColor(context, packageName, nameTextView, versionName ?: "N/A")
+            try {
+                AppUtils.setAppBackgroundColor(context, packageName, nameTextView, versionName, selectedModel) // Pass selectedModel
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
         if (versionTextView != null) {
             if (packageName == "com.xc.r3") {
