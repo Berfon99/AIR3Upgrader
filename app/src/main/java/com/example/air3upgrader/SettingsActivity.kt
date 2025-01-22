@@ -11,6 +11,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.air3upgrader.R.string.* // Import string resources
 import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
@@ -55,7 +56,7 @@ class SettingsActivity : AppCompatActivity() {
         modelDisplayMap = mutableMapOf()
         for (model in modelList) {
             val displayString = if (model == deviceName) {
-                "Device name: $deviceName"
+                getString(device_name) + " " + deviceName // Use string resource
             } else {
                 model
             }
@@ -104,25 +105,26 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun getDeviceName(): String {
-        return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: "Unknown Device"
+        return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
+            ?: getString(unknown_device) // Use string resource
     }
 
     private fun getDeviceInfo() {
         val deviceInfo = StringBuilder()
         // Device
-        deviceInfo.append("Device: ${Build.DEVICE}\n")
+        deviceInfo.append(getString(device) + " " + Build.DEVICE + "\n") // Use string resource
         // Product
-        deviceInfo.append("Product: ${Build.PRODUCT}\n")
+        deviceInfo.append(getString(product) + " " + Build.PRODUCT + "\n") // Use string resource
         // Model
-        deviceInfo.append("Model: ${Build.MODEL}\n")
+        deviceInfo.append(getString(model) + " " + Build.MODEL + "\n") // Use string resource
         // Brand
-        deviceInfo.append("Brand: ${Build.BRAND}\n")
+        deviceInfo.append(getString(brand) + " " + Build.BRAND + "\n") // Use string resource
         // Manufacturer
-        deviceInfo.append("Manufacturer: ${Build.MANUFACTURER}\n")
+        deviceInfo.append(getString(manufacturer) + " " + Build.MANUFACTURER + "\n") // Use string resource
         // Android Version
-        deviceInfo.append("Android Version: ${Build.VERSION.RELEASE}\n")
+        deviceInfo.append(getString(android_version) + " " + Build.VERSION.RELEASE + "\n") // Use string resource
         // SDK Version
-        deviceInfo.append("SDK Version: ${Build.VERSION.SDK_INT}\n")
+        deviceInfo.append(getString(sdk_version) + " " + Build.VERSION.SDK_INT + "\n") // Use string resource
 
         // Display the information in the TextView
         deviceInfoTextView.text = deviceInfo.toString()

@@ -16,8 +16,8 @@ object AppManager {
             when (packageName) {
                 "org.xcontest.XCTrack" -> "XCTrack"
                 "indysoft.xc_guide" -> "XC Guide"
-                "com.xc.r3" -> "AIR³ Manager"
-                else -> "Unknown App"
+                "com.xc.r3" -> context.getString(R.string.app_name) // Use string resource
+                else -> context.getString(R.string.unknown_app) // Use string resource
             }
         }
     }

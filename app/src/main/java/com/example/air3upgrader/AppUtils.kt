@@ -53,10 +53,10 @@ object AppUtils {
                     else -> fullVersionName // Return the full version for other apps
                 }
             } else {
-                "N/A" // Handle the case where versionName is null
+                context.getString(R.string.na) // Use string resource
             }
         } catch (e: PackageManager.NameNotFoundException) {
-            "N/A"
+            context.getString(R.string.na) // Use string resource
         }
     }
 

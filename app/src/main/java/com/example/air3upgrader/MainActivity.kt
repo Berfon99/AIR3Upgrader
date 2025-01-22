@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -20,11 +19,11 @@ import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.launch
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
+import com.example.air3upgrader.R.string.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -313,7 +312,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleUpgradeButtonClick() {
         // Display a Toast message
-        Toast.makeText(this, "APK download started...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(apk_download_started), Toast.LENGTH_SHORT).show() // Use string resource
         val appsToUpgrade = mutableListOf<VersionChecker.AppInfo>()
         if (xctrackCheckbox.isChecked) {
             appInfos.find { it.packageName == xctrackPackageName }?.let { appsToUpgrade.add(it) }
@@ -326,7 +325,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (appsToUpgrade.isEmpty()) {
-            Toast.makeText(this, "No apps selected for upgrade", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(no_apps_selected_for_upgrade), Toast.LENGTH_SHORT).show() // Use string resource
             return
         }
         downloadQueue.addAll(appsToUpgrade)
@@ -337,7 +336,7 @@ class MainActivity : AppCompatActivity() {
         if (downloadQueue.isNotEmpty()) {
             if (!isFirstDownload) {
                 // Display a Toast message
-                Toast.makeText(this, "Wait for next download...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(wait_for_next_download), Toast.LENGTH_SHORT).show() // Use string resource
             } else {
                 isFirstDownload = false
             }
@@ -354,8 +353,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val request = DownloadManager.Request(Uri.parse(apkUrl))
-            .setTitle("Downloading ${appInfo.packageName}")
-            .setDescription("Downloading the latest version of ${appInfo.packageName}")
+            .setTitle(getString(downloading) + " " + appInfo.packageName) // Use string resource
+            .setDescription(getString(downloading_latest_version_of) + " " + appInfo.packageName) // Use string resourc
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "${appInfo.packageName}.apk")
 
@@ -382,16 +381,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPermissionDialog() {
         val builder = AlertDialog.Builder(this)
-        builder.setTitle("Install Unknown Apps Permission")
-            .setMessage("To install apps from unknown sources, you need to allow this permission in your device settings.")
-            .setPositiveButton("Settings") { _, _ ->
+        builder.setTitle(getString(install_unknown_apps_permission))
+            .setMessage(getString(to_install_apps_from_unknown_sources_you_need_to_allow_this_permission_in_your_device_settings)) // Use string resource
+            .setPositiveButton(getString(settings)) { _, _ ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
                     intent.data = Uri.parse("package:$packageName")
                     permissionLauncher.launch(intent)
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(cancel), null)
             .show()
     }
 
@@ -399,7 +398,7 @@ class MainActivity : AppCompatActivity() {
         if (checkInstallPermission()) {
             startNextDownload()
         } else {
-            Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(permission_denied), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -418,7 +417,7 @@ class MainActivity : AppCompatActivity() {
             installedVersion
         }
         if (versionTextView != null) {
-            versionTextView.text = if (displayedVersion != "N/A") "Installed: $displayedVersion" else "Not installed"
+            versionTextView.text = if (displayedVersion != getString(na)) getString(installed) + " " + displayedVersion else getString(not_installed)
         }
         CoroutineScope(Dispatchers.Main).launch {
             try {

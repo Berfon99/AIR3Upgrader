@@ -3,6 +3,7 @@ package com.example.air3upgrader
 import android.content.Context
 import android.widget.CheckBox
 import android.widget.TextView
+import com.example.air3upgrader.R.string.* // Import string resources
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,7 +27,7 @@ object UiUpdater {
             }
         }
         if (versionTextView != null) {
-            versionTextView.text = "Server: ${versionName ?: "N/A"}"
+            versionTextView.text = context.getString(server) + " " + (versionName ?: context.getString(na)) // Use string resources
         }
     }
 
