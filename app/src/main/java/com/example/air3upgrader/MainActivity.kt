@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -112,7 +113,11 @@ class MainActivity : AppCompatActivity() {
         // Keep the screen on
         acquireWakeLock()
 
-        registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        registerReceiver(
+            onDownloadComplete,
+            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+            RECEIVER_NOT_EXPORTED
+        )
 
         // XCTrack Checkbox Listener
         xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
@@ -216,13 +221,19 @@ class MainActivity : AppCompatActivity() {
                 query.setFilterById(id)
                 val cursor = dm.query(query)
                 if (cursor.moveToFirst()) {
-                    val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(columnIndex)) {
-                        val uriString = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI))
+                    val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                    if (columnIndex != -1) { // Check if the column exists
+                        val uriString = cursor.getString(columnIndex)
                         val file = File(Uri.parse(uriString).path!!)
                         installApk(file)
+                    } else {
+                        // Handle the case where the column is not found
+                        Log.e("MainActivity", "COLUMN_LOCAL_URI not found in cursor")
+                        // You might want to display an error message to the user here
+                        Toast.makeText(context, getString(download_failed), Toast.LENGTH_SHORT).show()
                     }
                 }
+                cursor.close() // Close the cursor to release resources
             }
         }
     }
