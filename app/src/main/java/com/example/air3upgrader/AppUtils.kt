@@ -10,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 object AppUtils {
+
     fun getAppVersion(context: Context, packageName: String): String {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
@@ -47,8 +48,11 @@ object AppUtils {
                         fullVersionName.substringAfterLast(".")
                     }
                     "com.xc.r3" -> {
-                        // Remove everything after the last dot
-                        fullVersionName.substringBeforeLast(".")
+                        // Extract major and minor version for AIR³ Manager using regex
+                        val matchResult = Regex("(\\d+)\\.(\\d+)").find(fullVersionName)
+                        matchResult?.let {
+                            "${it.groupValues[1]}.${it.groupValues[2]}"
+                        } ?: fullVersionName // Return full version if regex fails
                     }
                     else -> fullVersionName // Return the full version for other apps
                 }
