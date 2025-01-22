@@ -54,5 +54,5 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("androidx.glance:glance-appwidget:1.0.0-alpha05")
-
+    implementation("com.google.android.material:material:1.12.0")
 }

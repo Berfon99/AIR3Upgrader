@@ -61,7 +61,7 @@ object AppUtils {
     }
 
     fun setAppBackgroundColor(context: Context, packageName: String, nameTextView: TextView, installedVersion: String?, selectedModel: String?) {
-        val serverVersion = getServerVersion(packageName, selectedModel)
+        val serverVersion = getServerVersion(context, packageName, selectedModel) // Pass context here
         if (serverVersion != null && installedVersion != null) {
             if (VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)) {
                 nameTextView.setBackgroundColor(ContextCompat.getColor(context, R.color.update_available))
@@ -73,12 +73,12 @@ object AppUtils {
         }
     }
 
-    private fun getServerVersion(packageName: String, selectedModel: String?): String? {
+    private fun getServerVersion(context: Context, packageName: String, selectedModel: String?): String? { // Add context parameter
         var result: String? = null
         runBlocking {
             result = withContext(Dispatchers.IO) {
-                val appInfos = VersionChecker().getLatestVersionFromServer(selectedModel ?: "")
-                appInfos.find { it.`package` == packageName }?.latestVersion // Use it.package
+                val appInfos = VersionChecker(context).getLatestVersionFromServer(selectedModel ?: "") // Pass context to VersionChecker
+                appInfos.find { it.`package` == packageName }?.latestVersion
             }
         }
         return result

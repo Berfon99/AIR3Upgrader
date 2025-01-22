@@ -38,6 +38,8 @@ import android.widget.ProgressBar
 import android.os.Handler
 import android.os.Looper
 import androidx.glance.visibility
+import android.content.ActivityNotFoundException
+import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
 
@@ -59,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
+    private lateinit var contentObserver: ContentObserver
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
@@ -72,7 +75,7 @@ class MainActivity : AppCompatActivity() {
     private val xcguidePackageName = "indysoft.xc_guide"
     private val air3managerPackageName = "com.xc.r3"
 
-    private val versionChecker = VersionChecker()
+    private val versionChecker by lazy { VersionChecker(this) }
     private var downloadID: Long = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -202,15 +205,30 @@ class MainActivity : AppCompatActivity() {
                 when (appInfo.name) {
                     xctrackPackageName -> {
                         val installedVersion = AppUtils.getAppVersion(this@MainActivity, xctrackPackageName)
-                        UiUpdater.updateCheckboxState(xctrackPackageName, xctrackCheckbox, installedVersion, appInfo.latestVersion)
+                        UiUpdater.updateCheckboxState(this@MainActivity, appInfo, when (appInfo.`package`) {
+                            xctrackPackageName -> xctrackCheckbox
+                            xcguidePackageName -> xcguideCheckbox
+                            air3managerPackageName -> air3managerCheckbox
+                            else -> null // Handle unknown package
+                        }!!) // Non-null assertion since we know it's one of the three
                     }
                     xcguidePackageName -> {
                         val installedVersion = AppUtils.getAppVersion(this@MainActivity, xcguidePackageName)
-                        UiUpdater.updateCheckboxState(xcguidePackageName, xcguideCheckbox, installedVersion, appInfo.latestVersion)
+                        UiUpdater.updateCheckboxState(this@MainActivity, appInfo, when (appInfo.`package`) {
+                            xctrackPackageName -> xctrackCheckbox
+                            xcguidePackageName -> xcguideCheckbox
+                            air3managerPackageName -> air3managerCheckbox
+                            else -> null // Handle unknown package
+                        }!!) // Non-null assertion since we know it's one of the three
                     }
                     air3managerPackageName -> {
                         val installedVersion = AppUtils.getAppVersion(this@MainActivity, air3managerPackageName)
-                        UiUpdater.updateCheckboxState(air3managerPackageName, air3managerCheckbox, installedVersion, appInfo.latestVersion)
+                        UiUpdater.updateCheckboxState(this@MainActivity, appInfo, when (appInfo.`package`) {
+                            xctrackPackageName -> xctrackCheckbox
+                            xcguidePackageName -> xcguideCheckbox
+                            air3managerPackageName -> air3managerCheckbox
+                            else -> null // Handle unknown package
+                        }!!) // Non-null assertion since we know it's one of the three
                     }
                 }
             }
@@ -221,9 +239,11 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
             val appInfo = downloadIdToAppInfo[id]
+
             // Inside onDownloadComplete's onReceive method, after calling installApk:
             val progressBar = findViewById<ProgressBar>(R.id.downloadProgressBar)
-            progressBar.visibility = View.GONE
+            progressBar.visibility = View.GONE // Hide the progress bar
+
             if (appInfo != null) {
                 downloadIdToAppInfo.remove(id)
                 val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -245,6 +265,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 cursor.close() // Close the cursor to release resources
             }
+
+            // Unregister the ContentObserver
+            contentResolver.unregisterContentObserver(contentObserver)
         }
     }
 
@@ -281,20 +304,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getLatestVersionFromServer() {
-        lifecycleScope.launch(Dispatchers.IO) { // Use Dispatchers.IO for network operations
+        lifecycleScope.launch(Dispatchers.IO) {
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
             val finalSelectedModel = selectedModel ?: getDeviceName()
 
             try {
                 appInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
 
-                // Update UI on the main thread
                 withContext(Dispatchers.Main) {
                     appInfos.forEach { appInfo ->
                         when (appInfo.`package`) {
-                            xctrackPackageName -> updateAppInfo(appInfo, xctrackName, xctrackServerVersion, xctrackCheckbox, xctrackApkName)
-                            xcguidePackageName -> updateAppInfo(appInfo, xcguideName, xcguideServerVersion, xcguideCheckbox, xcguideApkName)
-                            air3managerPackageName -> updateAppInfo(appInfo, air3managerName, air3managerServerVersion, air3managerCheckbox, air3managerApkName)
+                            xctrackPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xctrackName, xctrackServerVersion, xctrackVersion, finalSelectedModel)
+                            xcguidePackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xcguideName, xcguideServerVersion, xcguideVersion, finalSelectedModel)
+                            air3managerPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, air3managerName, air3managerServerVersion, air3managerVersion, finalSelectedModel)
                         }
                     }
                 }
@@ -308,18 +330,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateAppInfo(appInfo: AppInfo, nameTextView: TextView, serverVersionTextView: TextView, checkBox: CheckBox, apkNameTextView: TextView) {
+    private fun updateAppInfo(appInfo: AppInfo, selectedModel: String?) {
         val installedVersion = AppUtils.getAppVersion(this@MainActivity, appInfo.`package`)
-        UiUpdater.updateAppInfo(this@MainActivity, appInfo.`package`, nameTextView, serverVersionTextView, appInfo.latestVersion, null, selectedModel)
-        lifecycleScope.launch {
-            AppUtils.setAppBackgroundColor(this@MainActivity, appInfo.`package`, nameTextView, installedVersion, selectedModel)
+
+        when (appInfo.`package`) {
+            xctrackPackageName -> UiUpdater.updateAppInfo(this, appInfo, xctrackName, xctrackServerVersion, xctrackVersion, selectedModel)
+            xcguidePackageName -> UiUpdater.updateAppInfo(this, appInfo, xcguideName, xcguideServerVersion, xcguideVersion, selectedModel)
+            air3managerPackageName -> UiUpdater.updateAppInfo(this, appInfo, air3managerName, air3managerServerVersion, air3managerVersion, selectedModel)
         }
-        UiUpdater.updateCheckboxState(appInfo.`package`, checkBox, installedVersion, appInfo.latestVersion)
-        val apkName = extractApkName(appInfo.apkPath)
-        apkNameTextView.text = apkName
-        checkBox.setOnCheckedChangeListener { _, isChecked ->
-            apkNameTextView.visibility = if (isChecked) View.VISIBLE else View.GONE
-        }
+        UiUpdater.updateCheckboxState(this, appInfo, when (appInfo.`package`) {
+            xctrackPackageName -> xctrackCheckbox
+            xcguidePackageName -> xcguideCheckbox
+            air3managerPackageName -> air3managerCheckbox
+            else -> null // Handle unknown package
+        }!!) // Non-null assertion since we know it's one of the three
     }
 
     private fun handleUpgradeButtonClick() {
@@ -390,7 +414,7 @@ class MainActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
 
         // Create a ContentObserver to monitor download progress
-        val contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
                 super.onChange(selfChange)
                 val query = DownloadManager.Query().setFilterById(downloadId)
@@ -419,11 +443,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun installApk(file: File) {
         runOnUiThread {
-            val uri = FileProvider.getUriForFile(this, "${this.packageName}.provider", file)
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.setDataAndType(uri, "application/vnd.android.package-archive")
-            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            startActivityForResult(intent, 0) // Use startActivityForResult
+            try {
+                val uri = FileProvider.getUriForFile(this, "${this.packageName}.provider", file)
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.setDataAndType(uri, "application/vnd.android.package-archive")
+                intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                startActivity(intent)
+            } catch (e: ActivityNotFoundException) {
+                Log.e("MainActivity", "No activity found to handle installation: ${e.message}", e)
+                // Display an error message to the user using a Snackbar or a dialog
+                Snackbar.make(findViewById(android.R.id.content), "No activity found to handle installation", Snackbar.LENGTH_LONG).show()
+            }
         }
     }
 

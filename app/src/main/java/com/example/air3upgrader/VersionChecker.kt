@@ -1,5 +1,6 @@
 package com.example.air3upgrader
 
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.google.gson.Gson
@@ -11,13 +12,20 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
-class VersionChecker {
+class VersionChecker(private val context: Context) { // Add context as a parameter
 
     suspend fun getLatestVersionFromServer(selectedModel: String): List<AppInfo> = withContext(Dispatchers.IO) {
         try {
             val jsonString = downloadJson("https://ftp.fly-air3.com/Latest_Software_Download/versions.json")
             val appInfos = parseJson(jsonString)
-            filterAppInfo(appInfos, selectedModel)
+            val filteredAppInfos = filterAppInfo(appInfos, selectedModel)
+
+            // Update installedVersion for each AppInfo
+            filteredAppInfos.forEach { appInfo ->
+                appInfo.installedVersion = AppUtils.getAppVersion(context, appInfo.`package`)
+            }
+
+            filteredAppInfos
         } catch (e: Exception) {
             Log.e("VersionChecker", "Error getting latest version from server", e)
             emptyList()

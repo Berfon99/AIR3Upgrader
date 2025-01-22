@@ -5,6 +5,7 @@ data class AppInfo(
     val `package`: String,
     val latestVersion: String,
     val apkPath: String,
+    var installedVersion: String? = null,
     val compatibleModels: List<String>,
     val minAndroidVersion: String
 ) {
