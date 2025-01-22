@@ -9,6 +9,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.air3upgrader.R.string.* // Import string resources
@@ -86,6 +87,15 @@ class SettingsActivity : AppCompatActivity() {
                 val selectedDisplayString = parent.getItemAtPosition(position).toString()
                 val selectedModel = modelDisplayMap[selectedDisplayString]
                 Log.i("ModelSpinner", "Selected model: $selectedModel")
+
+                // Validate the selected model
+                if (selectedModel != null && !allowedModels.contains(selectedModel) && selectedModel != deviceName) {
+                    // Display an error message and reset the selection
+                    Toast.makeText(this@SettingsActivity, getString(error_invalid_file), Toast.LENGTH_SHORT).show()
+                    modelSpinner.setSelection(modelList.indexOf(deviceName)) // Reset to device name
+                    return
+                }
+
                 // Save the selected model
                 lifecycleScope.launch {
                     try {

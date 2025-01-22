@@ -3,7 +3,7 @@ package com.example.air3upgrader
 object VersionComparator {
     fun isServerVersionHigher(installedVersion: String, serverVersion: String, packageName: String): Boolean {
         if (installedVersion == "N/A" || serverVersion == "N/A") {
-            return false
+            return installedVersion == "N/A" // If installed is N/A, it's lower
         }
 
         val installedParts = splitVersionString(installedVersion, packageName)
@@ -12,16 +12,16 @@ object VersionComparator {
         val maxParts = maxOf(installedParts.size, serverParts.size)
 
         for (i in 0 until maxParts) {
-            val installedPart = installedParts.getOrElse(i) { "" }
-            val serverPart = serverParts.getOrElse(i) { "" }
+            val installedPart = installedParts.getOrElse(i) { "0" } // Default to 0 if part is missing
+            val serverPart = serverParts.getOrElse(i) { "0" } // Default to 0 if part is missing
 
             val comparisonResult = compareVersionParts(installedPart, serverPart)
             if (comparisonResult != 0) {
-                return comparisonResult > 0
+                return comparisonResult < 0 // Server is higher if comparison is negative
             }
         }
 
-        return false
+        return false // Versions are equal
     }
 
     private fun splitVersionString(version: String, packageName: String): List<String> {
@@ -38,9 +38,9 @@ object VersionComparator {
         val serverNum = serverPart.toIntOrNull()
 
         if (installedNum != null && serverNum != null) {
-            return serverNum.compareTo(installedNum)
+            return installedNum.compareTo(serverNum) // Compare numerically
         } else {
-            return serverPart.compareTo(installedPart)
+            return installedPart.compareTo(serverPart) // Compare lexicographically
         }
     }
 }

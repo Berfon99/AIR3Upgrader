@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -27,10 +28,16 @@ import androidx.lifecycle.lifecycleScope
 import com.example.air3upgrader.R.string.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
+import kotlinx.coroutines.withContext
+import android.widget.ProgressBar
+import android.os.Handler
+import android.os.Looper
+import androidx.glance.visibility
 
 class MainActivity : AppCompatActivity() {
 
@@ -55,9 +62,9 @@ class MainActivity : AppCompatActivity() {
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
-    private var appInfos: List<VersionChecker.AppInfo> = emptyList()
-    private var downloadQueue: MutableList<VersionChecker.AppInfo> = mutableListOf()
-    private var downloadIdToAppInfo: MutableMap<Long, VersionChecker.AppInfo> = mutableMapOf()
+    private var appInfos: List<AppInfo> = emptyList() // Corrected type
+    private var downloadQueue: MutableList<AppInfo> = mutableListOf()
+    private var downloadIdToAppInfo: MutableMap<Long, AppInfo> = mutableMapOf()
     private var isFirstDownload = true
 
     // Package names of the apps we want to check
@@ -172,9 +179,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // Check if the apps are installed and update the UI
-        checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel)
-        checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel)
-        checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel)
+        checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel, xctrackPackageName) // Pass packageName
+        checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel, xcguidePackageName) // Pass packageName
+        checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel, air3managerPackageName) // Pass packageName
         lifecycleScope.launch {
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
             val finalSelectedModel = selectedModel ?: getDeviceName()
@@ -192,7 +199,7 @@ class MainActivity : AppCompatActivity() {
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
             val finalSelectedModel = selectedModel ?: getDeviceName()
             appInfos.forEach { appInfo ->
-                when (appInfo.packageName) {
+                when (appInfo.name) {
                     xctrackPackageName -> {
                         val installedVersion = AppUtils.getAppVersion(this@MainActivity, xctrackPackageName)
                         UiUpdater.updateCheckboxState(xctrackPackageName, xctrackCheckbox, installedVersion, appInfo.latestVersion)
@@ -214,6 +221,9 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
             val appInfo = downloadIdToAppInfo[id]
+            // Inside onDownloadComplete's onReceive method, after calling installApk:
+            val progressBar = findViewById<ProgressBar>(R.id.downloadProgressBar)
+            progressBar.visibility = View.GONE
             if (appInfo != null) {
                 downloadIdToAppInfo.remove(id)
                 val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -271,76 +281,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getLatestVersionFromServer() {
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) { // Use Dispatchers.IO for network operations
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
             val finalSelectedModel = selectedModel ?: getDeviceName()
-            appInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
-            appInfos.forEach { appInfo ->
-                when (appInfo.packageName) {
-                    xctrackPackageName -> {
-                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, xctrackPackageName)
-                        UiUpdater.updateAppInfo(this@MainActivity, xctrackPackageName, xctrackName, xctrackServerVersion, appInfo.latestVersion, null, finalSelectedModel)
-                        launch { AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, installedVersion, finalSelectedModel) }
-                        UiUpdater.updateCheckboxState(xctrackPackageName, xctrackCheckbox, installedVersion, appInfo.latestVersion)
-                        // Extract and set the APK name
-                        val apkName = extractApkName(appInfo.apkPath)
-                        xctrackApkName.text = apkName
-                        // Set the visibility of the TextView
-                        xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
-                            xctrackApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+
+            try {
+                appInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
+
+                // Update UI on the main thread
+                withContext(Dispatchers.Main) {
+                    appInfos.forEach { appInfo ->
+                        when (appInfo.`package`) {
+                            xctrackPackageName -> updateAppInfo(appInfo, xctrackName, xctrackServerVersion, xctrackCheckbox, xctrackApkName)
+                            xcguidePackageName -> updateAppInfo(appInfo, xcguideName, xcguideServerVersion, xcguideCheckbox, xcguideApkName)
+                            air3managerPackageName -> updateAppInfo(appInfo, air3managerName, air3managerServerVersion, air3managerCheckbox, air3managerApkName)
                         }
                     }
-                    xcguidePackageName -> {
-                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, xcguidePackageName)
-                        UiUpdater.updateAppInfo(this@MainActivity, xcguidePackageName, xcguideName, xcguideServerVersion, appInfo.latestVersion, null, finalSelectedModel)
-                        launch { AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, installedVersion, finalSelectedModel) }
-                        UiUpdater.updateCheckboxState(xcguidePackageName, xcguideCheckbox, installedVersion, appInfo.latestVersion)
-                        // Extract and set the APK name
-                        val apkName = extractApkName(appInfo.apkPath)
-                        xcguideApkName.text = apkName
-                        // Set the visibility of the TextView
-                        xcguideCheckbox.setOnCheckedChangeListener { _, isChecked ->
-                            xcguideApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
-                        }
-                    }
-                    air3managerPackageName -> {
-                        val installedVersion = AppUtils.getAppVersion(this@MainActivity, air3managerPackageName)
-                        UiUpdater.updateAppInfo(this@MainActivity, air3managerPackageName, air3managerName, air3managerServerVersion, appInfo.latestVersion, null, finalSelectedModel)
-                        launch { AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, installedVersion, finalSelectedModel) }
-                        UiUpdater.updateCheckboxState(air3managerPackageName, air3managerCheckbox, installedVersion, appInfo.latestVersion)
-                        // Extract and set the APK name
-                        val apkName = extractApkName(appInfo.apkPath)
-                        air3managerApkName.text = apkName
-                        // Set the visibility of the TextView
-                        air3managerCheckbox.setOnCheckedChangeListener { _, isChecked ->
-                            air3managerApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
-                        }
-                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error getting latest version from server", e)
+                // Handle error, e.g., show a toast message to the user
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    private fun handleUpgradeButtonClick() {
-        // Display a Toast message
-        Toast.makeText(this, getString(apk_download_started), Toast.LENGTH_SHORT).show() // Use string resource
-        val appsToUpgrade = mutableListOf<VersionChecker.AppInfo>()
-        if (xctrackCheckbox.isChecked) {
-            appInfos.find { it.packageName == xctrackPackageName }?.let { appsToUpgrade.add(it) }
+    private fun updateAppInfo(appInfo: AppInfo, nameTextView: TextView, serverVersionTextView: TextView, checkBox: CheckBox, apkNameTextView: TextView) {
+        val installedVersion = AppUtils.getAppVersion(this@MainActivity, appInfo.`package`)
+        UiUpdater.updateAppInfo(this@MainActivity, appInfo.`package`, nameTextView, serverVersionTextView, appInfo.latestVersion, null, selectedModel)
+        lifecycleScope.launch {
+            AppUtils.setAppBackgroundColor(this@MainActivity, appInfo.`package`, nameTextView, installedVersion, selectedModel)
         }
-        if (xcguideCheckbox.isChecked) {
-            appInfos.find { it.packageName == xcguidePackageName }?.let { appsToUpgrade.add(it) }
+        UiUpdater.updateCheckboxState(appInfo.`package`, checkBox, installedVersion, appInfo.latestVersion)
+        val apkName = extractApkName(appInfo.apkPath)
+        apkNameTextView.text = apkName
+        checkBox.setOnCheckedChangeListener { _, isChecked ->
+            apkNameTextView.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
-        if (air3managerCheckbox.isChecked) {
-            appInfos.find { it.packageName == air3managerPackageName }?.let { appsToUpgrade.add(it) }
-        }
+    }
 
-        if (appsToUpgrade.isEmpty()) {
-            Toast.makeText(this, getString(no_apps_selected_for_upgrade), Toast.LENGTH_SHORT).show() // Use string resource
-            return
+    private fun handleUpgradeButtonClick() {
+        lifecycleScope.launch {
+            getLatestVersionFromServer() // Fetch the latest app information
+
+            // Wait for the appInfos to be populated
+            while (appInfos.isEmpty()) {
+                delay(100) // Wait for 100 milliseconds
+            }
+
+            // Display a Toast message
+            Toast.makeText(this@MainActivity, getString(apk_download_started), Toast.LENGTH_SHORT).show()
+
+            val appsToUpgrade = mutableListOf<AppInfo>()
+            if (xctrackCheckbox.isChecked) {
+                appInfos.find { appInfo -> appInfo.`package` == xctrackPackageName }?.let { appsToUpgrade.add(it) }
+            }
+            if (xcguideCheckbox.isChecked) {
+                appInfos.find { appInfo -> appInfo.`package` == xcguidePackageName }?.let { appsToUpgrade.add(it) }
+            }
+            if (air3managerCheckbox.isChecked) {
+                appInfos.find { appInfo -> appInfo.`package` == air3managerPackageName }?.let { appsToUpgrade.add(it) }
+            }
+
+            if (appsToUpgrade.isEmpty()) {
+                Toast.makeText(this@MainActivity, getString(no_apps_selected_for_upgrade), Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            downloadQueue.addAll(appsToUpgrade)
+            startNextDownload()
         }
-        downloadQueue.addAll(appsToUpgrade)
-        startNextDownload()
     }
 
     private fun startNextDownload() {
@@ -357,29 +369,62 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun downloadAndInstallApk(apkUrl: String, appInfo: VersionChecker.AppInfo) {
+    private fun downloadAndInstallApk(apkUrl: String, appInfo: AppInfo) {
         if (!checkInstallPermission()) {
             showPermissionDialog()
             return
         }
 
         val request = DownloadManager.Request(Uri.parse(apkUrl))
-            .setTitle(getString(downloading) + " " + appInfo.packageName) // Use string resource
-            .setDescription(getString(downloading_latest_version_of) + " " + appInfo.packageName) // Use string resourc
+            .setTitle(getString(downloading) + " " + appInfo.name)
+            .setDescription(getString(downloading_latest_version_of) + " " + appInfo.name)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "${appInfo.packageName}.apk")
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "${appInfo.`package`}.apk")
 
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        downloadID = downloadManager.enqueue(request)
-        downloadIdToAppInfo[downloadID] = appInfo
+        val downloadId = downloadManager.enqueue(request)
+        downloadIdToAppInfo[downloadId] = appInfo
+
+        // Display the progress bar
+        val progressBar = findViewById<ProgressBar>(R.id.downloadProgressBar)
+        progressBar.visibility = View.VISIBLE
+
+        // Create a ContentObserver to monitor download progress
+        val contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                super.onChange(selfChange)
+                val query = DownloadManager.Query().setFilterById(downloadId)
+                val cursor = downloadManager.query(query)
+                if (cursor.moveToFirst()) {
+                    val bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                    val totalBytesIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+
+                    if (bytesDownloadedIndex != -1 && totalBytesIndex != -1) {
+                        val bytesDownloaded = cursor.getInt(bytesDownloadedIndex)
+                        val totalBytes = cursor.getInt(totalBytesIndex)
+
+                        if (totalBytes > 0) {
+                            val progress = (bytesDownloaded * 100 / totalBytes).toInt()
+                            progressBar.progress = progress
+                        }
+                    }
+                }
+                cursor.close()
+            }
+        }
+
+        // Register the ContentObserver
+        contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, contentObserver)
     }
 
     private fun installApk(file: File) {
-        val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
-        val intent = Intent(Intent.ACTION_VIEW)
-        intent.setDataAndType(uri, "application/vnd.android.package-archive")
-        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-        startActivity(intent)
+        runOnUiThread {
+            val uri = FileProvider.getUriForFile(this, "${this.packageName}.provider", file)
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.setDataAndType(uri, "application/vnd.android.package-archive")
+            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            startActivityForResult(intent, 0) // Use startActivityForResult
+        }
     }
 
     private fun checkInstallPermission(): Boolean {
@@ -393,11 +438,11 @@ class MainActivity : AppCompatActivity() {
     private fun showPermissionDialog() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle(getString(install_unknown_apps_permission))
-            .setMessage(getString(to_install_apps_from_unknown_sources_you_need_to_allow_this_permission_in_your_device_settings)) // Use string resource
+            .setMessage(getString(to_install_apps_from_unknown_sources_you_need_to_allow_this_permission_in_your_device_settings))
             .setPositiveButton(getString(settings)) { _, _ ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                    intent.data = Uri.parse("package:$packageName")
+                    intent.data = Uri.parse("package:${this.packageName}") // Use this.packageName
                     permissionLauncher.launch(intent)
                 }
             }
@@ -413,8 +458,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkAppInstallation(packageName: String, nameTextView: TextView, versionTextView: TextView?, selectedModel: String) {
-        val installedVersion = AppUtils.getAppVersion(this, packageName)
+    private fun checkAppInstallation(packageName: String, nameTextView: TextView, versionTextView: TextView?, selectedModel: String, packageNameArg: String) {
+        // Add packageNameArg
+        val installedVersion = AppUtils.getAppVersion(this, packageNameArg) // Use packageNameArg
         val displayedVersion = if (packageName == air3managerPackageName && installedVersion != "N/A") {
             val parts = installedVersion.split(".")
             if (parts.size >= 3) {
@@ -432,7 +478,7 @@ class MainActivity : AppCompatActivity() {
         }
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                AppUtils.setAppBackgroundColor(this@MainActivity, packageName, nameTextView, displayedVersion, selectedModel)
+                AppUtils.setAppBackgroundColor(this@MainActivity, packageNameArg, nameTextView, displayedVersion, selectedModel) // Use packageNameArg
             } catch (e: Exception) {
                 e.printStackTrace()
             }

@@ -78,9 +78,14 @@ object AppUtils {
         runBlocking {
             result = withContext(Dispatchers.IO) {
                 val appInfos = VersionChecker().getLatestVersionFromServer(selectedModel ?: "")
-                appInfos.find { it.packageName == packageName }?.latestVersion
+                appInfos.find { it.`package` == packageName }?.latestVersion // Use it.package
             }
         }
         return result
+    }
+
+    fun extractApkName(apkPath: String): String {
+        val fileName = apkPath.substringAfterLast('/')
+        return fileName.substringBeforeLast('.') // Remove the file extension
     }
 }
