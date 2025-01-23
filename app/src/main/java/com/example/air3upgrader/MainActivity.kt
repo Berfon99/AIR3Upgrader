@@ -79,6 +79,41 @@ class MainActivity : AppCompatActivity() {
     private val air3managerPackageName = "com.xc.r3"
     private val versionChecker by lazy { VersionChecker(this) }
     private var downloadID: Long = 0
+    private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            val appInfo = downloadIdToAppInfo[id]
+
+            // Inside onDownloadComplete's onReceive method, after calling installApk:
+            val progressBar = findViewById<ProgressBar>(R.id.downloadProgressBar)
+            progressBar.visibility = View.GONE // Hide the progress bar
+
+            if (appInfo != null) {
+                downloadIdToAppInfo.remove(id)
+                val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                val query = DownloadManager.Query()
+                query.setFilterById(id)
+                val cursor = dm.query(query)
+                if (cursor.moveToFirst()) {
+                    val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                    if (columnIndex != -1) { // Check if the column exists
+                        val uriString = cursor.getString(columnIndex)
+                        val file = File(Uri.parse(uriString).path!!)
+                        installApk(file)
+                    } else {
+                        // Handle the case where the column is not found
+                        Log.e("MainActivity", "COLUMN_LOCAL_URI not found in cursor")
+                        // You might want to display an error message to the user here
+                        Toast.makeText(context, getString(download_failed), Toast.LENGTH_SHORT).show()
+                    }
+                }
+                cursor.close() // Close the cursor to release resources
+            }
+
+            // Unregister the ContentObserver
+            contentResolver.unregisterContentObserver(contentObserver)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -233,42 +268,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-            val appInfo = downloadIdToAppInfo[id]
-
-            // Inside onDownloadComplete's onReceive method, after calling installApk:
-            val progressBar = findViewById<ProgressBar>(R.id.downloadProgressBar)
-            progressBar.visibility = View.GONE // Hide the progress bar
-
-            if (appInfo != null) {
-                downloadIdToAppInfo.remove(id)
-                val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                val query = DownloadManager.Query()
-                query.setFilterById(id)
-                val cursor = dm.query(query)
-                if (cursor.moveToFirst()) {
-                    val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                    if (columnIndex != -1) { // Check if the column exists
-                        val uriString = cursor.getString(columnIndex)
-                        val file = File(Uri.parse(uriString).path!!)
-                        installApk(file)
-                    } else {
-                        // Handle the case where the column is not found
-                        Log.e("MainActivity", "COLUMN_LOCAL_URI not found in cursor")
-                        // You might want to display an error message to the user here
-                        Toast.makeText(context, getString(download_failed), Toast.LENGTH_SHORT).show()
-                    }
-                }
-                cursor.close() // Close the cursor to release resources
-            }
-
-            // Unregister the ContentObserver
-            contentResolver.unregisterContentObserver(contentObserver)
-        }
-    }
-
     private fun acquireWakeLock() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
@@ -326,22 +325,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-    }
-
-    private fun updateAppInfo(appInfo: AppInfo, selectedModel: String?) {
-        val installedVersion = AppUtils.getAppVersion(this@MainActivity, appInfo.`package`)
-
-        when (appInfo.`package`) {
-            xctrackPackageName -> UiUpdater.updateAppInfo(this, appInfo, xctrackName, xctrackServerVersion, xctrackVersion, selectedModel)
-            xcguidePackageName -> UiUpdater.updateAppInfo(this, appInfo, xcguideName, xcguideServerVersion, xcguideVersion, selectedModel)
-            air3managerPackageName -> UiUpdater.updateAppInfo(this, appInfo, air3managerName, air3managerServerVersion, air3managerVersion, selectedModel)
-        }
-        UiUpdater.updateCheckboxState(this, appInfo, when (appInfo.`package`) {
-            xctrackPackageName -> xctrackCheckbox
-            xcguidePackageName -> xcguideCheckbox
-            air3managerPackageName -> air3managerCheckbox
-            else -> null // Handle unknown package
-        }!!) // Non-null assertion since we know it's one of the three
     }
 
     private fun enqueueDownload(appInfo: AppInfo) {
