@@ -443,16 +443,31 @@ class MainActivity : AppCompatActivity() {
 
     private fun installApk(file: File) {
         runOnUiThread {
-            try {
-                val uri = FileProvider.getUriForFile(this, "${this.packageName}.provider", file)
-                val intent = Intent(Intent.ACTION_VIEW)
-                intent.setDataAndType(uri, "application/vnd.android.package-archive")
-                intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                startActivity(intent)
-            } catch (e: ActivityNotFoundException) {
-                Log.e("MainActivity", "No activity found to handle installation: ${e.message}", e)
-                // Display an error message to the user using a Snackbar or a dialog
-                Snackbar.make(findViewById(android.R.id.content), "No activity found to handle installation", Snackbar.LENGTH_LONG).show()
+            val appInfo = downloadIdToAppInfo.values.find { it.`package` == file.nameWithoutExtension }
+            val expectedSignature = when (appInfo?.`package`) {
+                xctrackPackageName -> getString(R.string.xctrack_apk_signature)
+                xcguidePackageName -> getString(R.string.xcguide_apk_signature)
+                air3managerPackageName -> getString(R.string.air3manager_apk_signature)
+                else -> ""
+            }
+
+            if (AppUtils.verifyApkIntegrity(file, expectedSignature)) {
+                try {
+                    val uri = FileProvider.getUriForFile(this, "${this.packageName}.provider", file)
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    intent.setDataAndType(uri, "application/vnd.android.package-archive")
+                    intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    startActivity(intent)
+                } catch (e: ActivityNotFoundException) {
+                    Log.e("MainActivity", "No activity found to handle installation: ${e.message}", e)
+                    // Display an error message to the user using a Snackbar or a dialog
+                    Snackbar.make(findViewById(android.R.id.content), "No activity found to handle installation", Snackbar.LENGTH_LONG).show()
+                }
+            } else {
+                // Affichage d'un message d'erreur à l'utilisateur
+                Toast.makeText(this, "Erreur : l'intégrité de l'APK n'a pas pu être vérifiée.", Toast.LENGTH_LONG).show()
+                // Vous pouvez également envisager de supprimer le fichier APK corrompu ici
+                // file.delete()
             }
         }
     }
