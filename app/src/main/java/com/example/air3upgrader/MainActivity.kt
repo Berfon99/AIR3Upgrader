@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
+import java.util.LinkedList
 import kotlinx.coroutines.withContext
 import android.widget.ProgressBar
 import android.os.Handler
@@ -40,6 +41,8 @@ import android.os.Looper
 import androidx.glance.visibility
 import android.content.ActivityNotFoundException
 import com.google.android.material.snackbar.Snackbar
+import kotlin.collections.isNotEmpty
+import kotlin.collections.removeFirst
 
 class MainActivity : AppCompatActivity() {
 
@@ -74,7 +77,6 @@ class MainActivity : AppCompatActivity() {
     private val xctrackPackageName = "org.xcontest.XCTrack"
     private val xcguidePackageName = "indysoft.xc_guide"
     private val air3managerPackageName = "com.xc.r3"
-
     private val versionChecker by lazy { VersionChecker(this) }
     private var downloadID: Long = 0
 
@@ -346,6 +348,11 @@ class MainActivity : AppCompatActivity() {
         }!!) // Non-null assertion since we know it's one of the three
     }
 
+    private fun enqueueDownload(appInfo: AppInfo) {
+        downloadQueue.add(appInfo)
+        startNextDownload() // Démarrez le téléchargement immédiatement
+    }
+
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
             getLatestVersionFromServer() // Fetch the latest app information
@@ -374,8 +381,10 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
 
-            downloadQueue.addAll(appsToUpgrade)
-            startNextDownload()
+            // Enqueue downloads instead of adding them directly to downloadQueue
+            appsToUpgrade.forEach { appInfo ->
+                enqueueDownload(appInfo)
+            }
         }
     }
 
@@ -387,7 +396,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 isFirstDownload = false
             }
-            val appInfo = downloadQueue.removeAt(0)
+            val appInfo = downloadQueue.removeAt(0) // Use removeAt(0) instead of removeFirst()
             val fullApkUrl = "https://ftp.fly-air3.com${appInfo.apkPath}"
             downloadAndInstallApk(fullApkUrl, appInfo)
         }
