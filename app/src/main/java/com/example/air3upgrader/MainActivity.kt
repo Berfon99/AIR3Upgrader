@@ -96,23 +96,35 @@ class MainActivity : AppCompatActivity() {
                 query.setFilterById(id)
                 val cursor = dm.query(query)
                 if (cursor.moveToFirst()) {
-                    val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                    if (columnIndex != -1) { // Check if the column exists
-                        val uriString = cursor.getString(columnIndex)
-                        val file = File(Uri.parse(uriString).path!!)
-                        installApk(file)
+                    val statusColumnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                    if (statusColumnIndex != -1) {
+                        val status = cursor.getInt(statusColumnIndex)
+                        Log.d("DownloadManager", "Download status: $status")
+
+                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                            val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                            if (columnIndex != -1) {
+                                val uriString = cursor.getString(columnIndex)
+                                val file = File(Uri.parse(uriString).path!!)
+                                installApk(file)
+                            } else {
+                                Log.e("MainActivity", "COLUMN_LOCAL_URI not found in cursor")
+                                Toast.makeText(context, getString(download_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Log.e("DownloadManager", "Download failed with status: $status")
+                            Toast.makeText(context, "Download failed", Toast.LENGTH_SHORT).show()
+                        }
                     } else {
-                        // Handle the case where the column is not found
-                        Log.e("MainActivity", "COLUMN_LOCAL_URI not found in cursor")
-                        // You might want to display an error message to the user here
-                        Toast.makeText(context, getString(download_failed), Toast.LENGTH_SHORT).show()
+                        Log.e("MainActivity", "COLUMN_STATUS not found in cursor")
+                        Toast.makeText(context, "Download status unknown", Toast.LENGTH_SHORT).show()
                     }
                 }
-                cursor.close() // Close the cursor to release resources
+                cursor.close()
             }
 
             // Unregister the ContentObserver
-            contentResolver.unregisterContentObserver(contentObserver) // Add this line
+            contentResolver.unregisterContentObserver(contentObserver)
         }
     }
 
