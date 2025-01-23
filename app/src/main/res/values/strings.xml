@@ -36,8 +36,8 @@
     <string name="unknown_device">Unknown Device</string>
     <string name="na">N/A</string>
     <string name="download_failed">Download failed. Please try again later.</string>
-    <string name="xctrack_apk_signature">YOUR_XCTRACK_APK_SIGNATURE</string>
-    <string name="xcguide_apk_signature">YOUR_XCGUIDE_APK_SIGNATURE</string>
-    <string name="air3manager_apk_signature">YOUR_AIR3MANAGER_APK_SIGNATURE</string>
+    <string name="xctrack_apk_signature">513134f67c4efc51f7650bb2657e1f45fc4244e224cd3f9d61051c252700f593</string>
+    <string name="xcguide_apk_signature">b97696fd760795f32b73459c01b836f4f211856e702b957b833cc887336ddfb3</string>
+    <string name="air3manager_apk_signature">fe36eab09d29b23132883494326ba732f0edfb31c0c85f4c78c4ccc84c50e1e0</string>
 
 </resources>

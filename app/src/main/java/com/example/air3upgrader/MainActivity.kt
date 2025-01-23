@@ -147,10 +147,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun extractApkName(apkPath: String): String {
-        return apkPath.substringAfterLast("/")
-    }
-
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
         return true
