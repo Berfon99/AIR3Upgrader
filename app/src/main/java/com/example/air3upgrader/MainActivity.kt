@@ -79,6 +79,7 @@ class MainActivity : AppCompatActivity() {
     private val air3managerPackageName = "com.xc.r3"
     private val versionChecker by lazy { VersionChecker(this) }
     private var downloadID: Long = 0
+
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
@@ -111,7 +112,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Unregister the ContentObserver
-            contentResolver.unregisterContentObserver(contentObserver)
+            contentResolver.unregisterContentObserver(contentObserver) // Add this line
         }
     }
 
@@ -160,10 +161,11 @@ class MainActivity : AppCompatActivity() {
         // Keep the screen on
         acquireWakeLock()
 
+        // Register the BroadcastReceiver with the RECEIVER_NOT_EXPORTED flag
         registerReceiver(
             onDownloadComplete,
             IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-            RECEIVER_NOT_EXPORTED
+            RECEIVER_NOT_EXPORTED // Add this flag
         )
 
         // XCTrack Checkbox Listener
@@ -443,8 +445,8 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val uri = FileProvider.getUriForFile(this, "${this.packageName}.provider", file)
                     val intent = Intent(Intent.ACTION_VIEW)
-                    intent.setDataAndType(uri, "application/vnd.android.package-archive")
-                    intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    intent.setDataAndType(uri, "application/vnd.android.package-archive") // Add setDataAndType
+                    intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP // Add FLAG_ACTIVITY_CLEAR_TOP
                     startActivity(intent)
                 } catch (e: ActivityNotFoundException) {
                     Log.e("MainActivity", "No activity found to handle installation: ${e.message}", e)
