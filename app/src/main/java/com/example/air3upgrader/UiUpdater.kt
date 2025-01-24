@@ -15,6 +15,14 @@ import android.os.Handler
 import android.os.Looper
 
 object UiUpdater {
+
+    private fun updateApkNameDisplay(context: Context, appInfo: AppInfo, apkNameTextView: TextView?) {
+        Handler(Looper.getMainLooper()).post {
+            apkNameTextView?.text = appInfo.apkPath.substringAfterLast('/')
+            apkNameTextView?.visibility = View.VISIBLE
+        }
+    }
+
     fun updateAppInfo(
         context: Context,
         appInfo: AppInfo,
@@ -33,27 +41,13 @@ object UiUpdater {
                 e.printStackTrace()
             }
 
-            // The following block is commented out to remove the APK name display
-            /*
-            val apkFileNameTextView = when (appInfo.`package`) {
-                "org.xcontest.XCTrack" -> (context as Activity).findViewById(R.id.xctrack_apk_name)
-                "indysoft.xc_guide" -> (context as Activity).findViewById(R.id.xcguide_apk_name)
-                "com.xc.r3" -> (context as Activity).findViewById(R.id.air3manager_apk_name)
+            val apkNameTextView = when (appInfo.`package`) {
+                "org.xcontest.XCTrack" -> (context as Activity).findViewById<TextView>(R.id.xctrack_apk_name)
+                "indysoft.xc_guide" -> (context as Activity).findViewById<TextView>(R.id.xcguide_apk_name)
+                "com.xc.r3" -> (context as Activity).findViewById<TextView>(R.id.air3manager_apk_name)
                 else -> null
             }
-
-            val updateUiRunnable = Runnable { // Create a custom runnable
-                val apkTextView = when (appInfo.`package`) {
-                    "org.xcontest.XCTrack" -> (context as Activity).findViewById<TextView>(R.id.xctrack_apk_name)
-                    "indysoft.xc_guide" -> (context as Activity).findViewById<TextView>(R.id.xcguide_apk_name)
-                    "com.xc.r3" -> (context as Activity).findViewById<TextView>(R.id.air3manager_apk_name)
-                    else -> null
-                }
-                apkTextView?.text = appInfo.apkPath.substringAfterLast('/')
-                apkTextView?.visibility = View.VISIBLE
-            }
-            Handler(Looper.getMainLooper()).post(updateUiRunnable) // Post the runnable
-            */
+            updateApkNameDisplay(context, appInfo, apkNameTextView)
         }
     }
 
@@ -62,3 +56,4 @@ object UiUpdater {
         //checkBox.isEnabled = appInfo.installedVersion != appInfo.latestVersion
     }
 }
+
