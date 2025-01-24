@@ -3,6 +3,7 @@ package com.example.air3upgrader
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.google.gson.GsonBuilder
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -17,13 +18,29 @@ class VersionChecker(private val context: Context) { // Add context as a paramet
     suspend fun getLatestVersionFromServer(selectedModel: String): List<AppInfo> = withContext(Dispatchers.IO) {
         try {
             val jsonString = downloadJson("https://ftp.fly-air3.com/Latest_Software_Download/versions.json")
-            val appInfos = parseJson(jsonString)
-            val filteredAppInfos = filterAppInfo(appInfos, selectedModel)
+            val gson = GsonBuilder().create()
+            val listType = object : TypeToken<AppsData>() {}.type
+            val appsData: AppsData = gson.fromJson(jsonString, listType)
+            val appInfos = appsData.apps
+
+            val filteredAppInfos = appInfos.filter { appInfo ->
+                if (appInfo.`package` == "com.xc.r3") {
+                    val isModelCompatible = appInfo.compatibleModels.contains(selectedModel)
+                    val isAndroidVersionCompatible = Build.VERSION.SDK_INT >= appInfo.minAndroidVersion.toInt()
+                    isModelCompatible && isAndroidVersionCompatible
+                } else {
+                    true // Keep other apps
+                }
+            }
+
+            // Find the first matching AIR³ Manager entry and add it to the list
+            val air3ManagerInfo = appInfos.firstOrNull { it.`package` == "com.xc.r3" && it.compatibleModels.contains(selectedModel) && Build.VERSION.SDK_INT >= it.minAndroidVersion.toInt() }
+            if (air3ManagerInfo != null) {
+                filteredAppInfos.toMutableList().add(0, air3ManagerInfo) // Add at the beginning
+            }
 
             // Update installedVersion for each AppInfo
-            filteredAppInfos.forEach { appInfo ->
-                appInfo.installedVersion = AppUtils.getAppVersion(context, appInfo.`package`)
-            }
+            filteredAppInfos.onEach { appInfo -> appInfo.installedVersion = AppUtils.getAppVersion(context, appInfo.`package`) }
 
             filteredAppInfos
         } catch (e: Exception) {

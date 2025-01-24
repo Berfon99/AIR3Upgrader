@@ -81,14 +81,27 @@ object AppUtils {
         }
     }
 
-    private fun getServerVersion(context: Context, packageName: String, selectedModel: String?): String? { // Add context parameter
+    fun getServerVersion(context: Context, packageName: String, selectedModel: String?): String? {
         var result: String? = null
         runBlocking {
             result = withContext(Dispatchers.IO) {
-                val appInfos = VersionChecker(context).getLatestVersionFromServer(selectedModel ?: "") // Pass context to VersionChecker
-                appInfos.find { it.`package` == packageName }?.latestVersion
+                val appInfos = VersionChecker(context).getLatestVersionFromServer(selectedModel ?: "")
+
+                // Journalisation des informations de version récupérées depuis le serveur
+                Timber.d("AppUtils - getServerVersion: appInfos = $appInfos")
+
+                val appInfo = appInfos.find { it.`package` == packageName }
+
+                // Journalisation de l'AppInfo trouvée pour le package spécifié
+                Timber.d("AppUtils - getServerVersion: appInfo for $packageName = $appInfo")
+
+                appInfo?.latestVersion
             }
         }
+
+        // Journalisation de la version du serveur retournée
+        Timber.d("AppUtils - getServerVersion: serverVersion for $packageName = $result")
+
         return result
     }
 
