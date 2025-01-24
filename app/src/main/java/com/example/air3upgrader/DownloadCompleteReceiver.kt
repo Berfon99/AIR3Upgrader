@@ -14,32 +14,42 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         if (intent.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
             val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
             if (downloadId != -1L) {
-                val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                val query = DownloadManager.Query().setFilterById(downloadId)
-                val cursor = downloadManager.query(query)
-                if (cursor.moveToFirst()) {
-                    val uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                    if (uriIndex != -1) {
-                        val uriString = cursor.getString(uriIndex)
-                        // Convert the content URI to a file URI
-                        val fileUri = Uri.fromFile(File(uriString.substringAfter("file://")))
+                // Get the downloaded APK file path
+                val filePath = getDownloadedApkFilePath(context, downloadId)
 
-                        // Get the content URI using FileProvider
-                        val contentUri = FileProvider.getUriForFile(
-                            context,
-                            context.packageName + ".fileprovider", // Replace with your FileProvider authority
-                            File(fileUri.path!!)
-                        )
+                // Start the installation intent in a separate thread
+                Thread {
+                    val contentUri = FileProvider.getUriForFile(
+                        context,
+                        context.packageName + ".provider", // Your FileProvider authority
+                        File(filePath)
+                    )
 
-                        // Start installation intent
-                        val installIntent = Intent(Intent.ACTION_VIEW)
-                        installIntent.setDataAndType(contentUri, "application/vnd.android.package-archive")
-                        installIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        context.startActivity(installIntent)
+                    val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(contentUri, "application/vnd.android.package-archive")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
                     }
-                }
-                cursor.close()
+
+                    context.startActivity(installIntent)
+                }.start()
             }
         }
+    }
+
+    // Helper function to get the downloaded APK file path
+    private fun getDownloadedApkFilePath(context: Context, downloadId: Long): String {
+        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val query = DownloadManager.Query().setFilterById(downloadId)
+        val cursor = downloadManager.query(query)
+        if (cursor.moveToFirst()) {
+            val uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+            if (uriIndex != -1) {
+                val uriString = cursor.getString(uriIndex)
+                cursor.close()
+                return uriString.substringAfter("file://")
+            }
+        }
+        cursor.close()
+        return ""
     }
 }
