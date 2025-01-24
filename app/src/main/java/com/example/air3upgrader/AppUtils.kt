@@ -15,6 +15,8 @@ import timber.log.Timber
 
 object AppUtils {
 
+    lateinit var appInfos: List<AppInfo>
+
     fun getAppVersion(context: Context, packageName: String): String {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
@@ -68,16 +70,16 @@ object AppUtils {
         }
     }
 
-    fun setAppBackgroundColor(context: Context, packageName: String, nameTextView: TextView, installedVersion: String?, selectedModel: String?) {
-        val serverVersion = getServerVersion(context, packageName, selectedModel) // Pass context here
-        if (serverVersion != null && installedVersion != null) {
-            if (VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)) {
-                nameTextView.setBackgroundColor(ContextCompat.getColor(context, R.color.update_available))
-            } else {
-                nameTextView.setBackgroundColor(Color.TRANSPARENT)
+    suspend fun setAppBackgroundColor(context: Context, packageName: String, nameTextView: TextView, installedVersion: String?, selectedModel: String?) {
+        withContext(Dispatchers.Main) {
+            val appInfo = appInfos.find { it.`package` == packageName } // Use appInfos directly
+            val backgroundResource = when {
+                VersionComparator.isServerVersionHigher(installedVersion ?: "", appInfo?.latestVersion ?: "", packageName) -> R.drawable.circle_background_orange
+                installedVersion == appInfo?.latestVersion && !(appInfo?.isSelectedForUpgrade ?: false) -> R.drawable.circle_background_green
+                appInfo?.isSelectedForUpgrade == true -> R.color.gray
+                else -> R.drawable.circle_background
             }
-        } else {
-            nameTextView.setBackgroundColor(Color.TRANSPARENT)
+            nameTextView.background = context.getDrawable(backgroundResource)
         }
     }
 

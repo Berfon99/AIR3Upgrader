@@ -340,6 +340,7 @@ class MainActivity : AppCompatActivity() {
 
             try {
                 appInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
+                AppUtils.appInfos = appInfos // Assign appInfos here
                 withContext(Dispatchers.Main) {
                     appInfos.forEach { appInfo ->
                         fileName = appInfo.apkPath.substringAfterLast('/')
