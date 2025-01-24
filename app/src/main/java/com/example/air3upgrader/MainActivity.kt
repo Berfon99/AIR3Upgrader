@@ -202,22 +202,32 @@ class MainActivity : AppCompatActivity() {
             RECEIVER_NOT_EXPORTED // Add this flag
         )
 
-        // XCTrack Checkbox Listener
+// XCTrack Checkbox Listener
         xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
             val appInfo = appInfos.find { it.`package` == xctrackPackageName }
-            appInfo?.isSelectedForUpgrade = isChecked // Update the property
+            appInfo?.isSelectedForUpgrade = isChecked
+            // Trigger UI update
+            appInfo?.let {
+                UiUpdater.updateAppInfo(this@MainActivity, it, xctrackName, xctrackServerVersion, xctrackVersion, selectedModel)
+            }
         }
 
         xcguideCheckbox.setOnCheckedChangeListener { _, isChecked ->
             val appInfo = appInfos.find { it.`package` == xcguidePackageName }
             appInfo?.isSelectedForUpgrade = isChecked
-            // ... (update UI or perform other actions) ...
+            // Trigger UI update
+            appInfo?.let {
+                UiUpdater.updateAppInfo(this@MainActivity, it, xcguideName, xcguideServerVersion, xcguideVersion, selectedModel)
+            }
         }
 
         air3managerCheckbox.setOnCheckedChangeListener { _, isChecked ->
             val appInfo = appInfos.find { it.`package` == air3managerPackageName }
             appInfo?.isSelectedForUpgrade = isChecked
-            // ... (update UI or perform other actions) ...
+            // Trigger UI update
+            appInfo?.let {
+                UiUpdater.updateAppInfo(this@MainActivity, it, air3managerName, air3managerServerVersion, air3managerVersion, selectedModel)
+            }
         }
     }
 
