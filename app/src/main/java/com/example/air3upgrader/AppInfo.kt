@@ -7,7 +7,8 @@ data class AppInfo(
     val apkPath: String,
     var installedVersion: String? = null,
     val compatibleModels: List<String>,
-    val minAndroidVersion: String
+    val minAndroidVersion: String,
+    var isSelectedForUpgrade: Boolean = false // Add this property
 ) {
     override fun toString(): String {
         return "AppInfo(name='$name', package='$`package`', latestVersion='$latestVersion', apkPath='$apkPath', compatibleModels=$compatibleModels, minAndroidVersion='$minAndroidVersion')"

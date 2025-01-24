@@ -30,6 +30,7 @@ object UiUpdater {
         serverVersionTextView: TextView,
         installedVersionTextView: TextView?,
         selectedModel: String?
+
     ) {
         nameTextView.text = appInfo.name
         serverVersionTextView.text = context.getString(server) + " " + appInfo.latestVersion
@@ -47,7 +48,12 @@ object UiUpdater {
                 "com.xc.r3" -> (context as Activity).findViewById<TextView>(R.id.air3manager_apk_name)
                 else -> null
             }
-            updateApkNameDisplay(context, appInfo, apkNameTextView)
+
+            if (appInfo.isSelectedForUpgrade) {
+                updateApkNameDisplay(context, appInfo, apkNameTextView)
+            } else {
+                apkNameTextView?.visibility = View.GONE
+            }
         }
     }
 

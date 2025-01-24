@@ -204,17 +204,20 @@ class MainActivity : AppCompatActivity() {
 
         // XCTrack Checkbox Listener
         xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            xctrackApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+            val appInfo = appInfos.find { it.`package` == xctrackPackageName }
+            appInfo?.isSelectedForUpgrade = isChecked // Update the property
         }
 
-        // XCGuide Checkbox Listener
         xcguideCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            xcguideApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
-         }
+            val appInfo = appInfos.find { it.`package` == xcguidePackageName }
+            appInfo?.isSelectedForUpgrade = isChecked
+            // ... (update UI or perform other actions) ...
+        }
 
-        // AIR3Manager Checkbox Listener
         air3managerCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            air3managerApkName.visibility = if (isChecked) View.VISIBLE else View.GONE
+            val appInfo = appInfos.find { it.`package` == air3managerPackageName }
+            appInfo?.isSelectedForUpgrade = isChecked
+            // ... (update UI or perform other actions) ...
         }
     }
 
