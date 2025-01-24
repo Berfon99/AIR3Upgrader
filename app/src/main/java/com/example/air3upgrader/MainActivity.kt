@@ -77,6 +77,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
     private lateinit var contentObserver: ContentObserver
+    private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver // Declare as class-level variable
+
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
@@ -195,6 +197,12 @@ class MainActivity : AppCompatActivity() {
         // Keep the screen on
         acquireWakeLock()
 
+        // Register the DownloadCompleteReceiver
+        downloadCompleteReceiver = DownloadCompleteReceiver()
+        val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        registerReceiver(downloadCompleteReceiver, filter, RECEIVER_NOT_EXPORTED)
+
+
         // Register the BroadcastReceiver with the RECEIVER_NOT_EXPORTED flag
         registerReceiver(
             onDownloadComplete,
@@ -202,7 +210,7 @@ class MainActivity : AppCompatActivity() {
             RECEIVER_NOT_EXPORTED // Add this flag
         )
 
-// XCTrack Checkbox Listener
+        // XCTrack Checkbox Listener
         xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
             val appInfo = appInfos.find { it.`package` == xctrackPackageName }
             appInfo?.isSelectedForUpgrade = isChecked
@@ -260,6 +268,7 @@ class MainActivity : AppCompatActivity() {
         finishAffinity() // Ensure the app is fully closed
         releaseWakeLock()
         unregisterReceiver(onDownloadComplete)
+        unregisterReceiver(downloadCompleteReceiver)
     }
 
     override fun onResume() {
@@ -393,7 +402,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle(getString(downloading) + " " + appInfo.name)
             .setDescription(getString(downloading_latest_version_of) + " " + appInfo.name)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName) // Use the extracted file name
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
 
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val downloadId = downloadManager.enqueue(request)
@@ -422,11 +431,23 @@ class MainActivity : AppCompatActivity() {
                             progressBar.progress = progress
                         }
                     }
-                }
+
+                    val statusColumnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                    if (statusColumnIndex != -1) {
+                        val status = cursor.getInt(statusColumnIndex)
+                        if (status == DownloadManager.STATUS_SUCCESSFUL) { // Start of if block
+                        // Download complete, trigger refresh
+                        getLatestVersionFromServer()
+                        // Hide the progress bar
+                        progressBar.visibility = View.GONE
+                        // Optionally, you can display a Toast message indicating download completion
+                        Toast.makeText(this@MainActivity, "Download complete", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 cursor.close()
+                }
             }
         }
-
         // Register the ContentObserver
         contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, contentObserver)
     }
