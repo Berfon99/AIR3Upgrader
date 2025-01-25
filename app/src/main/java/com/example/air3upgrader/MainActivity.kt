@@ -53,35 +53,38 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xcguideCheckbox: CheckBox
     private lateinit var air3managerCheckbox: CheckBox
     private lateinit var dataStoreManager: DataStoreManager
+    private lateinit var downloadManager: DownloadManager
     private val REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 1001
     private val REQUEST_CODE_QUERY_ALL_PACKAGES = 1002
     private val REQUEST_CODE_INSTALL_PACKAGES = 1003
 
+    private var isContentObserverRegistered = false
+
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
-    private lateinit var contentObserver: ContentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                super.onChange(selfChange)
-                Log.d("MainActivity", "ContentObserver onChange() called")
-                val query = DownloadManager.Query().setFilterById(downloadID)
-                val cursor = downloadManager.query(query)
-                if (cursor.moveToFirst()) {
-                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                    Log.d("MainActivity", "Download status: $status")
-                    val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesTotal")
-                    val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
-                    Log.d("MainActivity", "Download progress: $progress%")
-                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        contentResolver.unregisterContentObserver(this)
-                        Log.d("MainActivity", "ContentObserver unregistered")
-                    }
+    private var contentObserver: ContentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            super.onChange(selfChange)
+            Log.d("MainActivity", "ContentObserver onChange() called")
+            val query = DownloadManager.Query().setFilterById(downloadID)
+            val cursor = downloadManager.query(query)
+            if (cursor.moveToFirst()) {
+                val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                Log.d("MainActivity", "Download status: $status")
+                val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesTotal")
+                val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
+                Log.d("MainActivity", "Download progress: $progress%")
+                if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                    contentResolver.unregisterContentObserver(this)
+                    Log.d("MainActivity", "ContentObserver unregistered")
                 }
-                cursor.close()
             }
+            cursor.close()
         }
+    }
 
     private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver // Declare as class-level variable
 
@@ -229,10 +232,11 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d("MainActivity", "onDestroy() called")
-        // Unregister the ContentObserver if it has been initialized
-        if (::contentObserver.isInitialized) {
+        // Unregister the ContentObserver if it has been registered
+        if (isContentObserverRegistered) {
             contentResolver.unregisterContentObserver(contentObserver)
             Log.d("MainActivity", "ContentObserver unregistered in onDestroy()")
+            isContentObserverRegistered = false // Add this line
         }
         // Unregister the DownloadCompleteReceiver
         unregisterReceiver(downloadCompleteReceiver)
