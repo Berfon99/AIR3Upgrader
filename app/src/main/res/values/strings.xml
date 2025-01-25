@@ -40,4 +40,10 @@
     <string name="xcguide_apk_signature">b97696fd760795f32b73459c01b836f4f211856e702b957b833cc887336ddfb3</string>
     <string name="air3manager_apk_signature">fe36eab09d29b23132883494326ba732f0edfb31c0c85f4c78c4ccc84c50e1e0</string>
     <string name="version_not_found">Version not found</string>
+    <string name="no_internet_message">Please check your internet connection and try again.</string>
+    <string name="ok">OK</string>
+    <string name="retry">Retry</string>
+    <string name="no_internet_connection">No internet connection.</string>
+
+
 </resources>

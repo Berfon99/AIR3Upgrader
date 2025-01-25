@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import android.widget.TextView
 import android.os.Handler
 import android.os.Looper
+import androidx.appcompat.app.AlertDialog
 import androidx.glance.visibility
 
 object UiUpdater {

@@ -31,7 +31,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import android.os.Handler
 import android.os.Looper
-import androidx.compose.ui.geometry.isEmpty
 import kotlin.collections.isNotEmpty
 import com.google.android.material.color.DynamicColors
 import timber.log.Timber
@@ -196,16 +195,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showNoInternetDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("No Internet Connection")
-            .setMessage("This app requires an internet connection to function properly. Please check your connection and try again.")
-            .setPositiveButton("OK") { _, _ ->
-                finish() // Close the app
-            }
-            .show()
-    }
-
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
         return true
@@ -317,11 +306,27 @@ class MainActivity : AppCompatActivity() {
 
     internal fun getLatestVersionFromServer() {
         lifecycleScope.launch(Dispatchers.IO) {
+            // Check if internet is available
+            if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, getString(R.string.no_internet_connection), Toast.LENGTH_SHORT).show()
+                    showNoInternetDialog()
+                }
+                return@launch
+            }
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
             val finalSelectedModel = selectedModel ?: getDeviceName()
 
             try {
-                appInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
+                val newAppInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
+                if (newAppInfos.isEmpty()) {
+                    Log.e("MainActivity", "getLatestVersionFromServer: Server returned an empty list")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+                appInfos = newAppInfos
                 withContext(Dispatchers.Main) {
                     appInfos.forEach { appInfo ->
                         fileName = appInfo.apkPath.substringAfterLast('/')
@@ -333,12 +338,16 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "Error getting latest version from server", e)
+                Log.e("MainActivity", "Error getting latest version from server: ${e.message}")
                 // Handle error, e.g., show a toast message to the user
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
                 }
             }
+            // Re-check app installations after getting the latest versions
+            checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, finalSelectedModel, xctrackPackageName)
+            checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, finalSelectedModel, xcguidePackageName)
+            checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, finalSelectedModel, air3managerPackageName)
         }
     }
 
@@ -385,8 +394,32 @@ class MainActivity : AppCompatActivity() {
         contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, contentObserver)
     }
 
+    private fun showNoInternetDialog() {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.no_internet_connection))
+            .setMessage(getString(R.string.no_internet_message))
+            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
+                dialog.dismiss()
+                // Update UI to show "version not found"
+                updateUIAfterNoInternet()
+            }
+            .setNegativeButton(getString(R.string.retry)) { dialog, _ ->
+                dialog.dismiss()
+                // Retry the process
+                getLatestVersionFromServer()
+            }
+            .setCancelable(false) // Prevent dismissing by tapping outside
+            .create() // Create the dialog
+        dialog.show() // Show the dialog
+    }
+
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
+            selectedModel = dataStoreManager.getSelectedModel().firstOrNull() ?: getDeviceName()
+            if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                showNoInternetDialog()
+                return@launch
+            }
             getLatestVersionFromServer() // Fetch the latest app information
 
             // Wait for the appInfos to be populated
@@ -395,7 +428,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Display a Toast message
-            Toast.makeText(this@MainActivity, getString(apk_download_started), Toast.LENGTH_SHORT).show()
+            //Toast.makeText(this@MainActivity, getString(apk_download_started), Toast.LENGTH_SHORT).show() // Remove this line
 
             val appsToUpgrade = mutableListOf<AppInfo>()
             if (xctrackCheckbox.isChecked) {
@@ -417,6 +450,10 @@ class MainActivity : AppCompatActivity() {
             appsToUpgrade.forEach { appInfo ->
                 enqueueDownload(appInfo)
             }
+            // Re-check app installations after getting the latest versions
+            checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel, xctrackPackageName)
+            checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel, xcguidePackageName)
+            checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel, air3managerPackageName)
         }
     }
 
@@ -465,5 +502,14 @@ class MainActivity : AppCompatActivity() {
 
             AppUtils.setAppBackgroundColor(this@MainActivity, appPackageName, appNameTextView, installedVersion, selectedModel, appInfos)
         }
+    }
+
+    private fun updateUIAfterNoInternet() {
+        xctrackVersion.text = getString(R.string.version_not_found)
+        xcguideVersion.text = getString(R.string.version_not_found)
+        air3managerVersion.text = getString(R.string.version_not_found)
+        xctrackServerVersion.text = getString(R.string.version_not_found)
+        xcguideServerVersion.text = getString(R.string.version_not_found)
+        air3managerServerVersion.text = getString(R.string.version_not_found)
     }
 }
