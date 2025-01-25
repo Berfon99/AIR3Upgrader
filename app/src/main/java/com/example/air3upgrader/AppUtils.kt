@@ -107,28 +107,4 @@ object AppUtils {
         return result
     }
 
-    fun extractApkName(apkPath: String): String {
-        val fileName = apkPath.substringAfterLast('/')
-        return fileName.substringBeforeLast('.') // Remove the file extension
-    }
-
-    fun verifyApkIntegrity(apkFile: File, expectedSignature: String): Boolean {
-        try {
-            val messageDigest = MessageDigest.getInstance("SHA-256")
-            val fileInputStream = FileInputStream(apkFile)
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-
-            while (fileInputStream.read(buffer).also { bytesRead = it } > 0) {
-                messageDigest.update(buffer, 0, bytesRead)
-            }
-
-            val calculatedSignature = messageDigest.digest().fold("") { str, it -> str + "%02x".format(it) }
-
-            return calculatedSignature == expectedSignature
-        } catch (e: Exception) {
-            Timber.e(e, "Error verifying APK integrity")
-            return false
-        }
-    }
 }
