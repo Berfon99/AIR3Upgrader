@@ -211,11 +211,17 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         Log.d("MainActivity", "onDestroy() called")
         finishAffinity() // Ensure the app is fully closed
-        releaseWakeLock()
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
         unregisterReceiver(downloadCompleteReceiver)
-        contentResolver.unregisterContentObserver(contentObserver!!)
+        contentObserver?.let {
+            contentResolver.unregisterContentObserver(it)
+        }
     }
-
+    
     override fun onResume() {
         super.onResume()
         // Check if the apps are installed and update the UI
