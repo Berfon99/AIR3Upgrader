@@ -329,74 +329,51 @@ class MainActivity : AppCompatActivity() {
                 isFirstDownload = false
             }
             val appInfo = downloadQueue.removeAt(0) // Use removeAt(0) instead of removeFirst()
-            val fullApkUrl = "https://ftp.fly-air3.com${appInfo.apkPath}"
-
-            // Extract the file name from the apkPath
-            val fileName = appInfo.apkPath.substringAfterLast('/')
-            downloadAndInstallApk(fullApkUrl, appInfo, fileName) // Pass the file name
+            downloadAndInstallApk(appInfo) // Pass only the appInfo
         }
     }
 
-    private fun downloadAndInstallApk(apkUrl: String, appInfo: AppInfo, fileName: String) {
+    private fun downloadAndInstallApk(appInfo: AppInfo) {
         Log.d("MainActivity", "downloadAndInstallApk() called for ${appInfo.name}")
-
-        if (!checkInstallPermission()) {
-            Log.w("MainActivity", "Install permission not granted")
-            showPermissionDialog()
-            return
-        }
-
-        val request = DownloadManager.Request(Uri.parse(apkUrl))
-            .setTitle(getString(downloading) + " " + appInfo.name)
-            .setDescription(getString(downloading_latest_version_of) + " " + appInfo.name)
+        val url = "https://ftp.fly-air3.com${appInfo.apkPath}" // Construct the full URL here
+        val fileName = appInfo.apkPath.substringAfterLast('/')
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setDescription("Downloading ${appInfo.name}")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+            .setAllowedOverMetered(true)
+            .setAllowedOverRoaming(true)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName) // Set the correct file name here
 
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val downloadId = downloadManager.enqueue(request)
-        Log.d("MainActivity", "Download enqueued with ID: $downloadId")
-        downloadIdToAppInfo[downloadId] = appInfo
+        downloadID = downloadManager.enqueue(request)
+        Log.d("MainActivity", "Download enqueued with ID: $downloadID")
 
-        // Display the progress bar
-        val progressBar = findViewById<ProgressBar>(R.id.downloadProgressBar)
-        progressBar.visibility = View.VISIBLE
+        downloadIdToAppInfo[downloadID] = appInfo
 
-        // Create a ContentObserver to monitor download progress
+        // Register ContentObserver
         contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
                 super.onChange(selfChange)
                 Log.d("MainActivity", "ContentObserver onChange() called")
-                val query = DownloadManager.Query().setFilterById(downloadId)
+                val query = DownloadManager.Query().setFilterById(downloadID)
                 val cursor = downloadManager.query(query)
                 if (cursor.moveToFirst()) {
-                    val bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
-                    val totalBytesIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
-                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    val status = cursor.getInt(statusIndex)
+                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
                     Log.d("MainActivity", "Download status: $status")
-
-                    if (bytesDownloadedIndex != -1 && totalBytesIndex != -1) {
-                        val bytesDownloaded = cursor.getInt(bytesDownloadedIndex)
-                        val totalBytes = cursor.getInt(totalBytesIndex)
-                        Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $totalBytes")
-
-                        if (totalBytes > 0) {
-                            val progress = (bytesDownloaded * 100 / totalBytes).toInt()
-                            progressBar.progress = progress
-                            Log.d("MainActivity", "Download progress: $progress%")
-                            if (progress == 100) {
-                                contentResolver.unregisterContentObserver(this)
-                                Log.d("MainActivity", "ContentObserver unregistered")
-                            }
-                        }
+                    val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                    val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesTotal")
+                    val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
+                    Log.d("MainActivity", "Download progress: $progress%")
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        contentResolver.unregisterContentObserver(this)
+                        Log.d("MainActivity", "ContentObserver unregistered")
                     }
                 }
                 cursor.close()
             }
         }
-        // Register the ContentObserver
         contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, contentObserver)
-        Log.d("MainActivity", "ContentObserver registered")
     }
 
     private fun handleUpgradeButtonClick() {
