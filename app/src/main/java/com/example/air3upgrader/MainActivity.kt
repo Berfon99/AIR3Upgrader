@@ -336,7 +336,12 @@ class MainActivity : AppCompatActivity() {
     private fun downloadAndInstallApk(appInfo: AppInfo) {
         Log.d("MainActivity", "downloadAndInstallApk() called for ${appInfo.name}")
         val url = "https://ftp.fly-air3.com${appInfo.apkPath}" // Construct the full URL here
-        val fileName = appInfo.apkPath.substringAfterLast('/')
+        val originalFileName = appInfo.apkPath.substringAfterLast('/')
+        val fileName = if (appInfo.name == "AIR³ Manager") {
+            "AIR3Manager.apk" // Use a shorter name for AIR³ Manager
+        } else {
+            originalFileName // Use the original name for other APKs
+        }
         val request = DownloadManager.Request(Uri.parse(url))
             .setDescription("Downloading ${appInfo.name}")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
@@ -349,7 +354,6 @@ class MainActivity : AppCompatActivity() {
         Log.d("MainActivity", "Download enqueued with ID: $downloadID")
 
         downloadIdToAppInfo[downloadID] = appInfo
-
         // Register ContentObserver
         contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {

@@ -38,14 +38,15 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                             // Get the downloaded APK file path
                             val filePath = getDownloadedApkFilePath(context, downloadId)
                             Log.d("DownloadReceiver", "File Path: $filePath")
-
+                            val file = File(filePath)
+                            Log.d("DownloadReceiver", "File exists: ${file.exists()}")
                             // Start the installation intent in a separate thread
                             Thread {
                                 try {
                                     val contentUri = FileProvider.getUriForFile(
                                         context,
                                         context.packageName + ".provider", // Your FileProvider authority
-                                        File(filePath)
+                                        file
                                     )
                                     Log.d("DownloadReceiver", "Content URI: $contentUri")
 
