@@ -2,20 +2,13 @@ package com.example.air3upgrader
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileInputStream
-import java.security.MessageDigest
 import timber.log.Timber
 
 object AppUtils {
-
-    lateinit var appInfos: List<AppInfo>
 
     fun getAppVersion(context: Context, packageName: String): String {
         return try {
@@ -70,7 +63,7 @@ object AppUtils {
         }
     }
 
-    suspend fun setAppBackgroundColor(context: Context, packageName: String, nameTextView: TextView, installedVersion: String?, selectedModel: String?) {
+    suspend fun setAppBackgroundColor(context: Context, packageName: String, nameTextView: TextView, installedVersion: String?, selectedModel: String?, appInfos: List<AppInfo>) {
         withContext(Dispatchers.Main) {
             val appInfo = appInfos.find { it.`package` == packageName } // Use appInfos directly
             val backgroundResource = when {

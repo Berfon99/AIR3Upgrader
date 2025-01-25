@@ -1,9 +1,8 @@
 package com.example.air3upgrader
 
-import android.Manifest
+import androidx.appcompat.app.AlertDialog
 import android.annotation.SuppressLint
 import android.app.DownloadManager
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -17,42 +16,25 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.example.air3upgrader.R.string.*
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.firstOrNull
-import java.io.File
-import java.util.LinkedList
 import kotlinx.coroutines.withContext
-import android.widget.ProgressBar
 import android.os.Handler
 import android.os.Looper
-import androidx.glance.visibility
-import android.content.ActivityNotFoundException
-import com.google.android.material.snackbar.Snackbar
+import androidx.compose.ui.geometry.isEmpty
 import kotlin.collections.isNotEmpty
-import kotlin.collections.removeFirst
-import android.content.pm.PackageManager
-import android.content.res.Configuration
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.content.ContextCompat
 import com.google.android.material.color.DynamicColors
 import timber.log.Timber
-import com.example.air3upgrader.AppUtils.getServerVersion
-import com.example.air3upgrader.UiUpdater
 
 class MainActivity : AppCompatActivity() {
 
@@ -78,13 +60,35 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
-    private lateinit var contentObserver: ContentObserver
+    private lateinit var contentObserver: ContentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                super.onChange(selfChange)
+                Log.d("MainActivity", "ContentObserver onChange() called")
+                val query = DownloadManager.Query().setFilterById(downloadID)
+                val cursor = downloadManager.query(query)
+                if (cursor.moveToFirst()) {
+                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                    Log.d("MainActivity", "Download status: $status")
+                    val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                    val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesTotal")
+                    val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
+                    Log.d("MainActivity", "Download progress: $progress%")
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        contentResolver.unregisterContentObserver(this)
+                        Log.d("MainActivity", "ContentObserver unregistered")
+                    }
+                }
+                cursor.close()
+            }
+        }
+
     private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver // Declare as class-level variable
 
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
-    private var appInfos: List<AppInfo> = emptyList() // Corrected type
+    private var appInfos: List<AppInfo> = emptyList()
     private var downloadQueue: MutableList<AppInfo> = mutableListOf()
     private var downloadIdToAppInfo: MutableMap<Long, AppInfo> = mutableMapOf()
     private var isFirstDownload = true
@@ -145,8 +149,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Get the latest version from the server
-        getLatestVersionFromServer()
-
+        if (NetworkUtils.isNetworkAvailable(this)) {
+            getLatestVersionFromServer()
+        } else {
+            // Show a dialog to inform the user about the lack of internet connection
+            // Display a dialog
+            showNoInternetDialog()
+        }
         // Keep the screen on
         acquireWakeLock()
 
@@ -160,9 +169,9 @@ class MainActivity : AppCompatActivity() {
             val appInfo = appInfos.find { it.`package` == xctrackPackageName }
             appInfo?.isSelectedForUpgrade = isChecked
             // Trigger UI update
-            appInfo?.let {
-                UiUpdater.updateAppInfo(this@MainActivity, it, xctrackName, xctrackServerVersion, xctrackVersion, selectedModel)
-            }
+            appInfo?.let { appInfo ->
+                UiUpdater.updateAppInfo(this@MainActivity, appInfo, xctrackName, xctrackServerVersion, xctrackVersion, selectedModel, appInfos)
+            } 
         }
 
         xcguideCheckbox.setOnCheckedChangeListener { _, isChecked ->
@@ -170,7 +179,7 @@ class MainActivity : AppCompatActivity() {
             appInfo?.isSelectedForUpgrade = isChecked
             // Trigger UI update
             appInfo?.let {
-                UiUpdater.updateAppInfo(this@MainActivity, it, xcguideName, xcguideServerVersion, xcguideVersion, selectedModel)
+                UiUpdater.updateAppInfo(this@MainActivity, it, xcguideName, xcguideServerVersion, xcguideVersion, selectedModel, appInfos)
             }
         }
 
@@ -179,9 +188,19 @@ class MainActivity : AppCompatActivity() {
             appInfo?.isSelectedForUpgrade = isChecked
             // Trigger UI update
             appInfo?.let {
-                UiUpdater.updateAppInfo(this@MainActivity, it, air3managerName, air3managerServerVersion, air3managerVersion, selectedModel)
+                UiUpdater.updateAppInfo(this@MainActivity, it, air3managerName, air3managerServerVersion, air3managerVersion, selectedModel, appInfos)
             }
         }
+    }
+
+    private fun showNoInternetDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("No Internet Connection")
+            .setMessage("This app requires an internet connection to function properly. Please check your connection and try again.")
+            .setPositiveButton("OK") { _, _ ->
+                finish() // Close the app
+            }
+            .show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -210,30 +229,29 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d("MainActivity", "onDestroy() called")
-        finishAffinity() // Ensure the app is fully closed
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-            }
+        // Unregister the ContentObserver if it has been initialized
+        if (::contentObserver.isInitialized) {
+            contentResolver.unregisterContentObserver(contentObserver)
+            Log.d("MainActivity", "ContentObserver unregistered in onDestroy()")
         }
+        // Unregister the DownloadCompleteReceiver
         unregisterReceiver(downloadCompleteReceiver)
-        contentObserver?.let {
-            contentResolver.unregisterContentObserver(it)
-        }
+        // Release the wake lock if it's held
+        releaseWakeLock()
     }
-    
+
     override fun onResume() {
         super.onResume()
         // Check if the apps are installed and update the UI
         checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel, xctrackPackageName) // Pass packageName
         checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel, xcguidePackageName) // Pass packageName
         checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel, air3managerPackageName) // Pass packageName
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.Main) {
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
             val finalSelectedModel = selectedModel ?: getDeviceName()
-            AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, AppUtils.getAppVersion(this@MainActivity, xctrackPackageName), finalSelectedModel)
-            AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, AppUtils.getAppVersion(this@MainActivity, xcguidePackageName), finalSelectedModel)
-            AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, AppUtils.getAppVersion(this@MainActivity, air3managerPackageName), finalSelectedModel)
+            AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, AppUtils.getAppVersion(this@MainActivity, xctrackPackageName), finalSelectedModel, appInfos)
+            AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, AppUtils.getAppVersion(this@MainActivity, xcguidePackageName), finalSelectedModel, appInfos)
+            AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, AppUtils.getAppVersion(this@MainActivity, air3managerPackageName), finalSelectedModel, appInfos)
         }
         // Update checkbox states after installation
         updateCheckboxStates()
@@ -300,14 +318,13 @@ class MainActivity : AppCompatActivity() {
 
             try {
                 appInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
-                AppUtils.appInfos = appInfos // Assign appInfos here
                 withContext(Dispatchers.Main) {
                     appInfos.forEach { appInfo ->
                         fileName = appInfo.apkPath.substringAfterLast('/')
                         when (appInfo.`package`) {
-                            xctrackPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xctrackName, xctrackServerVersion, xctrackVersion, finalSelectedModel)
-                            xcguidePackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xcguideName, xcguideServerVersion, xcguideVersion, finalSelectedModel)
-                            air3managerPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, air3managerName, air3managerServerVersion, air3managerVersion, finalSelectedModel)
+                            xctrackPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xctrackName, xctrackServerVersion, xctrackVersion, finalSelectedModel, appInfos)
+                            xcguidePackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xcguideName, xcguideServerVersion, xcguideVersion, finalSelectedModel, appInfos)
+                            air3managerPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, air3managerName, air3managerServerVersion, air3managerVersion, finalSelectedModel, appInfos)
                         }
                     }
                 }
@@ -339,7 +356,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun downloadAndInstallApk(appInfo: AppInfo) {
+    private fun downloadAndInstallApk(appInfo: AppInfo) { 
         Log.d("MainActivity", "downloadAndInstallApk() called for ${appInfo.name}")
         val url = "https://ftp.fly-air3.com${appInfo.apkPath}" // Construct the full URL here
         val originalFileName = appInfo.apkPath.substringAfterLast('/')
@@ -360,29 +377,7 @@ class MainActivity : AppCompatActivity() {
         Log.d("MainActivity", "Download enqueued with ID: $downloadID")
 
         downloadIdToAppInfo[downloadID] = appInfo
-        // Register ContentObserver
-        contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                super.onChange(selfChange)
-                Log.d("MainActivity", "ContentObserver onChange() called")
-                val query = DownloadManager.Query().setFilterById(downloadID)
-                val cursor = downloadManager.query(query)
-                if (cursor.moveToFirst()) {
-                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                    Log.d("MainActivity", "Download status: $status")
-                    val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesTotal")
-                    val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
-                    Log.d("MainActivity", "Download progress: $progress%")
-                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        contentResolver.unregisterContentObserver(this)
-                        Log.d("MainActivity", "ContentObserver unregistered")
-                    }
-                }
-                cursor.close()
-            }
-        }
+
         contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, contentObserver)
     }
 
@@ -464,7 +459,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            AppUtils.setAppBackgroundColor(this@MainActivity, appPackageName, appNameTextView, installedVersion, selectedModel)
+            AppUtils.setAppBackgroundColor(this@MainActivity, appPackageName, appNameTextView, installedVersion, selectedModel, appInfos)
         }
     }
 }

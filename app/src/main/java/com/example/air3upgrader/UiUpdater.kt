@@ -8,11 +8,10 @@ import com.example.air3upgrader.R.string.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext // Ajoutez cette importation
-
 import android.widget.TextView
 import android.os.Handler
 import android.os.Looper
+import androidx.glance.visibility
 
 object UiUpdater {
 
@@ -29,15 +28,15 @@ object UiUpdater {
         nameTextView: TextView,
         serverVersionTextView: TextView,
         installedVersionTextView: TextView?,
-        selectedModel: String?
-
+        selectedModel: String?,
+        appInfos: List<AppInfo> // Add appInfos parameter
     ) {
         nameTextView.text = appInfo.name
         serverVersionTextView.text = context.getString(server) + " " + appInfo.latestVersion
         installedVersionTextView?.text = if (appInfo.installedVersion != context.getString(na)) context.getString(installed) + " " + appInfo.installedVersion else context.getString(not_installed)
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                AppUtils.setAppBackgroundColor(context, appInfo.`package`, nameTextView, appInfo.installedVersion, selectedModel)
+                AppUtils.setAppBackgroundColor(context, appInfo.`package`, nameTextView, appInfo.installedVersion, selectedModel, appInfos) // Pass appInfos
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -62,4 +61,3 @@ object UiUpdater {
         //checkBox.isEnabled = appInfo.installedVersion != appInfo.latestVersion
     }
 }
-
