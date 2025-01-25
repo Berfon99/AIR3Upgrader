@@ -1,6 +1,7 @@
 package com.example.air3upgrader
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -47,6 +48,7 @@ import kotlin.collections.removeFirst
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import com.google.android.material.color.DynamicColors
 import timber.log.Timber
 import com.example.air3upgrader.AppUtils.getServerVersion
@@ -95,60 +97,11 @@ class MainActivity : AppCompatActivity() {
     private val versionChecker by lazy { VersionChecker(this) }
     private var downloadID: Long = 0
 
-    private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-            val appInfo = downloadIdToAppInfo[id]
-
-            // Inside onDownloadComplete's onReceive method, after calling installApk:
-            val progressBar = findViewById<ProgressBar>(R.id.downloadProgressBar)
-            progressBar.visibility = View.GONE // Hide the progress bar
-
-            if (appInfo != null) {
-                downloadIdToAppInfo.remove(id)
-                val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                val query = DownloadManager.Query()
-                query.setFilterById(id)
-                val cursor = dm.query(query)
-                if (cursor.moveToFirst()) {
-                    val statusColumnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    if (statusColumnIndex != -1) {
-                        val status = cursor.getInt(statusColumnIndex)
-                        Log.d("DownloadManager", "Download status: $status")
-
-                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                            if (columnIndex != -1) {
-                                val uriString = cursor.getString(columnIndex)
-                                val file = File(Uri.parse(uriString).path!!)
-                                installApk(file)
-                                // Hide the progress bar after installation
-                                val progressBar = findViewById<ProgressBar>(R.id.downloadProgressBar)
-                                progressBar.visibility = View.GONE
-                            } else {
-                                Log.e("MainActivity", "COLUMN_LOCAL_URI not found in cursor")
-                                Toast.makeText(context, getString(download_failed), Toast.LENGTH_SHORT).show()
-                            }
-                        } else {
-                            Log.e("DownloadManager", "Download failed with status: $status")
-                            Toast.makeText(context, "Download failed", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Log.e("MainActivity", "COLUMN_STATUS not found in cursor")
-                        Toast.makeText(context, "Download status unknown", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                cursor.close()
-            }
-
-            // Unregister the ContentObserver
-            contentResolver.unregisterContentObserver(contentObserver)
-        }
-    }
-
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        Log.d("MainActivity", "onCreate() called")
 
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
@@ -200,15 +153,7 @@ class MainActivity : AppCompatActivity() {
         // Register the DownloadCompleteReceiver
         downloadCompleteReceiver = DownloadCompleteReceiver()
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-        registerReceiver(downloadCompleteReceiver, filter, RECEIVER_NOT_EXPORTED)
-
-
-        // Register the BroadcastReceiver with the RECEIVER_NOT_EXPORTED flag
-        registerReceiver(
-            onDownloadComplete,
-            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-            RECEIVER_NOT_EXPORTED // Add this flag
-        )
+        registerReceiver(downloadCompleteReceiver, filter, Context.RECEIVER_EXPORTED)
 
         // XCTrack Checkbox Listener
         xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
@@ -264,11 +209,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Release the wake lock
+        Log.d("MainActivity", "onDestroy() called")
         finishAffinity() // Ensure the app is fully closed
         releaseWakeLock()
-        unregisterReceiver(onDownloadComplete)
         unregisterReceiver(downloadCompleteReceiver)
+        contentResolver.unregisterContentObserver(contentObserver!!)
     }
 
     override fun onResume() {
@@ -342,7 +287,7 @@ class MainActivity : AppCompatActivity() {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
     }
 
-    private fun getLatestVersionFromServer() {
+    internal fun getLatestVersionFromServer() {
         lifecycleScope.launch(Dispatchers.IO) {
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
             val finalSelectedModel = selectedModel ?: getDeviceName()
@@ -393,7 +338,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun downloadAndInstallApk(apkUrl: String, appInfo: AppInfo, fileName: String) {
+        Log.d("MainActivity", "downloadAndInstallApk() called for ${appInfo.name}")
+
         if (!checkInstallPermission()) {
+            Log.w("MainActivity", "Install permission not granted")
             showPermissionDialog()
             return
         }
@@ -406,6 +354,7 @@ class MainActivity : AppCompatActivity() {
 
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val downloadId = downloadManager.enqueue(request)
+        Log.d("MainActivity", "Download enqueued with ID: $downloadId")
         downloadIdToAppInfo[downloadId] = appInfo
 
         // Display the progress bar
@@ -416,40 +365,38 @@ class MainActivity : AppCompatActivity() {
         contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
                 super.onChange(selfChange)
+                Log.d("MainActivity", "ContentObserver onChange() called")
                 val query = DownloadManager.Query().setFilterById(downloadId)
                 val cursor = downloadManager.query(query)
                 if (cursor.moveToFirst()) {
                     val bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
                     val totalBytesIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                    val status = cursor.getInt(statusIndex)
+                    Log.d("MainActivity", "Download status: $status")
 
                     if (bytesDownloadedIndex != -1 && totalBytesIndex != -1) {
                         val bytesDownloaded = cursor.getInt(bytesDownloadedIndex)
                         val totalBytes = cursor.getInt(totalBytesIndex)
+                        Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $totalBytes")
 
                         if (totalBytes > 0) {
                             val progress = (bytesDownloaded * 100 / totalBytes).toInt()
                             progressBar.progress = progress
+                            Log.d("MainActivity", "Download progress: $progress%")
+                            if (progress == 100) {
+                                contentResolver.unregisterContentObserver(this)
+                                Log.d("MainActivity", "ContentObserver unregistered")
+                            }
                         }
                     }
-
-                    val statusColumnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    if (statusColumnIndex != -1) {
-                        val status = cursor.getInt(statusColumnIndex)
-                        if (status == DownloadManager.STATUS_SUCCESSFUL) { // Start of if block
-                        // Download complete, trigger refresh
-                        getLatestVersionFromServer()
-                        // Hide the progress bar
-                        progressBar.visibility = View.GONE
-                        // Optionally, you can display a Toast message indicating download completion
-                        Toast.makeText(this@MainActivity, "Download complete", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                cursor.close()
                 }
+                cursor.close()
             }
         }
         // Register the ContentObserver
         contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, contentObserver)
+        Log.d("MainActivity", "ContentObserver registered")
     }
 
     private fun handleUpgradeButtonClick() {
