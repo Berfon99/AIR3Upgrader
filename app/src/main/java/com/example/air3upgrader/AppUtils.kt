@@ -2,22 +2,65 @@ package com.example.air3upgrader
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Color
+import android.util.Log
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.URL
 import java.net.HttpURLConnection
+import java.net.URL
 
 object AppUtils {
 
     fun getAppVersion(context: Context, packageName: String): String {
+        Log.d("AppUtils", "getAppVersion() called for package: $packageName")
         return try {
             val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
-            packageInfo.versionName ?: context.getString(R.string.na)
+            val versionName = packageInfo.versionName ?: context.getString(R.string.na)
+            Log.d("AppUtils", "Raw version name for $packageName: $versionName")
+            val filteredVersion = filterVersion(versionName, packageName)
+            Log.d("AppUtils", "Filtered version for $packageName: $filteredVersion")
+            filteredVersion
         } catch (e: PackageManager.NameNotFoundException) {
+            Log.e("AppUtils", "Package not found: $packageName", e)
             context.getString(R.string.na)
+        } catch (e: Exception) {
+            Log.e("AppUtils", "Error getting version for $packageName", e)
+            context.getString(R.string.na)
+        }
+    }
+
+    private fun filterVersion(versionName: String, packageName: String): String {
+        Log.d("AppUtils", "filterVersion() called for package: $packageName, versionName: $versionName")
+        return when (packageName) {
+            "org.xcontest.XCTrack" -> {
+                val parts = versionName.split("-")
+                if (parts.isNotEmpty()) {
+                    parts[0]
+                } else {
+                    versionName
+                }
+            }
+
+            "indysoft.xc_guide" -> {
+                val parts = versionName.split(".")
+                if (parts.size > 1) {
+                    parts[1]
+                } else {
+                    versionName
+                }
+            }
+
+            "com.xc.r3" -> {
+                val parts = versionName.split(".")
+                if (parts.size > 1) {
+                    parts[0] + "." + parts[1]
+                } else {
+                    versionName
+                }
+            }
+
+            else -> versionName
         }
     }
 

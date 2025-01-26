@@ -4,7 +4,7 @@ import android.util.Log
 
 object VersionComparator {
     fun isServerVersionHigher(installedVersion: String, serverVersion: String, packageName: String): Boolean {
-        Log.d("VersionComparator", "installedVersion: $installedVersion, serverVersion: $serverVersion, packageName: $packageName")
+        Log.d("VersionComparator", "isServerVersionHigher() called for package: $packageName, installedVersion: $installedVersion, serverVersion: $serverVersion")
 
         if (installedVersion == "N/A" || serverVersion == "N/A") {
             Log.d("VersionComparator", "One of the versions is N/A, returning ${installedVersion == "N/A"}")
@@ -39,6 +39,7 @@ object VersionComparator {
     }
 
     private fun splitVersionString(version: String, packageName: String): List<String> {
+        Log.d("VersionComparator", "splitVersionString() called for package: $packageName, version: $version")
         return when (packageName) {
             "org.xcontest.XCTrack" -> version.split(".", "-")
             "indysoft.xc_guide" -> listOf(version)
@@ -48,6 +49,7 @@ object VersionComparator {
     }
 
     private fun compareVersionParts(installedPart: String, serverPart: String): Int {
+        Log.d("VersionComparator", "compareVersionParts() called, installedPart: $installedPart, serverPart: $serverPart")
         val installedNum = installedPart.toIntOrNull()
         val serverNum = serverPart.toIntOrNull()
 
