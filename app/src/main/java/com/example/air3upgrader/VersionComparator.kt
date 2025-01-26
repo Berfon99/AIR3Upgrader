@@ -4,68 +4,58 @@ import android.util.Log
 
 object VersionComparator {
     fun isServerVersionHigher(installedVersion: String, serverVersion: String, packageName: String): Boolean {
-        Log.d("VersionComparator", "isServerVersionHigher() called for package: $packageName, installedVersion: $installedVersion, serverVersion: $serverVersion")
+        Log.d("VersionComparator", "Comparing versions for $packageName: Installed - $installedVersion, Server - $serverVersion")
 
-        if (installedVersion == "N/A" || serverVersion == "N/A") {
-            Log.d("VersionComparator", "One of the versions is N/A, returning ${installedVersion == "N/A"}")
-            return installedVersion == "N/A" // If installed is N/A, it's lower
+        if (installedVersion == "N/A" || installedVersion == "not installed") {
+            Log.d("VersionComparator", "Installed version is N/A or not installed, server version is higher")
+            return true
         }
 
-        val installedParts = splitVersionString(installedVersion, packageName)
-        val serverParts = splitVersionString(serverVersion, packageName)
+        val installedParts = if (packageName == "org.xcontest.XCTrack") {
+            parseXCTrackVersion(installedVersion)
+        } else {
+            installedVersion.split(".").map { it.toIntOrNull() ?: 0 }
+        }
+        val serverParts = if (packageName == "org.xcontest.XCTrack") {
+            parseXCTrackVersion(serverVersion)
+        } else {
+            serverVersion.split(".").map { it.toIntOrNull() ?: 0 }
+        }
 
-        Log.d("VersionComparator", "installedParts: $installedParts, serverParts: $serverParts")
+        Log.d("VersionComparator", "Installed parts: $installedParts")
+        Log.d("VersionComparator", "Server parts: $serverParts")
 
         val maxParts = maxOf(installedParts.size, serverParts.size)
-
         for (i in 0 until maxParts) {
-            val installedPart = installedParts.getOrElse(i) { "0" } // Default to 0 if part is missing
-            val serverPart = serverParts.getOrElse(i) { "0" } // Default to 0 if part is missing
-
-            Log.d("VersionComparator", "installedPart: $installedPart, serverPart: $serverPart")
-
-            val comparisonResult = compareVersionParts(installedPart, serverPart)
-
-            Log.d("VersionComparator", "comparisonResult: $comparisonResult")
-
-            if (comparisonResult != 0) {
-                Log.d("VersionComparator", "Comparison result is not 0, returning ${comparisonResult < 0}")
-                return comparisonResult < 0 // Server is higher if comparison is negative
+            val installedPart = installedParts.getOrElse(i) { 0 }
+            val serverPart = serverParts.getOrElse(i) { 0 }
+            if (serverPart > installedPart) {
+                Log.d("VersionComparator", "Server version is higher at part $i")
+                return true
+            } else if (serverPart < installedPart) {
+                Log.d("VersionComparator", "Server version is lower at part $i")
+                return false
             }
         }
 
-        Log.d("VersionComparator", "Versions are equal, returning false")
-        return false // Versions are equal
+        Log.d("VersionComparator", "Versions are equal")
+        return false
     }
 
-    private fun splitVersionString(version: String, packageName: String): List<String> {
-        Log.d("VersionComparator", "splitVersionString() called for package: $packageName, version: $version")
-        return when (packageName) {
-            "org.xcontest.XCTrack" -> version.split(".", "-")
-            "indysoft.xc_guide" -> listOf(version)
-            "com.xc.r3" -> listOf(version) // AIR³ Manager: traiter comme un seul nombre décimal
-            else -> version.split(".", "-")
+    private fun parseXCTrackVersion(version: String): List<Int> {
+        Log.d("VersionComparator", "Parsing XCTrack version: $version")
+        val filteredVersion = version.replace("-", ".")
+        val parts = filteredVersion.split(".")
+        Log.d("VersionComparator", "Parts after replace and split: $parts")
+        val intParts = parts.mapNotNull { it.toIntOrNull() }
+        Log.d("VersionComparator", "Parts after mapNotNull: $intParts")
+        val paddedParts = intParts.toMutableList()
+        while (paddedParts.size < 5) {
+            paddedParts.add(0)
         }
-    }
-
-    private fun compareVersionParts(installedPart: String, serverPart: String): Int {
-        Log.d("VersionComparator", "compareVersionParts() called, installedPart: $installedPart, serverPart: $serverPart")
-        val installedNum = installedPart.toIntOrNull()
-        val serverNum = serverPart.toIntOrNull()
-
-        return if (installedNum != null && serverNum != null) {
-            Log.d("VersionComparator", "Comparing numerically: $installedNum vs $serverNum")
-            installedNum.compareTo(serverNum) // Compare numerically
-        } else {
-            // Compare lexicographically, but handle non-numeric parts
-            val installedNumeric = installedPart.filter { it.isDigit() }
-            val serverNumeric = serverPart.filter { it.isDigit() }
-
-            val installedNumericInt = installedNumeric.toIntOrNull() ?: 0
-            val serverNumericInt = serverNumeric.toIntOrNull() ?: 0
-
-            Log.d("VersionComparator", "Comparing lexicographically with numeric extraction: $installedNumericInt vs $serverNumericInt")
-            installedNumericInt.compareTo(serverNumericInt)
-        }
+        Log.d("VersionComparator", "Parts after padding: $paddedParts")
+        val finalParts = paddedParts.take(5)
+        Log.d("VersionComparator", "Parsed XCTrack version parts: $finalParts")
+        return finalParts
     }
 }

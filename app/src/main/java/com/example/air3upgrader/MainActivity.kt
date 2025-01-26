@@ -295,10 +295,15 @@ class MainActivity : AppCompatActivity() {
             val serverVersion = appInfo?.latestVersion
             Log.d("MainActivity", "  Server version for $packageName: $serverVersion")
             if (serverVersion != null) {
+                val serverVersionToDisplay = if (packageName == xctrackPackageName) {
+                    serverVersion.replace("-", ".")
+                } else {
+                    serverVersion
+                }
                 when (packageName) {
-                    xctrackPackageName -> xctrackServerVersion.text = getString(R.string.server) + " " + serverVersion
-                    xcguidePackageName -> xcguideServerVersion.text = getString(R.string.server) + " " + serverVersion
-                    air3managerPackageName -> air3managerServerVersion.text = getString(R.string.server) + " " + serverVersion
+                    xctrackPackageName -> xctrackServerVersion.text = getString(R.string.server) + " " + serverVersionToDisplay
+                    xcguidePackageName -> xcguideServerVersion.text = getString(R.string.server) + " " + serverVersionToDisplay
+                    air3managerPackageName -> air3managerServerVersion.text = getString(R.string.server) + " " + serverVersionToDisplay
                 }
 
                 if (VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)) {
@@ -342,7 +347,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun enqueueDownload(appInfo: AppInfo) {
         downloadQueue.add(appInfo)
         startNextDownload() // Démarrez le téléchargement immédiatement
