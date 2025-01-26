@@ -306,7 +306,9 @@ class MainActivity : AppCompatActivity() {
                     air3managerPackageName -> air3managerServerVersion.text = getString(R.string.server) + " " + serverVersionToDisplay
                 }
 
+                Log.d("MainActivity", "  Calling VersionComparator.isServerVersionHigher() with: installedVersion=$installedVersion, serverVersion=$serverVersion, packageName=$packageName")
                 if (VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)) {
+                    Log.d("MainActivity", "  Server version is higher for $packageName")
                     // Une nouvelle version est disponible, cocher la case "Upgrade"
                     when (packageName) {
                         xctrackPackageName -> xctrackCheckbox.isChecked = true
@@ -314,6 +316,7 @@ class MainActivity : AppCompatActivity() {
                         air3managerPackageName -> air3managerCheckbox.isChecked = true
                     }
                 } else {
+                    Log.d("MainActivity", "  Server version is not higher for $packageName")
                     // La version du serveur est la même que celle installée, laisser la case décochée
                     when (packageName) {
                         xctrackPackageName -> xctrackCheckbox.isChecked = false
@@ -328,6 +331,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } else {
+                Log.d("MainActivity", "  Server version is null for $packageName")
                 // Gérer le cas où la version du serveur n'est pas disponible
                 when (packageName) {
                     xctrackPackageName -> xctrackServerVersion.text = getString(R.string.version_not_found)
@@ -347,6 +351,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun enqueueDownload(appInfo: AppInfo) {
         downloadQueue.add(appInfo)
         startNextDownload() // Démarrez le téléchargement immédiatement

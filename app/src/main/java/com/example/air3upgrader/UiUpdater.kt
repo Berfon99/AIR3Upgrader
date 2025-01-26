@@ -77,7 +77,7 @@ object UiUpdater {
         val color = if (installedVersionTextView?.text == context.getString(R.string.not_installed)) {
             Log.d("UiUpdater", "  Color: Not Installed")
             ContextCompat.getColor(context, R.color.not_installed_color)
-        } else if (filteredServerVersion == installedVersion) {
+        } else if (!VersionComparator.isServerVersionHigher(installedVersion ?: "", filteredServerVersion, appInfo.`package`)) {
             Log.d("UiUpdater", "  Color: Up-to-Date")
             ContextCompat.getColor(context, R.color.up_to_date_color)
         } else {

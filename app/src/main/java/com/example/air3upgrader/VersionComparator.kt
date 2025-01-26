@@ -16,13 +16,13 @@ object VersionComparator {
         } else {
             installedVersion.split(".").map { it.toIntOrNull() ?: 0 }
         }
+        Log.d("VersionComparator", "Installed parts: $installedParts")
+
         val serverParts = if (packageName == "org.xcontest.XCTrack") {
             parseXCTrackVersion(serverVersion)
         } else {
             serverVersion.split(".").map { it.toIntOrNull() ?: 0 }
         }
-
-        Log.d("VersionComparator", "Installed parts: $installedParts")
         Log.d("VersionComparator", "Server parts: $serverParts")
 
         val maxParts = maxOf(installedParts.size, serverParts.size)
@@ -36,6 +36,7 @@ object VersionComparator {
                 Log.d("VersionComparator", "Server version is lower at part $i")
                 return false
             }
+            Log.d("VersionComparator", "Server version is equal at part $i")
         }
 
         Log.d("VersionComparator", "Versions are equal")
@@ -45,17 +46,18 @@ object VersionComparator {
     private fun parseXCTrackVersion(version: String): List<Int> {
         Log.d("VersionComparator", "Parsing XCTrack version: $version")
         val filteredVersion = version.replace("-", ".")
+        Log.d("VersionComparator", "Filtered version: $filteredVersion")
         val parts = filteredVersion.split(".")
-        Log.d("VersionComparator", "Parts after replace and split: $parts")
+        Log.d("VersionComparator", "Parts after split: $parts")
         val intParts = parts.mapNotNull { it.toIntOrNull() }
-        Log.d("VersionComparator", "Parts after mapNotNull: $intParts")
+        Log.d("VersionComparator", "Integer parts: $intParts")
         val paddedParts = intParts.toMutableList()
         while (paddedParts.size < 5) {
             paddedParts.add(0)
         }
-        Log.d("VersionComparator", "Parts after padding: $paddedParts")
+        Log.d("VersionComparator", "Padded parts: $paddedParts")
         val finalParts = paddedParts.take(5)
-        Log.d("VersionComparator", "Parsed XCTrack version parts: $finalParts")
+        Log.d("VersionComparator", "Final parts: $finalParts")
         return finalParts
     }
 }
