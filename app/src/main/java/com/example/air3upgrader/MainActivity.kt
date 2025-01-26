@@ -48,6 +48,7 @@ import kotlin.collections.removeFirst
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.ui.geometry.isEmpty
 import androidx.core.content.ContextCompat
 import com.google.android.material.color.DynamicColors
 import timber.log.Timber
@@ -221,20 +222,10 @@ class MainActivity : AppCompatActivity() {
             contentResolver.unregisterContentObserver(it)
         }
     }
-    
+
     override fun onResume() {
         super.onResume()
-        // Check if the apps are installed and update the UI
-        checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel, xctrackPackageName) // Pass packageName
-        checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel, xcguidePackageName) // Pass packageName
-        checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel, air3managerPackageName) // Pass packageName
-        lifecycleScope.launch {
-            val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-            val finalSelectedModel = selectedModel ?: getDeviceName()
-            AppUtils.setAppBackgroundColor(this@MainActivity, xctrackPackageName, xctrackName, AppUtils.getAppVersion(this@MainActivity, xctrackPackageName), finalSelectedModel)
-            AppUtils.setAppBackgroundColor(this@MainActivity, xcguidePackageName, xcguideName, AppUtils.getAppVersion(this@MainActivity, xcguidePackageName), finalSelectedModel)
-            AppUtils.setAppBackgroundColor(this@MainActivity, air3managerPackageName, air3managerName, AppUtils.getAppVersion(this@MainActivity, air3managerPackageName), finalSelectedModel)
-        }
+        Log.d("MainActivity", "onResume() called")
         // Update checkbox states after installation
         updateCheckboxStates()
         startNextDownload()
@@ -254,9 +245,6 @@ class MainActivity : AppCompatActivity() {
                 val checkbox = checkboxes[i]
                 val installedVersion = AppUtils.getAppVersion(this@MainActivity, packageName)
                 appInfo = appInfos.find { it.`package` == packageName } // Assignation de la valeur à appInfo
-                appInfo?.let {
-                    UiUpdater.updateCheckboxState(this@MainActivity, it, checkbox, installedVersion)
-                }
             }
         }
     }
@@ -293,29 +281,12 @@ class MainActivity : AppCompatActivity() {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
     }
 
-    internal fun getLatestVersionFromServer() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-            val finalSelectedModel = selectedModel ?: getDeviceName()
-
-            try {
-                appInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
-                AppUtils.appInfos = appInfos // Assign appInfos here
-                withContext(Dispatchers.Main) {
-                    appInfos.forEach { appInfo ->
-                        fileName = appInfo.apkPath.substringAfterLast('/')
-                        when (appInfo.`package`) {
-                            xctrackPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xctrackName, xctrackServerVersion, xctrackVersion, finalSelectedModel)
-                            xcguidePackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xcguideName, xcguideServerVersion, xcguideVersion, finalSelectedModel)
-                            air3managerPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, air3managerName, air3managerServerVersion, air3managerVersion, finalSelectedModel)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error getting latest version from server", e)
-                // Handle error, e.g., show a toast message to the user
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
+    private fun checkAppInstallation(packageName: String, nameTextView: TextView, versionTextView: TextView, selectedModel: String, packageApp: String) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                val appInfo = appInfos.find { it.`package` == packageApp }
+                if (appInfo != null) {
+                    UiUpdater.updateAppInfo(this@MainActivity, appInfo, nameTextView, versionTextView, versionTextView, selectedModel)
                 }
             }
         }
@@ -386,8 +357,62 @@ class MainActivity : AppCompatActivity() {
         contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, contentObserver)
     }
 
+    internal fun getLatestVersionFromServer() {
+        lifecycleScope.launch {
+            // Check if internet is available
+            if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, getString(R.string.no_internet_connection), Toast.LENGTH_SHORT).show()
+                    showNoInternetDialog()
+                }
+                return@launch
+            }
+            withContext(Dispatchers.IO) {
+                val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
+                val finalSelectedModel = selectedModel ?: getDeviceName()
+
+                try {
+                    val newAppInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
+                    if (newAppInfos.isEmpty()) {
+                        Log.e("MainActivity", "getLatestVersionFromServer: Server returned an empty list")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
+                        }
+                        return@withContext
+                    }
+                    appInfos = newAppInfos
+                    withContext(Dispatchers.Main) {
+                        appInfos.forEach { appInfo ->
+                            fileName = appInfo.apkPath.substringAfterLast('/')
+                            when (appInfo.`package`) {
+                                xctrackPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xctrackName, xctrackServerVersion, xctrackVersion, finalSelectedModel)
+                                xcguidePackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, xcguideName, xcguideServerVersion, xcguideVersion, finalSelectedModel)
+                                air3managerPackageName -> UiUpdater.updateAppInfo(this@MainActivity, appInfo, air3managerName, air3managerServerVersion, air3managerVersion, finalSelectedModel)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error getting latest version from server: ${e.message}")
+                    // Handle error, e.g., show a toast message to the user
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                // Re-check app installations after getting the latest versions
+                checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, finalSelectedModel, xctrackPackageName)
+                checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, finalSelectedModel, xcguidePackageName)
+                checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, finalSelectedModel, air3managerPackageName)
+            }
+        }
+    }
+
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
+            selectedModel = dataStoreManager.getSelectedModel().firstOrNull() ?: getDeviceName()
+            if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                showNoInternetDialog()
+                return@launch
+            }
             getLatestVersionFromServer() // Fetch the latest app information
 
             // Wait for the appInfos to be populated
@@ -396,7 +421,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Display a Toast message
-            Toast.makeText(this@MainActivity, getString(apk_download_started), Toast.LENGTH_SHORT).show()
+            //Toast.makeText(this@MainActivity, getString(apk_download_started), Toast.LENGTH_SHORT).show() // Remove this line
 
             val appsToUpgrade = mutableListOf<AppInfo>()
             if (xctrackCheckbox.isChecked) {
@@ -417,54 +442,40 @@ class MainActivity : AppCompatActivity() {
             // Enqueue downloads instead of adding them directly to downloadQueue
             appsToUpgrade.forEach { appInfo ->
                 enqueueDownload(appInfo)
+                startNextDownload()
             }
+            // Re-check app installations after getting the latest versions
+            checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel, xctrackPackageName)
+            checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel, xcguidePackageName)
+            checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel, air3managerPackageName)
         }
     }
 
-    private fun checkAppInstallation(packageName: String, appNameTextView: TextView, appVersionTextView: TextView, selectedModel: String, appPackageName: String) {
-        val installedVersion = AppUtils.getAppVersion(this, packageName)
-        appVersionTextView.text = installedVersion
-
-        lifecycleScope.launch {
-            val serverVersion = AppUtils.getServerVersion(this@MainActivity, packageName, selectedModel)
-            if (serverVersion != null) {
-                when (packageName) {
-                    xctrackPackageName -> xctrackServerVersion.text = serverVersion
-                    xcguidePackageName -> xcguideServerVersion.text = serverVersion
-                    air3managerPackageName -> air3managerServerVersion.text = serverVersion
-                }
-
-                if (VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)) {
-                    // Une nouvelle version est disponible, cocher la case "Upgrade"
-                    when (packageName) {
-                        xctrackPackageName -> xctrackCheckbox.isChecked = true
-                        xcguidePackageName -> xcguideCheckbox.isChecked = true
-                        air3managerPackageName -> air3managerCheckbox.isChecked = true
-                    }
-                } else {
-                    // La version du serveur est la même que celle installée, laisser la case décochée
-                    when (packageName) {
-                        xctrackPackageName -> xctrackCheckbox.isChecked = false
-                        xcguidePackageName -> xcguideCheckbox.isChecked = false
-                        air3managerPackageName -> air3managerCheckbox.isChecked = false
-                    }
-                    // Activer la case pour permettre à l'utilisateur de la sélectionner manuellement
-                    when (packageName) {
-                        xctrackPackageName -> xctrackCheckbox.isEnabled = true
-                        xcguidePackageName -> xcguideCheckbox.isEnabled = true
-                        air3managerPackageName -> air3managerCheckbox.isEnabled = true
-                    }
-                }
-            } else {
-                // Gérer le cas où la version du serveur n'est pas disponible
-                when (packageName) {
-                    xctrackPackageName -> xctrackServerVersion.text = getString(R.string.version_not_found)
-                    xcguidePackageName -> xcguideServerVersion.text = getString(R.string.version_not_found)
-                    air3managerPackageName -> air3managerServerVersion.text = getString(R.string.version_not_found)
-                }
+    private fun showNoInternetDialog() {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.no_internet_connection))
+            .setMessage(getString(R.string.no_internet_message))
+            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
+                dialog.dismiss()
+                // Update UI to show "version not found"
+                updateUIAfterNoInternet()
             }
+            .setNegativeButton(getString(R.string.retry)) { dialog, _ ->
+                dialog.dismiss()
+                // Retry the process
+                getLatestVersionFromServer()
+            }
+            .setCancelable(false) // Prevent dismissing by tapping outside
+            .create() // Create the dialog
+        dialog.show() // Show the dialog
+    }
 
-            AppUtils.setAppBackgroundColor(this@MainActivity, appPackageName, appNameTextView, installedVersion, selectedModel)
-        }
+    private fun updateUIAfterNoInternet() {
+        xctrackVersion.text = getString(R.string.version_not_found)
+        xcguideVersion.text = getString(R.string.version_not_found)
+        air3managerVersion.text = getString(R.string.version_not_found)
+        xctrackServerVersion.text = getString(R.string.version_not_found)
+        xcguideServerVersion.text = getString(R.string.version_not_found)
+        air3managerServerVersion.text = getString(R.string.version_not_found)
     }
 }
