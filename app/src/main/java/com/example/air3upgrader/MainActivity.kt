@@ -226,8 +226,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Log.d("MainActivity", "onResume() called")
-        // Update checkbox states after installation
-        updateCheckboxStates()
         startNextDownload()
     }
 
@@ -288,13 +286,14 @@ class MainActivity : AppCompatActivity() {
     private fun checkAppInstallationForApp(packageName: String, appNameTextView: TextView, appVersionTextView: TextView, selectedModel: String, appPackageName: String) {
         Log.d("MainActivity", "checkAppInstallationForApp() called for package: $packageName")
         val installedVersion = AppUtils.getAppVersion(this, packageName)
-        Log.d("MainActivity", "Installed version for $packageName: $installedVersion")
+        Log.d("MainActivity", "  Installed version for $packageName: $installedVersion")
         appVersionTextView.text = if (installedVersion != getString(R.string.na)) getString(R.string.installed) + " " + installedVersion else getString(R.string.not_installed)
 
         lifecycleScope.launch {
             val appInfo = appInfos.find { it.`package` == packageName }
-            val serverVersion = appInfo?.latestVersion // Changed from version to latestVersion
-            Log.d("MainActivity", "Server version for $packageName: $serverVersion")
+            Log.d("MainActivity", "  appInfo for $packageName: $appInfo")
+            val serverVersion = appInfo?.latestVersion
+            Log.d("MainActivity", "  Server version for $packageName: $serverVersion")
             if (serverVersion != null) {
                 when (packageName) {
                     xctrackPackageName -> xctrackServerVersion.text = getString(R.string.server) + " " + serverVersion
@@ -314,13 +313,13 @@ class MainActivity : AppCompatActivity() {
                     when (packageName) {
                         xctrackPackageName -> xctrackCheckbox.isChecked = false
                         xcguidePackageName -> xcguideCheckbox.isChecked = false
-                        air3managerPackageName -> xctrackCheckbox.isChecked = false
+                        air3managerPackageName -> air3managerCheckbox.isChecked = false
                     }
                     // Activer la case pour permettre à l'utilisateur de la sélectionner manuellement
                     when (packageName) {
                         xctrackPackageName -> xctrackCheckbox.isEnabled = true
                         xcguidePackageName -> xcguideCheckbox.isEnabled = true
-                        air3managerPackageName -> xctrackCheckbox.isEnabled = true
+                        air3managerPackageName -> air3managerCheckbox.isEnabled = true
                     }
                 }
             } else {
@@ -332,7 +331,14 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             launch {
-                AppUtils.setAppBackgroundColor(this@MainActivity, appPackageName, appNameTextView, installedVersion, selectedModel)
+                Log.d("MainActivity", "Before calling setAppBackgroundColor")
+                val appInfo = appInfos.find { it.`package` == packageName }
+                if (appInfo != null) {
+                    UiUpdater.setAppBackgroundColor(this@MainActivity, appInfo, appNameTextView, appVersionTextView)
+                } else {
+                    Log.e("MainActivity", "AppInfo is null for package: $packageName")
+                }
+                Log.d("MainActivity", "After calling setAppBackgroundColor")
             }
         }
     }
@@ -414,37 +420,36 @@ class MainActivity : AppCompatActivity() {
                 }
                 return@launch
             }
-            withContext(Dispatchers.IO) {
-                val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-                val finalSelectedModel = selectedModel ?: getDeviceName()
-                Log.d("MainActivity", "Selected model: $finalSelectedModel")
+            val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
+            val finalSelectedModel = selectedModel ?: getDeviceName()
+            Log.d("MainActivity", "Selected model: $finalSelectedModel")
 
-                try {
-                    Log.d("MainActivity", "Fetching latest version from server...")
-                    val newAppInfos = versionChecker.getLatestVersionFromServer(finalSelectedModel)
-                    if (newAppInfos.isEmpty()) {
-                        Log.e("MainActivity", "getLatestVersionFromServer: Server returned an empty list")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
-                        }
-                        return@withContext
-                    }
-                    appInfos = newAppInfos
-                    Log.d("MainActivity", "Successfully fetched ${appInfos.size} app infos from server")
-                    for (appInfo in appInfos) {
-                        Log.d("MainActivity", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}")
-                    }
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "Error getting latest version from server: ${e.message}")
-                    // Handle error, e.g., show a toast message to the user
+            try {
+                Log.d("MainActivity", "Fetching latest version from server...")
+                val newAppInfos = withContext(Dispatchers.IO) {
+                    versionChecker.getLatestVersionFromServer(finalSelectedModel)
+                }
+                if (newAppInfos.isEmpty()) {
+                    Log.e("MainActivity", "getLatestVersionFromServer: Server returned an empty list")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
                     }
+                    return@launch
                 }
-            }
-            //checkAppInstallation() // Remove this line
-            withContext(Dispatchers.Main) {
-                checkAppInstallation()
+                appInfos = newAppInfos
+                Log.d("MainActivity", "Successfully fetched ${appInfos.size} app infos from server")
+                for (appInfo in appInfos) {
+                    Log.d("MainActivity", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}")
+                }
+                withContext(Dispatchers.Main) {
+                    checkAppInstallation()
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error getting latest version from server: ${e.message}")
+                // Handle error, e.g., show a toast message to the user
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

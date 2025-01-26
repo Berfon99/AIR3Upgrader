@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.glance.visibility
 
 object UiUpdater {
-    private fun updateApkNameDisplay(context: Context, appInfo: AppInfo, apkNameTextView: TextView?) {
+    internal fun updateApkNameDisplay(context: Context, appInfo: AppInfo, apkNameTextView: TextView?) {
         apkNameTextView?.text = appInfo.apkPath.substringAfterLast('/')
         apkNameTextView?.visibility = View.VISIBLE
     }
@@ -61,17 +61,27 @@ object UiUpdater {
         }
     }
 
-    private fun setAppBackgroundColor(
+    internal fun setAppBackgroundColor(
         context: Context,
         appInfo: AppInfo,
         nameTextView: TextView,
         installedVersionTextView: TextView?
     ) {
+        val installedVersion = getInstalledVersion(context, appInfo.`package`)
+        val filteredServerVersion = appInfo.latestVersion
+        Log.d("UiUpdater", "setAppBackgroundColor() called for ${appInfo.name}")
+        Log.d("UiUpdater", "  Installed Version: $installedVersion")
+        Log.d("UiUpdater", "  Filtered Server Version: $filteredServerVersion")
+        Log.d("UiUpdater", "  installedVersionTextView?.text: ${installedVersionTextView?.text}")
+
         val color = if (installedVersionTextView?.text == context.getString(R.string.not_installed)) {
+            Log.d("UiUpdater", "  Color: Not Installed")
             ContextCompat.getColor(context, R.color.not_installed_color)
-        } else if (appInfo.latestVersion == getInstalledVersion(context, appInfo.`package`)) {
+        } else if (filteredServerVersion == installedVersion) {
+            Log.d("UiUpdater", "  Color: Up-to-Date")
             ContextCompat.getColor(context, R.color.up_to_date_color)
         } else {
+            Log.d("UiUpdater", "  Color: Update Available")
             ContextCompat.getColor(context, R.color.update_available_color)
         }
         nameTextView.setBackgroundColor(color)
