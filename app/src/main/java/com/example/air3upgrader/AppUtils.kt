@@ -6,105 +6,53 @@ import android.graphics.Color
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileInputStream
-import java.security.MessageDigest
-import timber.log.Timber
+import java.net.URL
+import java.net.HttpURLConnection
 
 object AppUtils {
-
-    lateinit var appInfos: List<AppInfo>
 
     fun getAppVersion(context: Context, packageName: String): String {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
-            val fullVersionName = packageInfo.versionName
-
-            if (fullVersionName != null) {
-                when (packageName) {
-                    "org.xcontest.XCTrack" -> {
-                        // Split by . and - and take the first 5 parts
-                        val parts = fullVersionName.split(".", "-").take(5)
-                        // Reconstruct the version string with the original separators
-                        val reconstructedVersion = buildString {
-                            var partIndex = 0
-                            var charIndex = 0
-                            while (partIndex < parts.size && charIndex < fullVersionName.length) {
-                                val currentPart = parts[partIndex]
-                                append(currentPart)
-                                charIndex += currentPart.length
-                                partIndex++
-                                if (partIndex < parts.size) {
-                                    while (charIndex < fullVersionName.length && fullVersionName[charIndex] != '.' && fullVersionName[charIndex] != '-') {
-                                        charIndex++
-                                    }
-                                    if (charIndex < fullVersionName.length) {
-                                        append(fullVersionName[charIndex])
-                                        charIndex++
-                                    }
-                                }
-                            }
-                        }
-                        reconstructedVersion
-                    }
-                    "indysoft.xc_guide" -> {
-                        // Remove everything before the last dot
-                        fullVersionName.substringAfterLast(".")
-                    }
-                    "com.xc.r3" -> {
-                        // Extract major and minor version for AIR³ Manager using regex
-                        val matchResult = Regex("(\\d+)\\.(\\d+)").find(fullVersionName)
-                        matchResult?.let {
-                            "${it.groupValues[1]}.${it.groupValues[2]}"
-                        } ?: fullVersionName // Return full version if regex fails
-                    }
-                    else -> fullVersionName // Return the full version for other apps
-                }
-            } else {
-                context.getString(R.string.na) // Use string resource
-            }
+            packageInfo.versionName ?: context.getString(R.string.na)
         } catch (e: PackageManager.NameNotFoundException) {
-            context.getString(R.string.na) // Use string resource
+            context.getString(R.string.na)
         }
     }
 
-    suspend fun setAppBackgroundColor(context: Context, packageName: String, nameTextView: TextView, installedVersion: String?, selectedModel: String?) {
-        withContext(Dispatchers.Main) {
-            val appInfo = appInfos.find { it.`package` == packageName } // Use appInfos directly
-            val backgroundResource = when {
-                VersionComparator.isServerVersionHigher(installedVersion ?: "", appInfo?.latestVersion ?: "", packageName) -> R.drawable.circle_background_orange
-                installedVersion == appInfo?.latestVersion && !(appInfo?.isSelectedForUpgrade ?: false) -> R.drawable.circle_background_green
-                appInfo?.isSelectedForUpgrade == true -> R.color.gray
-                else -> R.drawable.circle_background
-            }
-            nameTextView.background = context.getDrawable(backgroundResource)
-        }
-    }
+    suspend fun getServerVersion(context: Context, packageName: String, selectedModel: String): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://ftp.fly-air3.com/versions/$selectedModel/$packageName.txt")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.connectTimeout = 5000 // 5 seconds
+                connection.readTimeout = 5000 // 5 seconds
+                connection.requestMethod = "GET"
 
-    fun getServerVersion(context: Context, packageName: String, selectedModel: String?): String? {
-        var result: String? = null
-        runBlocking {
-            result = withContext(Dispatchers.IO) {
-                val appInfos = VersionChecker(context).getLatestVersionFromServer(selectedModel ?: "")
-
-                // Journalisation des informations de version récupérées depuis le serveur
-                Timber.d("AppUtils - getServerVersion: appInfos = $appInfos")
-
-                val appInfo = appInfos.find { it.`package` == packageName }
-
-                // Journalisation de l'AppInfo trouvée pour le package spécifié
-                Timber.d("AppUtils - getServerVersion: appInfo for $packageName = $appInfo")
-
-                appInfo?.latestVersion
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val inputStream = connection.inputStream
+                    val serverVersion = inputStream.bufferedReader().use { it.readText() }.trim()
+                    inputStream.close()
+                    serverVersion
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                null
             }
         }
-
-        // Journalisation de la version du serveur retournée
-        Timber.d("AppUtils - getServerVersion: serverVersion for $packageName = $result")
-
-        return result
     }
 
+    suspend fun setAppBackgroundColor(context: Context, packageName: String, appNameTextView: TextView, installedVersion: String, selectedModel: String) {
+        val serverVersion = getServerVersion(context, packageName, selectedModel)
+        val color = if (installedVersion == context.getString(R.string.na)) {
+            ContextCompat.getColor(context, R.color.not_installed_color)
+        } else if (serverVersion == installedVersion) {
+            ContextCompat.getColor(context, R.color.up_to_date_color)
+        } else {
+            ContextCompat.getColor(context, R.color.update_available_color)
+        }
+        appNameTextView.setBackgroundColor(color)
+    }
 }

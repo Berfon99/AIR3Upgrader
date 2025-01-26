@@ -15,8 +15,8 @@ object UiUpdater {
     }
     fun updateAppInfo(context: Context, appInfo: AppInfo, nameTextView: TextView, serverVersionTextView: TextView, installedVersionTextView: TextView?, selectedModel: String?) {
         nameTextView.text = appInfo.name
-        serverVersionTextView.text = appInfo.latestVersion
-        installedVersionTextView?.text = getInstalledVersion(context, appInfo.`package`) ?: context.getString(R.string.not_installed)
+        serverVersionTextView.text = context.getString(R.string.server) + " " + appInfo.latestVersion
+        installedVersionTextView?.text = if (getInstalledVersion(context, appInfo.`package`) != null) context.getString(R.string.installed) + " " + getInstalledVersion(context, appInfo.`package`) else context.getString(R.string.not_installed)
         setAppBackgroundColor(context, appInfo, nameTextView, installedVersionTextView)
         val apkNameTextView = when (appInfo.`package`) {
             "org.xcontest.XCTrack" -> (context as Activity).findViewById<TextView>(R.id.xctrack_apk_name)
