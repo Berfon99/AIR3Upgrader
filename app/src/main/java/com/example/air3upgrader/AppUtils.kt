@@ -34,14 +34,11 @@ object AppUtils {
         Log.d("AppUtils", "filterVersion() called for package: $packageName, versionName: $versionName")
         return when (packageName) {
             "org.xcontest.XCTrack" -> {
-                val parts = versionName.split("-")
-                if (parts.isNotEmpty()) {
-                    parts[0]
-                } else {
-                    versionName
-                }
+                val parts = versionName.replace("-", ".").split(".") // Replace "-" with "." and split
+                val filteredParts = parts.take(5) // Take up to 5 parts
+                val paddedParts = filteredParts + List(5 - filteredParts.size) { "0" } // Pad with "0" if needed
+                paddedParts.joinToString(".") // Join with "."
             }
-
             "indysoft.xc_guide" -> {
                 val parts = versionName.split(".")
                 if (parts.size > 1) {
@@ -50,7 +47,6 @@ object AppUtils {
                     versionName
                 }
             }
-
             "com.xc.r3" -> {
                 val parts = versionName.split(".")
                 if (parts.size > 1) {
@@ -59,7 +55,6 @@ object AppUtils {
                     versionName
                 }
             }
-
             else -> versionName
         }
     }
