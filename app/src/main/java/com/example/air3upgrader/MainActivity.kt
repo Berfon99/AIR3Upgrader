@@ -110,8 +110,6 @@ class MainActivity : AppCompatActivity() {
             Timber.plant(Timber.DebugTree())
         }
 
-        // Apply dynamic colors if available
-        DynamicColors.applyToActivitiesIfAvailable(application)
         dataStoreManager = DataStoreManager(this)
 
         // Set the action bar title with device info
