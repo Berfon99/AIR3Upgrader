@@ -218,8 +218,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         unregisterReceiver(downloadCompleteReceiver)
-        contentObserver?.let {
-            contentResolver.unregisterContentObserver(it)
+        if (::contentObserver.isInitialized) {
+            contentResolver.unregisterContentObserver(contentObserver)
         }
     }
 
