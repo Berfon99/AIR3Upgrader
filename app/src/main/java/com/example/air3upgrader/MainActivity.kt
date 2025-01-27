@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
-    private lateinit var contentObserver: ContentObserver
+    private var contentObserver: ContentObserver? = null
     private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver // Declare as class-level variable
 
 
@@ -206,27 +206,6 @@ class MainActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d("MainActivity", "onDestroy() called")
-        finishAffinity() // Ensure the app is fully closed
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-            }
-        }
-        unregisterReceiver(downloadCompleteReceiver)
-        contentObserver?.let {
-            contentResolver.unregisterContentObserver(it)
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        Log.d("MainActivity", "onResume() called")
-        startNextDownload()
     }
 
     private fun updateCheckboxStates() {
@@ -393,7 +372,7 @@ class MainActivity : AppCompatActivity() {
 
         downloadIdToAppInfo[downloadID] = appInfo
         // Register ContentObserver
-        contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        val myContentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
                 super.onChange(selfChange)
                 Log.d("MainActivity", "ContentObserver onChange() called")
@@ -408,14 +387,33 @@ class MainActivity : AppCompatActivity() {
                     val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
                     Log.d("MainActivity", "Download progress: $progress%")
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        contentResolver.unregisterContentObserver(this)
-                        Log.d("MainActivity", "ContentObserver unregistered")
+                        this.let {
+                            contentResolver.unregisterContentObserver(it)
+                            Log.d("MainActivity", "ContentObserver unregistered")
+                        }
                     }
                 }
                 cursor.close()
             }
         }
-        contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, contentObserver)
+        contentObserver = myContentObserver
+        contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, myContentObserver)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("MainActivity", "onDestroy() called")
+        finishAffinity() // Ensure the app is fully closed
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
+        unregisterReceiver(downloadCompleteReceiver)
+        val observer = contentObserver // Create a local, immutable copy
+        observer?.let {
+            contentResolver.unregisterContentObserver(it)
+        }
     }
 
     internal fun getLatestVersionFromServer() {
