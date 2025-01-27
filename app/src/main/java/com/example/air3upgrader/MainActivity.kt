@@ -54,6 +54,7 @@ import com.google.android.material.color.DynamicColors
 import timber.log.Timber
 import com.example.air3upgrader.AppUtils.getServerVersion
 import com.example.air3upgrader.UiUpdater
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : AppCompatActivity() {
 
@@ -100,6 +101,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         Log.d("MainActivity", "onCreate() called")
