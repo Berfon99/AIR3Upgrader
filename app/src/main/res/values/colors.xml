@@ -10,5 +10,8 @@
     <color name="purple_700">#FF3700B3</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
-    <color name="update_available">#FFFF00</color> <!-- Add this line -->
+    <color name="update_available">#FFFF00</color>
+    <color name="not_installed_color">#FFCCCCCC</color> <!-- Light Gray -->
+    <color name="up_to_date_color">#FF00FF00</color> <!-- Green -->
+    <color name="update_available_color">#FFFFCC00</color> <!-- Yellow -->
 </resources>
