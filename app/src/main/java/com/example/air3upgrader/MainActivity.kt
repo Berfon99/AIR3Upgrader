@@ -380,7 +380,8 @@ class MainActivity : AppCompatActivity() {
             originalFileName // Use the original name for other APKs
         }
         val request = DownloadManager.Request(Uri.parse(url))
-            .setDescription("Downloading ${appInfo.name}")
+            .setDescription(appInfo.`package`) // Set the description to the package name
+            .setTitle(appInfo.name) // Set the title to the app name
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
