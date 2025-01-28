@@ -61,8 +61,9 @@ class VersionChecker(private val context: Context) {
             }.toMutableList()
 
             // Find the first matching AIR³ Manager entry and add it to the list
-            val air3ManagerInfo = appInfos.firstOrNull { it.`package` == "com.xc.r3" && it.compatibleModels.contains(selectedModel) && Build.VERSION.SDK_INT >= it.minAndroidVersion.toInt() }
+            val air3ManagerInfo = appInfos.filter { it.`package` == "com.xc.r3" && it.compatibleModels.contains(selectedModel) && Build.VERSION.SDK_INT >= it.minAndroidVersion.toInt() }.maxByOrNull { it.latestVersion }
             if (air3ManagerInfo != null) {
+                filteredAppInfos.removeAll { it.`package` == "com.xc.r3" }
                 filteredAppInfos.add(0, air3ManagerInfo) // Add at the beginning
             }
 
@@ -70,6 +71,7 @@ class VersionChecker(private val context: Context) {
             filteredAppInfos.onEach { appInfo ->
                 appInfo.installedVersion = AppUtils.getAppVersion(context, appInfo.`package`)
                 appInfo.highestServerVersion = appInfo.latestVersion
+                Log.d("VersionChecker", "Setting highestServerVersion for ${appInfo.`package`} to ${appInfo.highestServerVersion}") // Added log
             }
             Log.d("VersionChecker", "Successfully fetched ${filteredAppInfos.size} app infos from server")
             for (appInfo in filteredAppInfos) {
