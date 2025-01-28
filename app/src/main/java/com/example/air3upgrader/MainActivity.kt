@@ -358,6 +358,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             originalFileName // Use the original name for other APKs
         }
+
         Log.d("MainActivity", "Downloading from URL: $url, saving as: $fileName")
 
         val request = DownloadManager.Request(Uri.parse(url))
@@ -367,38 +368,49 @@ class MainActivity : AppCompatActivity() {
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
             .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName) // Set the correct file name here
-
+        Log.d("MainActivity", "Request: $request")
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        downloadID = downloadManager.enqueue(request)
-        Log.d("MainActivity", "Download enqueued with ID: $downloadID")
+        try {
+            downloadID = downloadManager.enqueue(request)
+            Log.d("MainActivity", "Download enqueued with ID: $downloadID")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error enqueuing download", e)
+        }
 
         downloadIdToAppInfo[downloadID] = appInfo
         // Register ContentObserver
         val myContentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                super.onChange(selfChange)
+            override fun onChange(selfChange: Boolean, uri: Uri?) {
                 Log.d("MainActivity", "ContentObserver onChange() called")
+                Log.d("MainActivity", "ContentObserver onChange() - selfChange: $selfChange, uri: $uri")
+                val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager // Get DownloadManager here
                 val query = DownloadManager.Query().setFilterById(downloadID)
                 val cursor = downloadManager.query(query)
                 if (cursor.moveToFirst()) {
-                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                    Log.d("MainActivity", "Download status: $status")
-                    val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesDownloaded")
+                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                    val bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                    val bytesTotalIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                    val status = cursor.getInt(statusIndex)
+                    val bytesDownloaded = cursor.getLong(bytesDownloadedIndex)
+                    val bytesTotal = cursor.getLong(bytesTotalIndex)
                     val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
+
+                    Log.d("MainActivity", "Download status: $status")
+                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesTotal")
                     Log.d("MainActivity", "Download progress: $progress%")
+
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        val uri = downloadManager.getUriForDownloadedFile(downloadID)
-                        if (uri != null) {
-                            val apkFile = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
-                            Log.d("MainActivity", "apkFile: $apkFile")
-                            AppUtils.installApk(this@MainActivity, apkFile)
-                        }
-                        this.let {
+                        // Unregister the ContentObserver
+                        contentObserver?.let {
                             contentResolver.unregisterContentObserver(it)
                             Log.d("MainActivity", "ContentObserver unregistered")
                         }
+                        val uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                        val apkFileUriString = cursor.getString(uriIndex)
+                        val apkFileUri = Uri.parse(apkFileUriString)
+                        val apkFile = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+                        Log.d("MainActivity", "apkFile: ${apkFile.absolutePath}")
+                        AppUtils.installApk(this@MainActivity, apkFile)
                     }
                 }
                 cursor.close()
