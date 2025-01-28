@@ -1,6 +1,10 @@
 package com.example.air3upgrader
 
 import android.content.Context
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.util.Log
 import android.widget.TextView
@@ -119,5 +123,21 @@ object AppUtils {
         }
         appNameTextView.setBackgroundColor(color)
         Log.d("AppUtils", "Background color set")
+    }
+
+    fun installApk(context: Context, apkFile: File) {
+        Log.d("installApk", "installApk() called with apkFile: ${apkFile.absolutePath}")
+        try {
+            val authority = "${context.packageName}.provider"
+            Log.d("installApk", "authority: $authority")
+            val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
+            Log.d("installApk", "apkUri: $apkUri")
+            val installIntent = Intent(Intent.ACTION_VIEW)
+            installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive")
+            installIntent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            context.startActivity(installIntent)
+        } catch (e: Exception) {
+            Log.e("installApk", "Error installing APK", e)
+        }
     }
 }

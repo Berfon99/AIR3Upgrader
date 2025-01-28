@@ -359,13 +359,14 @@ class MainActivity : AppCompatActivity() {
             originalFileName // Use the original name for other APKs
         }
         Log.d("MainActivity", "Downloading from URL: $url, saving as: $fileName")
+
         val request = DownloadManager.Request(Uri.parse(url))
             .setDescription(appInfo.`package`) // Set the description to the package name
             .setTitle(appInfo.name) // Set the title to the app name
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName) // Set the correct file name here
+            .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName) // Set the correct file name here
 
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         downloadID = downloadManager.enqueue(request)
@@ -388,6 +389,12 @@ class MainActivity : AppCompatActivity() {
                     val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
                     Log.d("MainActivity", "Download progress: $progress%")
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        val uri = downloadManager.getUriForDownloadedFile(downloadID)
+                        if (uri != null) {
+                            val apkFile = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+                            Log.d("MainActivity", "apkFile: $apkFile")
+                            AppUtils.installApk(this@MainActivity, apkFile)
+                        }
                         this.let {
                             contentResolver.unregisterContentObserver(it)
                             Log.d("MainActivity", "ContentObserver unregistered")
