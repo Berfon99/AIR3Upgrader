@@ -271,7 +271,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val appInfo = appInfos.find { it.`package` == packageName }
             Log.d("MainActivity", "  appInfo for $packageName: $appInfo")
-            val serverVersion = appInfo?.latestVersion
+            val serverVersion = appInfo?.highestServerVersion
             Log.d("MainActivity", "  Server version for $packageName: $serverVersion")
             if (serverVersion != null) {
                 val serverVersionToDisplay = if (packageName == xctrackPackageName) {
@@ -358,6 +358,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             originalFileName // Use the original name for other APKs
         }
+        Log.d("MainActivity", "Downloading from URL: $url, saving as: $fileName")
         val request = DownloadManager.Request(Uri.parse(url))
             .setDescription(appInfo.`package`) // Set the description to the package name
             .setTitle(appInfo.name) // Set the title to the app name
@@ -383,7 +384,7 @@ class MainActivity : AppCompatActivity() {
                     Log.d("MainActivity", "Download status: $status")
                     val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                     val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesTotal")
+                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesDownloaded")
                     val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
                     Log.d("MainActivity", "Download progress: $progress%")
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
@@ -447,7 +448,7 @@ class MainActivity : AppCompatActivity() {
                 appInfos = newAppInfos
                 Log.d("MainActivity", "Successfully fetched ${appInfos.size} app infos from server")
                 for (appInfo in appInfos) {
-                    Log.d("MainActivity", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}")
+                    Log.d("MainActivity", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}, Highest Server Version: ${appInfo.highestServerVersion}")
                 }
                 withContext(Dispatchers.Main) {
                     checkAppInstallation()

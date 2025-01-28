@@ -11,7 +11,10 @@ import androidx.glance.visibility
 
 object UiUpdater {
     internal fun updateApkNameDisplay(context: Context, appInfo: AppInfo, apkNameTextView: TextView?) {
-        apkNameTextView?.text = appInfo.apkPath.substringAfterLast('/')
+        Log.d("UiUpdater", "updateApkNameDisplay() called for app: ${appInfo.name}")
+        val apkName = appInfo.apkPath.substringAfterLast('/')
+        Log.d("UiUpdater", "APK name: $apkName")
+        apkNameTextView?.text = apkName
         apkNameTextView?.visibility = View.VISIBLE
     }
 
@@ -23,8 +26,9 @@ object UiUpdater {
         installedVersionTextView: TextView?,
         selectedModel: String?
     ) {
+        Log.d("UiUpdater", "updateAppInfo() called for app: ${appInfo.name}")
         nameTextView.text = appInfo.name
-        serverVersionTextView.text = context.getString(R.string.server) + " " + appInfo.latestVersion
+        serverVersionTextView.text = context.getString(R.string.server) + " " + appInfo.highestServerVersion
         val installedVersion = getInstalledVersion(context, appInfo.`package`)
         Log.d("UiUpdater", "Installed version for ${appInfo.`package`}: $installedVersion")
         installedVersionTextView?.text =
@@ -68,16 +72,15 @@ object UiUpdater {
         installedVersionTextView: TextView?
     ) {
         val installedVersion = getInstalledVersion(context, appInfo.`package`)
-        val filteredServerVersion = appInfo.latestVersion
         Log.d("UiUpdater", "setAppBackgroundColor() called for ${appInfo.name}")
         Log.d("UiUpdater", "  Installed Version: $installedVersion")
-        Log.d("UiUpdater", "  Filtered Server Version: $filteredServerVersion")
+        Log.d("UiUpdater", "  Highest Server Version: ${appInfo.highestServerVersion}")
         Log.d("UiUpdater", "  installedVersionTextView?.text: ${installedVersionTextView?.text}")
 
         val color = if (installedVersionTextView?.text == context.getString(R.string.not_installed)) {
             Log.d("UiUpdater", "  Color: Not Installed")
             ContextCompat.getColor(context, R.color.not_installed_color)
-        } else if (!VersionComparator.isServerVersionHigher(installedVersion ?: "", filteredServerVersion, appInfo.`package`)) {
+        } else if (!VersionComparator.isServerVersionHigher(installedVersion ?: "", appInfo.highestServerVersion, appInfo.`package`)) {
             Log.d("UiUpdater", "  Color: Up-to-Date")
             ContextCompat.getColor(context, R.color.up_to_date_color)
         } else {
