@@ -358,7 +358,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             originalFileName // Use the original name for other APKs
         }
-
         Log.d("MainActivity", "Downloading from URL: $url, saving as: $fileName")
 
         val request = DownloadManager.Request(Uri.parse(url))
@@ -410,7 +409,18 @@ class MainActivity : AppCompatActivity() {
                         val apkFileUri = Uri.parse(apkFileUriString)
                         val apkFile = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
                         Log.d("MainActivity", "apkFile: ${apkFile.absolutePath}")
-                        AppUtils.installApk(this@MainActivity, apkFile)
+                        if (appInfo.name == "AIR³ Manager") {
+                            val newApkFile = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), originalFileName)
+                            if (apkFile.renameTo(newApkFile)) {
+                                Log.d("MainActivity", "File renamed to: ${newApkFile.absolutePath}")
+                                AppUtils.installApk(this@MainActivity, newApkFile)
+                            } else {
+                                Log.e("MainActivity", "Failed to rename file")
+                                AppUtils.installApk(this@MainActivity, apkFile)
+                            }
+                        } else {
+                            AppUtils.installApk(this@MainActivity, apkFile)
+                        }
                     }
                 }
                 cursor.close()
