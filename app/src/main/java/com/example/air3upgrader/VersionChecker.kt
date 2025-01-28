@@ -40,6 +40,20 @@ class VersionChecker(private val context: Context) {
         }
     }
 
+    private fun getApiLevelFromAndroidVersion(androidVersion: String): Int {
+        return when (androidVersion) {
+            "5" -> 21 // Lollipop
+            "8" -> 26 // Oreo
+            "8.1" -> 27 // Oreo MR1
+            "10" -> 29 // Android 10
+            "11" -> 30 // Android 11
+            "13" -> 33 // Android 13
+            "14" -> 34 // Android 14
+            "15" -> 35 // Android 15
+            else -> 0 // Unknown version
+        }
+    }
+
     suspend fun getLatestVersionFromServer(selectedModel: String): List<AppInfo> = withContext(Dispatchers.IO) {
         Log.d("VersionChecker", "getLatestVersionFromServer() called with selectedModel: $selectedModel")
         try {
@@ -48,35 +62,45 @@ class VersionChecker(private val context: Context) {
             val gson = GsonBuilder().create()
             val listType = object : TypeToken<AppsData>() {}.type
             val appsData: AppsData = gson.fromJson(jsonString, listType)
-            val appInfos = appsData.apps
+            var appInfos = appsData.apps
 
-            val filteredAppInfos = appInfos.filter { appInfo ->
-                if (appInfo.`package` == "com.xc.r3") {
-                    val isModelCompatible = appInfo.compatibleModels.contains(selectedModel)
-                    val isAndroidVersionCompatible = Build.VERSION.SDK_INT >= appInfo.minAndroidVersion.toInt()
-                    isModelCompatible && isAndroidVersionCompatible
-                } else {
-                    true // Keep other apps
-                }
-            }.toMutableList()
+            // Filter AIR³ Manager entries based on compatibility
+            var compatibleAir3ManagerInfos = appInfos.filter {
+                it.`package` == "com.xc.r3" &&
+                        it.compatibleModels.contains(selectedModel) &&
+                        Build.VERSION.SDK_INT >= getApiLevelFromAndroidVersion(it.minAndroidVersion)
+            }
 
-            // Find the first matching AIR³ Manager entry and add it to the list
-            val air3ManagerInfo = appInfos.filter { it.`package` == "com.xc.r3" && it.compatibleModels.contains(selectedModel) && Build.VERSION.SDK_INT >= it.minAndroidVersion.toInt() }.maxByOrNull { it.latestVersion }
-            if (air3ManagerInfo != null) {
-                filteredAppInfos.removeAll { it.`package` == "com.xc.r3" }
-                filteredAppInfos.add(0, air3ManagerInfo) // Add at the beginning
+            // Find the highest compatible AIR³ Manager version
+            val highestCompatibleAir3ManagerInfo = compatibleAir3ManagerInfos.maxByOrNull { it.latestVersion }
+
+            // Filter other apps based on compatibility
+            appInfos = appInfos.filter { appInfo ->
+                appInfo.`package` != "com.xc.r3" || compatibleAir3ManagerInfos.contains(appInfo)
+            }
+
+            val filteredAppInfos = appInfos.toMutableList()
+
+            // Remove all existing AIR³ Manager entries
+            filteredAppInfos.removeAll { it.`package` == "com.xc.r3" }
+
+            // Add the highest compatible AIR³ Manager version if it's compatible with the Android version
+            highestCompatibleAir3ManagerInfo?.let {
+                filteredAppInfos.add(0, it)
             }
 
             // Update installedVersion and highestServerVersion for each AppInfo
             filteredAppInfos.onEach { appInfo ->
                 appInfo.installedVersion = AppUtils.getAppVersion(context, appInfo.`package`)
                 appInfo.highestServerVersion = appInfo.latestVersion
-                Log.d("VersionChecker", "Setting highestServerVersion for ${appInfo.`package`} to ${appInfo.highestServerVersion}") // Added log
+                Log.d("VersionChecker", "Setting highestServerVersion for ${appInfo.`package`} to ${appInfo.highestServerVersion}")
             }
+
             Log.d("VersionChecker", "Successfully fetched ${filteredAppInfos.size} app infos from server")
             for (appInfo in filteredAppInfos) {
                 Log.d("VersionChecker", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}, Highest Server Version: ${appInfo.highestServerVersion}")
             }
+
             return@withContext filteredAppInfos
         } catch (e: Exception) {
             Log.e("VersionChecker", "Error getting latest version from server", e)
