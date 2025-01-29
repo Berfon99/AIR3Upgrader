@@ -22,6 +22,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ProgressBar
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -37,7 +38,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
 import java.util.LinkedList
 import kotlinx.coroutines.withContext
-import android.widget.ProgressBar
 import android.os.Handler
 import android.os.Looper
 import androidx.glance.visibility
@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xctrackCheckbox: CheckBox
     private lateinit var xcguideCheckbox: CheckBox
     private lateinit var air3managerCheckbox: CheckBox
+    private lateinit var refreshButton: Button
     private lateinit var dataStoreManager: DataStoreManager
     private val REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 1001
     private val REQUEST_CODE_QUERY_ALL_PACKAGES = 1002
@@ -119,6 +120,7 @@ class MainActivity : AppCompatActivity() {
         air3managerName = findViewById(R.id.air3manager_name)
         closeButton = findViewById(R.id.close_button)
         upgradeButton = findViewById(R.id.upgrade_button)
+        refreshButton = findViewById(R.id.refresh_button)
         xctrackVersion = findViewById(R.id.xctrack_version)
         xcguideVersion = findViewById(R.id.xcguide_version)
         air3managerVersion = findViewById(R.id.air3manager_version)
@@ -141,6 +143,10 @@ class MainActivity : AppCompatActivity() {
         upgradeButton.setOnClickListener {
             // Handle upgrade button click
             handleUpgradeButtonClick()
+        }
+
+        refreshButton.setOnClickListener {
+            handleRefreshButtonClick()
         }
 
         // Get the latest version from the server
@@ -461,6 +467,16 @@ class MainActivity : AppCompatActivity() {
             appsToUpgrade.forEach { appInfo ->
                 enqueueDownload(appInfo)
             }
+        }
+    }
+
+    private fun handleRefreshButtonClick() {
+        lifecycleScope.launch {
+            if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                showNoInternetDialog()
+                return@launch
+            }
+            getLatestVersionFromServer()
         }
     }
 
