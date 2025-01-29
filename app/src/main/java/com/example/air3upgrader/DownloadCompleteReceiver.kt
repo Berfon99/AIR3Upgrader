@@ -61,6 +61,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                                     Handler(Looper.getMainLooper()).post {
                                         Toast.makeText(context, "Download complete", Toast.LENGTH_SHORT).show()
                                     }
+                                    (context as? MainActivity)?.downloadNextApp()
                                     (context as? MainActivity)?.getLatestVersionFromServer()
                                 } catch (e: Exception) {
                                     Log.e("DownloadReceiver", "Error starting installation: ${e.message}", e)

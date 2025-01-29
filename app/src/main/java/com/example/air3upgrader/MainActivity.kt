@@ -80,16 +80,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
-    private var contentObserver: ContentObserver? = null
     private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver // Declare as class-level variable
 
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
     private var appInfos: List<AppInfo> = emptyList() // Corrected type
-    private var downloadQueue: MutableList<AppInfo> = mutableListOf()
+    private val downloadQueue = LinkedList<AppInfo>()
     private var downloadIdToAppInfo: MutableMap<Long, AppInfo> = mutableMapOf()
-    private var isFirstDownload = true
     private var fileName: String = ""
 
     // Package names of the apps we want to check
@@ -97,7 +95,6 @@ class MainActivity : AppCompatActivity() {
     private val xcguidePackageName = "indysoft.xc_guide"
     private val air3managerPackageName = "com.xc.r3"
     private val versionChecker by lazy { VersionChecker(this) }
-    private var downloadID: Long = 0
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -332,20 +329,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun enqueueDownload(appInfo: AppInfo) {
+        Log.d("MainActivity", "enqueueDownload() called for ${appInfo.name}")
         downloadQueue.add(appInfo)
-        startNextDownload() // Démarrez le téléchargement immédiatement
+        if (downloadQueue.size == 1) {
+            downloadNextApp()
+        }
     }
 
-    private fun startNextDownload() {
+    internal fun downloadNextApp() {
+        Log.d("MainActivity", "downloadNextApp() called")
         if (downloadQueue.isNotEmpty()) {
-            if (!isFirstDownload) {
-                // Display a Toast message
-                Toast.makeText(this, getString(wait_for_next_download), Toast.LENGTH_SHORT).show() // Use string resource
-            } else {
-                isFirstDownload = false
-            }
-            val appInfo = downloadQueue.removeAt(0) // Use removeAt(0) instead of removeFirst()
-            downloadAndInstallApk(appInfo) // Pass only the appInfo
+            val nextApp = downloadQueue.first()
+            downloadQueue.removeFirst()
+            downloadAndInstallApk(nextApp)
         }
     }
 
@@ -370,64 +366,11 @@ class MainActivity : AppCompatActivity() {
         Log.d("MainActivity", "Request: $request")
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         try {
-            downloadID = downloadManager.enqueue(request)
-            Log.d("MainActivity", "Download enqueued with ID: $downloadID")
+            downloadManager.enqueue(request)
+            Log.d("MainActivity", "Download enqueued")
         } catch (e: Exception) {
             Log.e("MainActivity", "Error enqueuing download", e)
         }
-
-        downloadIdToAppInfo[downloadID] = appInfo
-        // Register ContentObserver
-        val myContentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean, uri: Uri?) {
-                Log.d("MainActivity", "ContentObserver onChange() called")
-                Log.d("MainActivity", "ContentObserver onChange() - selfChange: $selfChange, uri: $uri")
-                val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager // Get DownloadManager here
-                val query = DownloadManager.Query().setFilterById(downloadID)
-                val cursor = downloadManager.query(query)
-                if (cursor.moveToFirst()) {
-                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    val bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
-                    val bytesTotalIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
-                    val status = cursor.getInt(statusIndex)
-                    val bytesDownloaded = cursor.getLong(bytesDownloadedIndex)
-                    val bytesTotal = cursor.getLong(bytesTotalIndex)
-                    val progress = if (bytesTotal > 0) (bytesDownloaded * 100 / bytesTotal).toInt() else 0
-
-                    Log.d("MainActivity", "Download status: $status")
-                    Log.d("MainActivity", "Bytes downloaded: $bytesDownloaded, Total bytes: $bytesTotal")
-                    Log.d("MainActivity", "Download progress: $progress%")
-
-                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        // Unregister the ContentObserver
-                        contentObserver?.let {
-                            contentResolver.unregisterContentObserver(it)
-                            Log.d("MainActivity", "ContentObserver unregistered")
-                        }
-                        val uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                        val apkFileUriString = cursor.getString(uriIndex)
-                        val apkFileUri = Uri.parse(apkFileUriString)
-                        val apkFile = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
-                        Log.d("MainActivity", "apkFile: ${apkFile.absolutePath}")
-                        if (appInfo.name == "AIR³ Manager") {
-                            val newApkFile = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), originalFileName)
-                            if (apkFile.renameTo(newApkFile)) {
-                                Log.d("MainActivity", "File renamed to: ${newApkFile.absolutePath}")
-                                AppUtils.installApk(this@MainActivity, newApkFile)
-                            } else {
-                                Log.e("MainActivity", "Failed to rename file")
-                                AppUtils.installApk(this@MainActivity, apkFile)
-                            }
-                        } else {
-                            AppUtils.installApk(this@MainActivity, apkFile)
-                        }
-                    }
-                }
-                cursor.close()
-            }
-        }
-        contentObserver = myContentObserver
-        contentResolver.registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, myContentObserver)
     }
 
     override fun onDestroy() {
@@ -440,10 +383,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         unregisterReceiver(downloadCompleteReceiver)
-        val observer = contentObserver // Create a local, immutable copy
-        observer?.let {
-            contentResolver.unregisterContentObserver(it)
-        }
     }
 
     internal fun getLatestVersionFromServer() {
@@ -501,14 +440,6 @@ class MainActivity : AppCompatActivity() {
             }
             getLatestVersionFromServer() // Fetch the latest app information
 
-            // Wait for the appInfos to be populated
-            while (appInfos.isEmpty()) {
-                delay(100) // Wait for 100 milliseconds
-            }
-
-            // Display a Toast message
-            //Toast.makeText(this@MainActivity, getString(apk_download_started), Toast.LENGTH_SHORT).show() // Remove this line
-
             val appsToUpgrade = mutableListOf<AppInfo>()
             if (xctrackCheckbox.isChecked) {
                 appInfos.find { appInfo -> appInfo.`package` == xctrackPackageName }?.let { appsToUpgrade.add(it) }
@@ -528,13 +459,7 @@ class MainActivity : AppCompatActivity() {
             // Enqueue downloads instead of adding them directly to downloadQueue
             appsToUpgrade.forEach { appInfo ->
                 enqueueDownload(appInfo)
-                startNextDownload()
             }
-            // Re-check app installations after getting the latest versions
-            //checkAppInstallation(xctrackPackageName, xctrackName, xctrackVersion, selectedModel, xctrackPackageName)
-            //checkAppInstallation(xcguidePackageName, xcguideName, xcguideVersion, selectedModel, xcguidePackageName)
-            //checkAppInstallation(air3managerPackageName, air3managerName, air3managerVersion, selectedModel, air3managerPackageName)
-            checkAppInstallation()
         }
     }
 
