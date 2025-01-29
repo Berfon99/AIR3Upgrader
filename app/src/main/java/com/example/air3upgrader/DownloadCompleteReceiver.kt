@@ -26,6 +26,13 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
             val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
             Log.d("DownloadReceiver", "Download ID: $downloadId")
 
+            val mainActivity = context as? MainActivity
+            if (mainActivity?.isInstalling == true) {
+                Log.d("DownloadReceiver", "Installation already in progress, skipping installation")
+                return
+            }
+            mainActivity?.isInstalling = true
+
             if (downloadId != -1L) {
                 val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                 val query = DownloadManager.Query().setFilterById(downloadId)
@@ -57,6 +64,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                                     Log.d("DownloadReceiver", "Intent: $installIntent")
 
                                     context.startActivity(installIntent)
+                                    (context as? MainActivity)?.onInstallationComplete()
                                     // Display a Toast message indicating download completion
                                     Handler(Looper.getMainLooper()).post {
                                         Toast.makeText(context, "Download complete", Toast.LENGTH_SHORT).show()

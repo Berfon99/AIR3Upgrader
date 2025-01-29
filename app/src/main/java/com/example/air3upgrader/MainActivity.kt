@@ -89,6 +89,7 @@ class MainActivity : AppCompatActivity() {
     private val downloadQueue = LinkedList<AppInfo>()
     private var downloadIdToAppInfo: MutableMap<Long, AppInfo> = mutableMapOf()
     private var fileName: String = ""
+    internal var isInstalling = false
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -461,6 +462,11 @@ class MainActivity : AppCompatActivity() {
                 enqueueDownload(appInfo)
             }
         }
+    }
+
+    fun onInstallationComplete() {
+        isInstalling = false
+        Log.d("MainActivity", "onInstallationComplete() called, isInstalling set to false")
     }
 
     private fun showNoInternetDialog() {
