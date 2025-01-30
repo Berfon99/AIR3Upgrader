@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
-    private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver // Declare as class-level variable
+    private lateinit var downloadCompleteReceiver: DownloadReceiver // Declare as class-level variable
 
 
     private var wakeLock: PowerManager.WakeLock? = null
@@ -147,7 +147,7 @@ class MainActivity : AppCompatActivity() {
         acquireWakeLock()
 
         // Register the DownloadCompleteReceiver
-        downloadCompleteReceiver = DownloadCompleteReceiver()
+        downloadCompleteReceiver = DownloadReceiver()
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
         registerReceiver(downloadCompleteReceiver, filter, Context.RECEIVER_EXPORTED)
 
@@ -386,7 +386,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun enqueueDownload(appInfo: AppInfo) {
-        Log.d("MainActivity", "enqueueDownload() called for ${appInfo.name}")
+        Log.d("MainActivity", "enqueueDownload() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
         downloadQueue.add(appInfo)
         if (downloadQueue.size == 1) {
             downloadNextApp()
@@ -403,13 +403,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun downloadAndInstallApk(appInfo: AppInfo) {
-        Log.d("MainActivity", "downloadAndInstallApk() called for ${appInfo.name}")
-        val url = "https://ftp.fly-air3.com${appInfo.apkPath}" // Construct the full URL here
-        val originalFileName = appInfo.apkPath.substringAfterLast('/')
-        val fileName = if (appInfo.name == "AIR³ Manager") {
-            "AIR3Manager.apk" // Use a shorter name for AIR³ Manager
+        Log.d("MainActivity", "downloadAndInstallApk() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
+        val url = if (appInfo.apkPath.startsWith("http")) {
+            appInfo.apkPath
         } else {
-            originalFileName // Use the original name for other APKs
+            "https://ftp.fly-air3.com${appInfo.apkPath}" // Construct the full URL here
+        }
+        val fileName = when {
+            appInfo.name == "AIR³ Manager" -> {
+                "AIR3Manager.apk" // Use a shorter name for AIR³ Manager
+            }
+            appInfo.`package` == "indysoft.xc_guide" && !appInfo.apkPath.startsWith("/") -> {
+                "${appInfo.name}.apk" // Use the app name (e.g., "XCGuide-608.apk") for XC Guide from pg-race.aero
+            }
+            else -> {
+                appInfo.apkPath.substringAfterLast('/') // Use the original name for other APKs and XC Guide from ftp.fly-air3.com
+            }
         }
         Log.d("MainActivity", "Downloading from URL: $url, saving as: $fileName")
 
@@ -503,21 +512,31 @@ class MainActivity : AppCompatActivity() {
                 showNoInternetDialog()
                 return@launch
             }
-            getLatestVersionFromServer() // Fetch the latest app information
+            // Fetch the latest app information FIRST
+            getLatestVersionFromServer()
 
             val appsToUpgrade = mutableListOf<AppInfo>()
             if (xctrackCheckbox.isChecked) {
-                appInfos.find { appInfo -> appInfo.`package` == xctrackPackageName }?.let { appsToUpgrade.add(it) }
+                appInfos.find { appInfo -> appInfo.`package` == xctrackPackageName }?.let {
+                    Log.d("MainActivity", "XCTrack apkPath before enqueue: ${it.apkPath}")
+                    appsToUpgrade.add(it)
+                }
             }
             if (xcguideCheckbox.isChecked) {
-                appInfos.find { appInfo -> appInfo.`package` == xcguidePackageName }?.let { appsToUpgrade.add(it) }
+                appInfos.find { appInfo -> appInfo.`package` == xcguidePackageName }?.let {
+                    Log.d("MainActivity", "XCGuide apkPath before enqueue: ${it.apkPath}")
+                    appsToUpgrade.add(it)
+                }
             }
             if (air3managerCheckbox.isChecked) {
-                appInfos.find { appInfo -> appInfo.`package` == air3managerPackageName }?.let { appsToUpgrade.add(it) }
+                appInfos.find { appInfo -> appInfo.`package` == air3managerPackageName }?.let {
+                    Log.d("MainActivity", "AIR3Manager apkPath before enqueue: ${it.apkPath}")
+                    appsToUpgrade.add(it)
+                }
             }
 
             if (appsToUpgrade.isEmpty()) {
-                Toast.makeText(this@MainActivity, getString(no_apps_selected_for_upgrade), Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, getString(R.string.no_apps_selected_for_upgrade), Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
