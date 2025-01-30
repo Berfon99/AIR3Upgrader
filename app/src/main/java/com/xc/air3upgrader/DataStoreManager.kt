@@ -40,4 +40,9 @@ class DataStoreManager(private val context: Context) {
                 preferences[SELECTED_MODEL]
             }
     }
+
+    // Check if the device model is supported
+    fun isDeviceModelSupported(deviceModel: String, allowedModels: List<String>): Boolean {
+        return allowedModels.contains(deviceModel)
+    }
 }

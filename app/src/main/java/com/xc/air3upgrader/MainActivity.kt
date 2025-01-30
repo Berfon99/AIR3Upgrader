@@ -194,16 +194,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateCheckboxStates() {
-        lifecycleScope.launch {
-            val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-            val finalSelectedModel = selectedModel ?: getDeviceName()
-            checkAppInstallationForApp(xctrackPackageName, xctrackName, xctrackVersion, finalSelectedModel, xctrackPackageName)
-            checkAppInstallationForApp(xcguidePackageName, xcguideName, xcguideVersion, finalSelectedModel, xcguidePackageName)
-            checkAppInstallationForApp(air3managerPackageName, air3managerName, air3managerVersion, finalSelectedModel, air3managerPackageName)
-        }
-    }
-
     private fun acquireWakeLock() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
@@ -211,15 +201,6 @@ class MainActivity : AppCompatActivity() {
             "AIR3Upgrader:KeepScreenOn"
         )
         wakeLock?.acquire()
-    }
-
-    private fun releaseWakeLock() {
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-            }
-        }
-        wakeLock = null
     }
 
     private fun setActionBarTitleWithSelectedModel() {

@@ -12,7 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.xc.air3upgrader.R.string.* // Import string resources
+import com.xc.air3upgrader.R.string.*
 import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
@@ -89,7 +89,7 @@ class SettingsActivity : AppCompatActivity() {
                 Log.i("ModelSpinner", "Selected model: $selectedModel")
 
                 // Validate the selected model
-                if (selectedModel != null && !allowedModels.contains(selectedModel) && selectedModel != deviceName) {
+                if (selectedModel != null && !dataStoreManager.isDeviceModelSupported(selectedModel, allowedModels) && selectedModel != deviceName) {
                     // Display an error message and reset the selection
                     Toast.makeText(this@SettingsActivity, getString(error_invalid_file), Toast.LENGTH_SHORT).show()
                     modelSpinner.setSelection(modelList.indexOf(deviceName)) // Reset to device name
