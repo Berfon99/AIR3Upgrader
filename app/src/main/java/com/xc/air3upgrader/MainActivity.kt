@@ -206,12 +206,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun setActionBarTitleWithSelectedModel() {
         lifecycleScope.launch {
-            dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
-                val finalSelectedModel = when {
-                    selectedModel == null -> getDeviceName() // Use device name if selectedModel is null
-                    dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
-                    else -> getDeviceName() // Fallback to device name if model is not supported
+            // Delay the initial read to allow SettingsActivity to initialize
+            val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
+            val deviceModel = Build.MODEL
+            val finalSelectedModel = when {
+                selectedModel == null -> deviceModel
+                selectedModel.isEmpty() -> deviceModel
+                dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
+                else -> {
+                    Log.e("MainActivity", "Unsupported model selected: $selectedModel")
+                    getDeviceName()
                 }
+            }
+            dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
                 val androidVersion = Build.VERSION.RELEASE // Get the Android version
                 supportActionBar?.title = "AIR³ Upgrader - $finalSelectedModel - Android $androidVersion" // Set the title correctly
             }

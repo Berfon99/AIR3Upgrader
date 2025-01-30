@@ -24,6 +24,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var dataStoreManager: DataStoreManager
     private lateinit var deviceName: String
     private var previousSelection: String? = null
+    private var isSpinnerInitialized = false
+    private var spinnerListener: AdapterView.OnItemSelectedListener? = null
+    private var isUserInteracting = false
 
     // List of allowed models
     private val allowedModels = listOf(
@@ -80,16 +83,29 @@ class SettingsActivity : AppCompatActivity() {
             val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
             val defaultSelection = when {
                 selectedModel != null -> selectedModel
-                allowedModels.contains(Build.MODEL) -> Build.MODEL
-                else -> deviceName
+                else -> Build.MODEL // Default to device model on fresh install
             }
+
+            // Remove the listener temporarily
+            spinnerListener = modelSpinner.onItemSelectedListener
+            modelSpinner.onItemSelectedListener = null
+
             modelSpinner.setSelection(modelList.indexOf(defaultSelection))
             previousSelection = defaultSelection
+            isSpinnerInitialized = true
+
+            // Re-add the listener
+            modelSpinner.onItemSelectedListener = spinnerListener
         }
 
         // Set a listener to respond to user selections
-        modelSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+        spinnerListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                Log.d("SettingsActivity", "onItemSelected called")
+                if (!isSpinnerInitialized || !isUserInteracting) {
+                    // Ignore the initial selection
+                    return
+                }
                 val selectedDisplayString = parent.getItemAtPosition(position).toString()
                 val selectedModel = modelDisplayMap[selectedDisplayString]
 
@@ -105,6 +121,8 @@ class SettingsActivity : AppCompatActivity() {
                         modelSpinner.setSelection(modelList.indexOf(previousSelection)) // Reset to previous selection
                         return
                     }
+                    // Show the information dialog
+                    showRefreshDataDialog()
                     // Save the selected model
                     saveSelectedModel(selectedModel)
                 }
@@ -114,8 +132,14 @@ class SettingsActivity : AppCompatActivity() {
                 // Another interface callback
             }
         }
+        modelSpinner.onItemSelectedListener = spinnerListener
         // Get device information
         getDeviceInfo()
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        isUserInteracting = true
     }
 
     private fun showDeviceNameConfirmationDialog(selectedDisplayString: String) {
@@ -131,6 +155,19 @@ class SettingsActivity : AppCompatActivity() {
             .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
                 // User canceled, reset the selection
                 modelSpinner.setSelection(modelList.indexOf(previousSelection))
+                dialog.dismiss()
+            }
+            .setCancelable(false) // Prevent dismissing by tapping outside
+            .create() // Create the dialog
+        dialog.show() // Show the dialog
+    }
+
+    private fun showRefreshDataDialog() {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.refresh_data_title))
+            .setMessage(getString(R.string.refresh_data_message))
+            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
+                // User confirmed, save the device name (null)
                 dialog.dismiss()
             }
             .setCancelable(false) // Prevent dismissing by tapping outside
