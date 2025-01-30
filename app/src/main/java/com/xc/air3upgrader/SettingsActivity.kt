@@ -16,8 +16,13 @@ import androidx.lifecycle.lifecycleScope
 import com.xc.air3upgrader.R.string.*
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import android.content.Intent
 
 class SettingsActivity : AppCompatActivity() {
+
+    companion object {
+        const val MODEL_CHANGED_RESULT_CODE = 100
+    }
 
     private lateinit var modelSpinner: Spinner
     private lateinit var deviceInfoTextView: TextView
@@ -27,6 +32,7 @@ class SettingsActivity : AppCompatActivity() {
     private var isSpinnerInitialized = false
     private var spinnerListener: AdapterView.OnItemSelectedListener? = null
     private var isUserInteracting = false
+    private var isModelChanged = false
 
     // List of allowed models
     private val allowedModels = listOf(
@@ -43,6 +49,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var modelDisplayList: MutableList<String>
     // Map to link display strings to models
     private lateinit var modelDisplayMap: MutableMap<String, String?>
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -121,10 +128,9 @@ class SettingsActivity : AppCompatActivity() {
                         modelSpinner.setSelection(modelList.indexOf(previousSelection)) // Reset to previous selection
                         return
                     }
-                    // Show the information dialog
-                    showRefreshDataDialog()
                     // Save the selected model
                     saveSelectedModel(selectedModel)
+                    isModelChanged = true
                 }
             }
 
@@ -150,6 +156,7 @@ class SettingsActivity : AppCompatActivity() {
                 // User confirmed, save the device name (null)
                 saveSelectedModel(null)
                 previousSelection = deviceName
+                isModelChanged = true // Set the flag
                 dialog.dismiss()
             }
             .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
@@ -214,5 +221,13 @@ class SettingsActivity : AppCompatActivity() {
 
         // Display the information in the TextView
         deviceInfoTextView.text = deviceInfo.toString()
+    }
+
+    override fun finish() {
+        if (isModelChanged) {
+            val returnIntent = Intent()
+            setResult(MODEL_CHANGED_RESULT_CODE, returnIntent)
+        }
+        super.finish()
     }
 }

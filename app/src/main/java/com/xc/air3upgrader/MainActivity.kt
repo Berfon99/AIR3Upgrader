@@ -31,11 +31,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.firstOrNull
 import java.util.LinkedList
 import kotlinx.coroutines.withContext
-import kotlin.collections.isNotEmpty
 import timber.log.Timber
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        private const val SETTINGS_REQUEST_CODE = 1
+    }
 
     private lateinit var xctrackName: TextView
     private lateinit var xcguideName: TextView
@@ -182,7 +185,7 @@ class MainActivity : AppCompatActivity() {
             R.id.action_settings -> {
                 // Handle settings item click
                 val intent = Intent(this, SettingsActivity::class.java)
-                startActivity(intent)
+                startActivityForResult(intent, SETTINGS_REQUEST_CODE)
                 true
             }
             R.id.action_about -> {
@@ -193,6 +196,23 @@ class MainActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == SETTINGS_REQUEST_CODE) {
+            if (resultCode == SettingsActivity.MODEL_CHANGED_RESULT_CODE) {
+                // Trigger your refresh logic here
+                refreshData()
+            }
+        }
+    }
+
+    private fun refreshData() {
+        // Example: Re-fetch server versions (replace with your actual code)
+        getLatestVersionFromServer()
+        setActionBarTitleWithSelectedModel()
     }
 
     private fun acquireWakeLock() {
