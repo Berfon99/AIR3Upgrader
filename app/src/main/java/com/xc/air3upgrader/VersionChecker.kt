@@ -2,13 +2,11 @@ package com.xc.air3upgrader
 
 import android.content.Context
 import android.os.Build
-import android.util.Log
-import androidx.glance.layout.size
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
+import timber.log.Timber
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -58,10 +56,10 @@ class VersionChecker(private val context: Context) {
     }
 
     suspend fun getLatestVersionFromServer(selectedModel: String): List<AppInfo> = withContext(Dispatchers.IO) {
-        Log.d("VersionChecker", "getLatestVersionFromServer() called with selectedModel: $selectedModel")
+        Timber.d("getLatestVersionFromServer() called with selectedModel: $selectedModel")
         try {
             val jsonString = downloadJson("https://ftp.fly-air3.com/Latest_Software_Download/versions.json")
-            Log.d("VersionChecker", "Raw server response: $jsonString")
+            Timber.d("Raw server response: $jsonString")
             val gson = GsonBuilder().create()
             val listType = object : TypeToken<AppsData>() {}.type
             val appsData: AppsData = gson.fromJson(jsonString, listType)
@@ -94,49 +92,39 @@ class VersionChecker(private val context: Context) {
             filteredAppInfos.forEach { appInfo ->
                 appInfo.installedVersion = AppUtils.getAppVersion(context, appInfo.`package`)
                 appInfo.highestServerVersion = appInfo.latestVersion
-                Log.d("VersionChecker", "Setting highestServerVersion for ${appInfo.`package`} to ${appInfo.highestServerVersion}")
+                Timber.d("Setting highestServerVersion for ${appInfo.`package`} to ${appInfo.highestServerVersion}")
             }
 
             // Handle XC Guide separately
             val xcGuideVersionFromTxt = xcGuideVersionChecker.getXcGuideVersion()
-            Log.d("VersionChecker", "XC Guide version from version.txt: $xcGuideVersionFromTxt")
+            Timber.d("XC Guide version from version.txt: $xcGuideVersionFromTxt")
             val xcGuideAppInfo = filteredAppInfos.find { it.`package` == "indysoft.xc_guide" }
-            Log.d("VersionChecker", "XC Guide AppInfo: $xcGuideAppInfo")
+            Timber.d("XC Guide AppInfo: $xcGuideAppInfo")
 
             if (xcGuideVersionFromTxt != null && xcGuideAppInfo != null) {
-                Log.d("VersionChecker", "Comparing versions: serverVersion=${xcGuideAppInfo.highestServerVersion}, txtVersion=$xcGuideVersionFromTxt")
+                Timber.d("Comparing versions: serverVersion=${xcGuideAppInfo.highestServerVersion}, txtVersion=$xcGuideVersionFromTxt")
                 if (VersionComparator.isServerVersionHigher(xcGuideAppInfo.highestServerVersion, xcGuideVersionFromTxt, "indysoft.xc_guide")) {
                     // Version from version.txt is newer
-                    Log.d("VersionChecker", "Version from version.txt is newer")
+                    Timber.d("Version from version.txt is newer")
                     xcGuideAppInfo.highestServerVersion = xcGuideVersionFromTxt
                     xcGuideAppInfo.apkPath = "https://pg-race.aero/xcguide/XCGuide.apk"
                     xcGuideAppInfo.name = "XCGuide-$xcGuideVersionFromTxt"
                 } else {
-                    Log.d("VersionChecker", "Version from version.json is newer or equal")
+                    Timber.d("Version from version.json is newer or equal")
                 }
             } else {
-                Log.d("VersionChecker", "Could not get XC Guide version from version.txt or AppInfo not found")
+                Timber.d("Could not get XC Guide version from version.txt or AppInfo not found")
             }
 
-            Log.d("VersionChecker", "Successfully fetched ${filteredAppInfos.size} app infos from server")
+            Timber.d("Successfully fetched ${filteredAppInfos.size} app infos from server")
             for (appInfo in filteredAppInfos) {
-                Log.d("VersionChecker", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}, Highest Server Version: ${appInfo.highestServerVersion}")
+                Timber.d("AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}, Highest Server Version: ${appInfo.highestServerVersion}")
             }
 
             return@withContext filteredAppInfos
         } catch (e: Exception) {
-            Log.e("VersionChecker", "Error getting latest version from server", e)
+            Timber.e(e, "Error getting latest version from server")
             return@withContext emptyList()
         }
-    }
-
-    private fun isAndroidVersionCompatible(minAndroidVersion: String): Boolean {
-        val currentVersion = Build.VERSION.RELEASE
-        Log.d("VersionChecker", "Current Android version: $currentVersion, Min Android version: $minAndroidVersion")
-        return currentVersion.compareTo(minAndroidVersion) >= 0
-    }
-
-    private fun JSONArray.toList(): List<String> {
-        return (0 until length()).map { getString(it) }
     }
 }

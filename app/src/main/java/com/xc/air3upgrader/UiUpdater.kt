@@ -9,7 +9,7 @@ import androidx.core.content.ContextCompat
 import timber.log.Timber
 
 object UiUpdater {
-    internal fun updateApkNameDisplay(appInfo: AppInfo, apkNameTextView: TextView?) {
+    private fun updateApkNameDisplay(appInfo: AppInfo, apkNameTextView: TextView?) {
         Timber.d("updateApkNameDisplay() called for app: ${appInfo.name}")
         val apkName = appInfo.apkPath.substringAfterLast('/')
         Timber.d("APK name: $apkName")
