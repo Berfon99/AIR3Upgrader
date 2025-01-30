@@ -21,6 +21,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.ui.geometry.isEmpty
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.xc.air3upgrader.R.string.*
@@ -206,10 +207,23 @@ class MainActivity : AppCompatActivity() {
     private fun setActionBarTitleWithSelectedModel() {
         lifecycleScope.launch {
             dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
-                val currentSelectedModel = selectedModel ?: getDeviceName()
+                val finalSelectedModel = when {
+                    selectedModel == null -> getDefaultModel()
+                    dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
+                    else -> getDefaultModel()
+                }
                 val androidVersion = Build.VERSION.RELEASE // Get the Android version
-                supportActionBar?.title = "AIR³ Upgrader - $currentSelectedModel - Android $androidVersion" // Set the title correctly
+                supportActionBar?.title = "AIR³ Upgrader - $finalSelectedModel - Android $androidVersion" // Set the title correctly
             }
+        }
+    }
+
+    private fun getDefaultModel(): String {
+        val deviceModel = Build.MODEL
+        return if (dataStoreManager.isDeviceModelSupported(deviceModel, getSettingsAllowedModels())) {
+            deviceModel
+        } else {
+            getDeviceName()
         }
     }
 
@@ -217,11 +231,20 @@ class MainActivity : AppCompatActivity() {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
     }
 
+    private fun getSettingsAllowedModels(): List<String> {
+        val settingsActivity = SettingsActivity()
+        return settingsActivity.getAllowedModels()
+    }
+
     private fun checkAppInstallation() {
         Log.d("MainActivity", "checkAppInstallation() called")
         lifecycleScope.launch {
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-            val finalSelectedModel = selectedModel ?: getDeviceName()
+            val finalSelectedModel = when {
+                selectedModel == null -> getDefaultModel()
+                dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
+                else -> getDefaultModel()
+            }
             Log.d("MainActivity", "checkAppInstallation() - Selected model: $finalSelectedModel")
             checkAppInstallationForApp(xctrackPackageName, xctrackName, xctrackVersion, finalSelectedModel, xctrackPackageName)
             checkAppInstallationForApp(xcguidePackageName, xcguideName, xcguideVersion, finalSelectedModel, xcguidePackageName)
@@ -368,7 +391,11 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-            val finalSelectedModel = selectedModel ?: getDeviceName()
+            val finalSelectedModel = when {
+                selectedModel == null -> getDefaultModel()
+                dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
+                else -> getDefaultModel()
+            }
             Log.d("MainActivity", "Selected model: $finalSelectedModel")
 
             try {
@@ -403,7 +430,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
-            selectedModel = dataStoreManager.getSelectedModel().firstOrNull() ?: getDeviceName()
+            selectedModel = when {
+                dataStoreManager.getSelectedModel().firstOrNull() == null -> getDefaultModel()
+                dataStoreManager.isDeviceModelSupported(dataStoreManager.getSelectedModel().firstOrNull()!!, getSettingsAllowedModels()) -> dataStoreManager.getSelectedModel().firstOrNull()!!
+                else -> getDefaultModel()
+            }
             if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
                 showNoInternetDialog()
                 return@launch

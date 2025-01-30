@@ -114,6 +114,10 @@ class SettingsActivity : AppCompatActivity() {
         getDeviceInfo()
     }
 
+    public fun getAllowedModels(): List<String> {
+        return allowedModels
+    }
+
     private fun getDeviceName(): String {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
             ?: getString(unknown_device) // Use string resource
