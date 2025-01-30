@@ -10,6 +10,7 @@ import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.xc.air3upgrader.R.string.*
@@ -22,6 +23,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var deviceInfoTextView: TextView
     private lateinit var dataStoreManager: DataStoreManager
     private lateinit var deviceName: String
+    private var previousSelection: String? = null
 
     // List of allowed models
     private val allowedModels = listOf(
@@ -82,6 +84,7 @@ class SettingsActivity : AppCompatActivity() {
                 else -> deviceName
             }
             modelSpinner.setSelection(modelList.indexOf(defaultSelection))
+            previousSelection = defaultSelection
         }
 
         // Set a listener to respond to user selections
@@ -89,23 +92,21 @@ class SettingsActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 val selectedDisplayString = parent.getItemAtPosition(position).toString()
                 val selectedModel = modelDisplayMap[selectedDisplayString]
-                Log.i("ModelSpinner", "Selected model: $selectedModel")
 
-                // Validate the selected model
-                if (selectedModel != null && !dataStoreManager.isDeviceModelSupported(selectedModel, allowedModels)) {
-                    // Display an error message and reset the selection
-                    Toast.makeText(this@SettingsActivity, getString(error_invalid_file), Toast.LENGTH_SHORT).show()
-                    modelSpinner.setSelection(modelList.indexOf(deviceName)) // Reset to device name
-                    return
-                }
-
-                // Save the selected model
-                lifecycleScope.launch {
-                    try {
-                        dataStoreManager.saveSelectedModel(selectedModel)
-                    } catch (e: Exception) {
-                        Log.e("SettingsActivity", "Error saving selected model", e)
+                // Check if the user selected the device name
+                if (selectedModel == null) {
+                    // Show the confirmation dialog
+                    showDeviceNameConfirmationDialog(selectedDisplayString)
+                } else {
+                    // Validate the selected model
+                    if (!dataStoreManager.isDeviceModelSupported(selectedModel, allowedModels)) {
+                        // Display an error message and reset the selection
+                        Toast.makeText(this@SettingsActivity, getString(error_invalid_file), Toast.LENGTH_SHORT).show()
+                        modelSpinner.setSelection(modelList.indexOf(previousSelection)) // Reset to previous selection
+                        return
                     }
+                    // Save the selected model
+                    saveSelectedModel(selectedModel)
                 }
             }
 
@@ -115,6 +116,37 @@ class SettingsActivity : AppCompatActivity() {
         }
         // Get device information
         getDeviceInfo()
+    }
+
+    private fun showDeviceNameConfirmationDialog(selectedDisplayString: String) {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.device_name_confirmation_title))
+            .setMessage(getString(R.string.device_name_confirmation_message))
+            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
+                // User confirmed, save the device name (null)
+                saveSelectedModel(null)
+                previousSelection = deviceName
+                dialog.dismiss()
+            }
+            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
+                // User canceled, reset the selection
+                modelSpinner.setSelection(modelList.indexOf(previousSelection))
+                dialog.dismiss()
+            }
+            .setCancelable(false) // Prevent dismissing by tapping outside
+            .create() // Create the dialog
+        dialog.show() // Show the dialog
+    }
+
+    private fun saveSelectedModel(selectedModel: String?) {
+        lifecycleScope.launch {
+            try {
+                dataStoreManager.saveSelectedModel(selectedModel)
+                previousSelection = selectedModel
+            } catch (e: Exception) {
+                Log.e("SettingsActivity", "Error saving selected model", e)
+            }
+        }
     }
 
     public fun getAllowedModels(): List<String> {
