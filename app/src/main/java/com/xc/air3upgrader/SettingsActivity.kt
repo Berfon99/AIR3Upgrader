@@ -1,4 +1,4 @@
-package com.example.air3upgrader
+package com.xc.air3upgrader
 
 import android.os.Build
 import android.os.Bundle
@@ -12,7 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.air3upgrader.R.string.* // Import string resources
+import com.xc.air3upgrader.R.string.* // Import string resources
 import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {

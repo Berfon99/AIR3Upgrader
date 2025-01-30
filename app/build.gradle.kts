@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.air3upgrader"
+    namespace = "com.xc.air3upgrader" // Changed namespace
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.air3upgrader"
+        applicationId = "com.xc.air3upgrader" // Changed applicationId
         minSdk = 27
         targetSdk = 34
         versionCode = 1

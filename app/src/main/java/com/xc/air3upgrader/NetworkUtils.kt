@@ -1,4 +1,4 @@
-package com.example.air3upgrader
+package com.xc.air3upgrader
 
 import android.content.Context
 import android.net.ConnectivityManager

@@ -1,4 +1,4 @@
-package com.example.air3upgrader
+package com.xc.air3upgrader
 
 import android.content.Context
 import android.net.Uri
@@ -128,9 +128,9 @@ object AppUtils {
     fun installApk(context: Context, apkFile: File) {
         Log.d("installApk", "installApk() called with apkFile: ${apkFile.absolutePath}")
         try {
-            val authority = "${context.packageName}.provider"
+            val authority = "com.xc.air3upgrader.provider" // Changed authority
             Log.d("installApk", "authority: $authority")
-            val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
+            val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile) // Changed authority
             Log.d("installApk", "apkUri: $apkUri")
             val installIntent = Intent(Intent.ACTION_VIEW)
             installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive")

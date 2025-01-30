@@ -1,4 +1,4 @@
-package com.example.air3upgrader
+package com.xc.air3upgrader
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity

@@ -1,10 +1,9 @@
-package com.example.air3upgrader // Replace with your package name
+package com.xc.air3upgrader // Replace with your package name
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.app.DownloadManager
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -52,7 +51,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                                 try {
                                     val contentUri = FileProvider.getUriForFile(
                                         context,
-                                        context.packageName + ".provider", // Your FileProvider authority
+                                        "com.xc.air3upgrader.provider", // Changed authority
                                         file
                                     )
                                     Log.d("DownloadReceiver", "Content URI: $contentUri")

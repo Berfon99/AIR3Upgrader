@@ -1,4 +1,4 @@
-package com.example.air3upgrader
+package com.xc.air3upgrader
 
 import android.app.Activity
 import android.content.Context
@@ -7,7 +7,6 @@ import android.util.Log
 import android.view.View
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.glance.visibility
 
 object UiUpdater {
     internal fun updateApkNameDisplay(context: Context, appInfo: AppInfo, apkNameTextView: TextView?) {

@@ -1,9 +1,8 @@
-package com.example.air3upgrader
+package com.xc.air3upgrader
 
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import androidx.glance.layout.size
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
