@@ -42,7 +42,7 @@
     <string name="version_not_found">Version not found</string>
     <string name="no_internet_connection">No internet connection</string>
     <string name="no_internet_message">No internet message</string>
-    <string name="ok">Ok</string>
+    <string name="ok">OK</string>
     <string name="retry">Retry</string>
     <string name="xctrack">XCTrack</string>
     <string name="upgrade">Upgrade</string>
