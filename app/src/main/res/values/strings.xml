@@ -50,6 +50,7 @@
     <string name="air3_manager">AIR³ Manager</string>
     <string name="refresh">Refresh</string>
     <string name="close">Close</string>
+    <string name="server_version">Server: %1$s</string>
     <string name="device_name_confirmation_title">Use Device Name?</string>
     <string name="refresh_data_title">Refresh Required</string>
     <string name="refresh_data_message">Please Refresh the data to take it into account</string>

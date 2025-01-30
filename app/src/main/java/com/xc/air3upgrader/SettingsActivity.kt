@@ -3,7 +3,6 @@ package com.xc.air3upgrader
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -17,6 +16,7 @@ import com.xc.air3upgrader.R.string.*
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import android.content.Intent
+import timber.log.Timber
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -108,7 +108,7 @@ class SettingsActivity : AppCompatActivity() {
         // Set a listener to respond to user selections
         spinnerListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                Log.d("SettingsActivity", "onItemSelected called")
+                Timber.d("onItemSelected called")
                 if (!isSpinnerInitialized || !isUserInteracting) {
                     // Ignore the initial selection
                     return
@@ -119,7 +119,7 @@ class SettingsActivity : AppCompatActivity() {
                 // Check if the user selected the device name
                 if (selectedModel == null) {
                     // Show the confirmation dialog
-                    showDeviceNameConfirmationDialog(selectedDisplayString)
+                    showDeviceNameConfirmationDialog()
                 } else {
                     // Validate the selected model
                     if (!dataStoreManager.isDeviceModelSupported(selectedModel, allowedModels)) {
@@ -148,33 +148,20 @@ class SettingsActivity : AppCompatActivity() {
         isUserInteracting = true
     }
 
-    private fun showDeviceNameConfirmationDialog(selectedDisplayString: String) {
+    private fun showDeviceNameConfirmationDialog() {
         val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.device_name_confirmation_title))
-            .setMessage(getString(R.string.device_name_confirmation_message))
-            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
+            .setTitle(getString(device_name_confirmation_title))
+            .setMessage(getString(device_name_confirmation_message))
+            .setPositiveButton(getString(ok)) { dialog, _ ->
                 // User confirmed, save the device name (null)
                 saveSelectedModel(null)
                 previousSelection = deviceName
                 isModelChanged = true // Set the flag
                 dialog.dismiss()
             }
-            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
+            .setNegativeButton(getString(cancel)) { dialog, _ ->
                 // User canceled, reset the selection
                 modelSpinner.setSelection(modelList.indexOf(previousSelection))
-                dialog.dismiss()
-            }
-            .setCancelable(false) // Prevent dismissing by tapping outside
-            .create() // Create the dialog
-        dialog.show() // Show the dialog
-    }
-
-    private fun showRefreshDataDialog() {
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.refresh_data_title))
-            .setMessage(getString(R.string.refresh_data_message))
-            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
-                // User confirmed, save the device name (null)
                 dialog.dismiss()
             }
             .setCancelable(false) // Prevent dismissing by tapping outside
@@ -188,12 +175,12 @@ class SettingsActivity : AppCompatActivity() {
                 dataStoreManager.saveSelectedModel(selectedModel)
                 previousSelection = selectedModel
             } catch (e: Exception) {
-                Log.e("SettingsActivity", "Error saving selected model", e)
+                Timber.e(e, "Error saving selected model")
             }
         }
     }
 
-    public fun getAllowedModels(): List<String> {
+    fun getAllowedModels(): List<String> {
         return allowedModels
     }
 

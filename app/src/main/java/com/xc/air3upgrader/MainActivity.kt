@@ -22,11 +22,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.ui.geometry.isEmpty
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.xc.air3upgrader.R.string.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -91,7 +89,7 @@ class MainActivity : AppCompatActivity() {
         // Set the status and navigation bar color
         window.statusBarColor = ContextCompat.getColor(this, R.color.black)
         window.navigationBarColor = ContextCompat.getColor(this, R.color.black)
-        Log.d("MainActivity", "onCreate() called")
+        Timber.d("onCreate() called")
 
         // Request storage permission
         requestStoragePermission()
@@ -151,31 +149,27 @@ class MainActivity : AppCompatActivity() {
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
         registerReceiver(downloadCompleteReceiver, filter, Context.RECEIVER_EXPORTED)
 
-        // XCTrack Checkbox Listener
-        xctrackCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            val appInfo = appInfos.find { it.`package` == xctrackPackageName }
-            appInfo?.isSelectedForUpgrade = isChecked
-            // Trigger UI update
-            appInfo?.let {
-                UiUpdater.updateAppInfo(this@MainActivity, it, xctrackName, xctrackServerVersion, xctrackVersion, selectedModel)
-            }
-        }
+        // Set up checkbox listeners
+        setupCheckboxListener(xctrackCheckbox, xctrackPackageName, xctrackName, xctrackServerVersion, xctrackVersion)
+        setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
+        setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
+    }
 
-        xcguideCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            val appInfo = appInfos.find { it.`package` == xcguidePackageName }
-            appInfo?.isSelectedForUpgrade = isChecked
-            // Trigger UI update
-            appInfo?.let {
-                UiUpdater.updateAppInfo(this@MainActivity, it, xcguideName, xcguideServerVersion, xcguideVersion, selectedModel)
-            }
-        }
-
-        air3managerCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            val appInfo = appInfos.find { it.`package` == air3managerPackageName }
-            appInfo?.isSelectedForUpgrade = isChecked
-            // Trigger UI update
-            appInfo?.let {
-                UiUpdater.updateAppInfo(this@MainActivity, it, air3managerName, air3managerServerVersion, air3managerVersion, selectedModel)
+    private fun setupCheckboxListener(
+        checkBox: CheckBox,
+        packageName: String,
+        nameTextView: TextView,
+        serverVersionTextView: TextView,
+        installedVersionTextView: TextView
+    ) {
+        checkBox.setOnCheckedChangeListener { _, isChecked ->
+            val appInfo = appInfos.firstOrNull { it.`package` == packageName }
+            if (appInfo != null) {
+                appInfo.isSelectedForUpgrade = isChecked
+                // Trigger UI update
+                UiUpdater.updateAppInfo(this@MainActivity, appInfo, nameTextView, serverVersionTextView, installedVersionTextView)
+            } else {
+                Timber.w("App info not found for package: $packageName")
             }
         }
     }

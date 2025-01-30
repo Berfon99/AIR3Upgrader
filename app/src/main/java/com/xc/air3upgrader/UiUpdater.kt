@@ -3,16 +3,16 @@ package com.xc.air3upgrader
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import timber.log.Timber
 
 object UiUpdater {
-    internal fun updateApkNameDisplay(context: Context, appInfo: AppInfo, apkNameTextView: TextView?) {
-        Log.d("UiUpdater", "updateApkNameDisplay() called for app: ${appInfo.name}")
+    internal fun updateApkNameDisplay(appInfo: AppInfo, apkNameTextView: TextView?) {
+        Timber.d("updateApkNameDisplay() called for app: ${appInfo.name}")
         val apkName = appInfo.apkPath.substringAfterLast('/')
-        Log.d("UiUpdater", "APK name: $apkName")
+        Timber.d("APK name: $apkName")
         apkNameTextView?.text = apkName
         apkNameTextView?.visibility = View.VISIBLE
     }
@@ -22,14 +22,13 @@ object UiUpdater {
         appInfo: AppInfo,
         nameTextView: TextView,
         serverVersionTextView: TextView,
-        installedVersionTextView: TextView?,
-        selectedModel: String?
+        installedVersionTextView: TextView?
     ) {
-        Log.d("UiUpdater", "updateAppInfo() called for app: ${appInfo.name}")
+        Timber.d("updateAppInfo() called for app: ${appInfo.name}")
         nameTextView.text = appInfo.name
-        serverVersionTextView.text = context.getString(R.string.server) + " " + appInfo.highestServerVersion
+        serverVersionTextView.text = context.getString(R.string.server_version, appInfo.highestServerVersion)
         val installedVersion = getInstalledVersion(context, appInfo.`package`)
-        Log.d("UiUpdater", "Installed version for ${appInfo.`package`}: $installedVersion")
+        Timber.d("Installed version for ${appInfo.`package`}: $installedVersion")
         installedVersionTextView?.text =
             if (installedVersion != null) context.getString(R.string.installed) + " " + installedVersion else context.getString(R.string.not_installed)
         setAppBackgroundColor(context, appInfo, nameTextView, installedVersionTextView)
@@ -40,26 +39,26 @@ object UiUpdater {
             else -> null
         }
         if (appInfo.isSelectedForUpgrade) {
-            updateApkNameDisplay(context, appInfo, apkNameTextView)
+            updateApkNameDisplay(appInfo, apkNameTextView)
         } else {
             apkNameTextView?.visibility = View.GONE
         }
     }
 
     private fun getInstalledVersion(context: Context, packageName: String): String? {
-        Log.d("UiUpdater", "getInstalledVersion() called for package: $packageName")
+        Timber.d("getInstalledVersion() called for package: $packageName")
         return try {
             val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
             val versionName = packageInfo.versionName
-            Log.d("UiUpdater", "Raw version name for $packageName: $versionName")
+            Timber.d("Raw version name for $packageName: $versionName")
             val filteredVersion = AppUtils.getAppVersion(context, packageName)
-            Log.d("UiUpdater", "Filtered version for $packageName: $filteredVersion")
+            Timber.d("Filtered version for $packageName: $filteredVersion")
             filteredVersion
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.e("UiUpdater", "Package not found: $packageName", e)
+            Timber.e(e, "Package not found: $packageName")
             null
         } catch (e: Exception) {
-            Log.e("UiUpdater", "Error getting version for $packageName", e)
+            Timber.e(e, "Error getting version for $packageName")
             null
         }
     }
@@ -71,19 +70,19 @@ object UiUpdater {
         installedVersionTextView: TextView?
     ) {
         val installedVersion = getInstalledVersion(context, appInfo.`package`)
-        Log.d("UiUpdater", "setAppBackgroundColor() called for ${appInfo.name}")
-        Log.d("UiUpdater", "  Installed Version: $installedVersion")
-        Log.d("UiUpdater", "  Highest Server Version: ${appInfo.highestServerVersion}")
-        Log.d("UiUpdater", "  installedVersionTextView?.text: ${installedVersionTextView?.text}")
+        Timber.d("setAppBackgroundColor() called for ${appInfo.name}")
+        Timber.d("  Installed Version: $installedVersion")
+        Timber.d("  Highest Server Version: ${appInfo.highestServerVersion}")
+        Timber.d("  installedVersionTextView?.text: ${installedVersionTextView?.text}")
 
         val color = if (installedVersionTextView?.text == context.getString(R.string.not_installed)) {
-            Log.d("UiUpdater", "  Color: Not Installed")
+            Timber.d("  Color: Not Installed")
             ContextCompat.getColor(context, R.color.not_installed_color)
         } else if (!VersionComparator.isServerVersionHigher(installedVersion ?: "", appInfo.highestServerVersion, appInfo.`package`)) {
-            Log.d("UiUpdater", "  Color: Up-to-Date")
+            Timber.d("  Color: Up-to-Date")
             ContextCompat.getColor(context, R.color.up_to_date_color)
         } else {
-            Log.d("UiUpdater", "  Color: Update Available")
+            Timber.d("  Color: Update Available")
             ContextCompat.getColor(context, R.color.update_available_color)
         }
         nameTextView.setBackgroundColor(color)
