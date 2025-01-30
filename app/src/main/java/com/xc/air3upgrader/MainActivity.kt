@@ -5,6 +5,7 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -22,6 +23,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.geometry.isEmpty
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.xc.air3upgrader.R.string.*
@@ -90,6 +92,9 @@ class MainActivity : AppCompatActivity() {
         window.statusBarColor = ContextCompat.getColor(this, R.color.black)
         window.navigationBarColor = ContextCompat.getColor(this, R.color.black)
         Log.d("MainActivity", "onCreate() called")
+
+        // Request storage permission
+        requestStoragePermission()
 
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
@@ -198,13 +203,45 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            REQUEST_CODE_WRITE_EXTERNAL_STORAGE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Storage permission granted
+                    Log.d("MainActivity", "Storage permission granted")
+                    // Now check for install permission
+                    if (!checkInstallPermission()) {
+                        requestInstallPermission()
+                    }
+                } else {
+                    // Storage permission denied
+                    Log.d("MainActivity", "Storage permission denied")
+                    // Handle the case where the user denied storage permission
+                    Toast.makeText(this, "Storage permission is required to download and install apps.", Toast.LENGTH_LONG).show()
+                }
+            }
+            // ... other permission requests ...
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-
         if (requestCode == SETTINGS_REQUEST_CODE) {
             if (resultCode == SettingsActivity.MODEL_CHANGED_RESULT_CODE) {
                 // Trigger your refresh logic here
                 refreshData()
+            }
+        }
+        if (requestCode == REQUEST_CODE_INSTALL_PACKAGES) {
+            if (checkInstallPermission()) {
+                // Install permission granted
+                Log.d("MainActivity", "Install permission granted")
+            } else {
+                // Install permission denied
+                Log.d("MainActivity", "Install permission denied")
+                // Handle the case where the user denied install permission
+                Toast.makeText(this, "Install permission is required to install apps.", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -532,5 +569,44 @@ class MainActivity : AppCompatActivity() {
         xctrackServerVersion.text = getString(R.string.version_not_found)
         xcguideServerVersion.text = getString(R.string.version_not_found)
         air3managerServerVersion.text = getString(R.string.version_not_found)
+    }
+
+    private fun checkInstallPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val packageManager = packageManager
+            return packageManager.canRequestPackageInstalls()
+        }
+        return true // No need to check on older versions
+    }
+
+    private fun requestInstallPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+            intent.data = Uri.parse("package:$packageName")
+            startActivityForResult(intent, REQUEST_CODE_INSTALL_PACKAGES)
+        }
+    }
+
+    private fun requestStoragePermission() {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                // Permission is not granted, request it
+                ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE), REQUEST_CODE_WRITE_EXTERNAL_STORAGE)
+            } else {
+                // Permission is already granted
+                Log.d("MainActivity", "Storage permission already granted")
+                // Check for install permission
+                if (!checkInstallPermission()) {
+                    requestInstallPermission()
+                }
+            }
+        } else {
+            // Permission is already granted
+            Log.d("MainActivity", "Storage permission already granted")
+            // Check for install permission
+            if (!checkInstallPermission()) {
+                requestInstallPermission()
+            }
+        }
     }
 }
