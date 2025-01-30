@@ -13,6 +13,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.xc.air3upgrader.R.string.*
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
@@ -73,13 +74,15 @@ class SettingsActivity : AppCompatActivity() {
         modelSpinner.adapter = adapter
 
         // Set the default selection based on the device model
-        val deviceModel = Build.MODEL
-        val defaultSelection = if (allowedModels.contains(deviceModel)) {
-            deviceModel
-        } else {
-            deviceName
+        lifecycleScope.launch {
+            val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
+            val defaultSelection = when {
+                selectedModel != null -> selectedModel
+                allowedModels.contains(Build.MODEL) -> Build.MODEL
+                else -> deviceName
+            }
+            modelSpinner.setSelection(modelList.indexOf(defaultSelection))
         }
-        modelSpinner.setSelection(modelList.indexOf(defaultSelection))
 
         // Set a listener to respond to user selections
         modelSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -89,7 +92,7 @@ class SettingsActivity : AppCompatActivity() {
                 Log.i("ModelSpinner", "Selected model: $selectedModel")
 
                 // Validate the selected model
-                if (selectedModel != null && !dataStoreManager.isDeviceModelSupported(selectedModel, allowedModels) && selectedModel != deviceName) {
+                if (selectedModel != null && !dataStoreManager.isDeviceModelSupported(selectedModel, allowedModels)) {
                     // Display an error message and reset the selection
                     Toast.makeText(this@SettingsActivity, getString(error_invalid_file), Toast.LENGTH_SHORT).show()
                     modelSpinner.setSelection(modelList.indexOf(deviceName)) // Reset to device name

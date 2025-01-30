@@ -208,9 +208,9 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
                 val finalSelectedModel = when {
-                    selectedModel == null -> getDefaultModel()
+                    selectedModel == null -> getDeviceName() // Use device name if selectedModel is null
                     dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
-                    else -> getDefaultModel()
+                    else -> getDeviceName() // Fallback to device name if model is not supported
                 }
                 val androidVersion = Build.VERSION.RELEASE // Get the Android version
                 supportActionBar?.title = "AIR³ Upgrader - $finalSelectedModel - Android $androidVersion" // Set the title correctly
