@@ -1,15 +1,15 @@
 package com.xc.air3upgrader
 
 data class AppInfo(
-    val name: String,
+    var name: String, // Changed from val to var
     val `package`: String,
     var latestVersion: String,
-    val apkPath: String,
+    var apkPath: String, // Changed from val to var
     var installedVersion: String? = null,
     val compatibleModels: List<String>,
     val minAndroidVersion: String,
-    var isSelectedForUpgrade: Boolean = false, // Add this property
-    var highestServerVersion: String = "" // Add this property
+    var isSelectedForUpgrade: Boolean = false,
+    var highestServerVersion: String = ""
 ) {
     override fun toString(): String {
         return "AppInfo(name='$name', package='$`package`', latestVersion='$latestVersion', apkPath='$apkPath', compatibleModels=$compatibleModels, minAndroidVersion='$minAndroidVersion', highestServerVersion='$highestServerVersion')"

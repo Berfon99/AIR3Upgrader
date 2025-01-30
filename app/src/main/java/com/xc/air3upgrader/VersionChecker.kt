@@ -3,6 +3,7 @@ package com.xc.air3upgrader
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import androidx.glance.layout.size
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class VersionChecker(private val context: Context) {
+
+    // Add an instance of XcGuideVersionChecker
+    private val xcGuideVersionChecker = XcGuideVersionChecker()
 
     private fun downloadJson(urlString: String): String {
         val url = URL(urlString)
@@ -61,10 +65,10 @@ class VersionChecker(private val context: Context) {
             val gson = GsonBuilder().create()
             val listType = object : TypeToken<AppsData>() {}.type
             val appsData: AppsData = gson.fromJson(jsonString, listType)
-            var appInfos = appsData.apps
+            val appInfos = appsData.apps.toMutableList()
 
             // Filter AIR³ Manager entries based on compatibility
-            var compatibleAir3ManagerInfos = appInfos.filter {
+            val compatibleAir3ManagerInfos = appInfos.filter {
                 it.`package` == "com.xc.r3" &&
                         it.compatibleModels.contains(selectedModel) &&
                         Build.VERSION.SDK_INT >= getApiLevelFromAndroidVersion(it.minAndroidVersion)
@@ -74,11 +78,9 @@ class VersionChecker(private val context: Context) {
             val highestCompatibleAir3ManagerInfo = compatibleAir3ManagerInfos.maxByOrNull { it.latestVersion }
 
             // Filter other apps based on compatibility
-            appInfos = appInfos.filter { appInfo ->
+            val filteredAppInfos = appInfos.filter { appInfo ->
                 appInfo.`package` != "com.xc.r3" || compatibleAir3ManagerInfos.contains(appInfo)
-            }
-
-            val filteredAppInfos = appInfos.toMutableList()
+            }.toMutableList()
 
             // Remove all existing AIR³ Manager entries
             filteredAppInfos.removeAll { it.`package` == "com.xc.r3" }
@@ -89,10 +91,31 @@ class VersionChecker(private val context: Context) {
             }
 
             // Update installedVersion and highestServerVersion for each AppInfo
-            filteredAppInfos.onEach { appInfo ->
+            filteredAppInfos.forEach { appInfo ->
                 appInfo.installedVersion = AppUtils.getAppVersion(context, appInfo.`package`)
                 appInfo.highestServerVersion = appInfo.latestVersion
                 Log.d("VersionChecker", "Setting highestServerVersion for ${appInfo.`package`} to ${appInfo.highestServerVersion}")
+            }
+
+            // Handle XC Guide separately
+            val xcGuideVersionFromTxt = xcGuideVersionChecker.getXcGuideVersion()
+            Log.d("VersionChecker", "XC Guide version from version.txt: $xcGuideVersionFromTxt")
+            val xcGuideAppInfo = filteredAppInfos.find { it.`package` == "indysoft.xc_guide" }
+            Log.d("VersionChecker", "XC Guide AppInfo: $xcGuideAppInfo")
+
+            if (xcGuideVersionFromTxt != null && xcGuideAppInfo != null) {
+                Log.d("VersionChecker", "Comparing versions: serverVersion=${xcGuideAppInfo.highestServerVersion}, txtVersion=$xcGuideVersionFromTxt")
+                if (VersionComparator.isServerVersionHigher(xcGuideAppInfo.highestServerVersion, xcGuideVersionFromTxt, "indysoft.xc_guide")) {
+                    // Version from version.txt is newer
+                    Log.d("VersionChecker", "Version from version.txt is newer")
+                    xcGuideAppInfo.highestServerVersion = xcGuideVersionFromTxt
+                    xcGuideAppInfo.apkPath = "https://pg-race.aero/xcguide/XCGuide.apk"
+                    xcGuideAppInfo.name = "XCGuide-$xcGuideVersionFromTxt"
+                } else {
+                    Log.d("VersionChecker", "Version from version.json is newer or equal")
+                }
+            } else {
+                Log.d("VersionChecker", "Could not get XC Guide version from version.txt or AppInfo not found")
             }
 
             Log.d("VersionChecker", "Successfully fetched ${filteredAppInfos.size} app infos from server")
