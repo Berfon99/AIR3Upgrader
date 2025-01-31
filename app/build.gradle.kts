@@ -12,8 +12,7 @@ android {
         minSdk = 27
         targetSdk = 34
         versionCode = 1 // You can change this number for each new version
-        versionName = "1.0" // You can change this string for each new version
-
+        versionName = "1.0.0" // You can change this string for each new version
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -25,7 +24,17 @@ android {
                 "proguard-rules.pro"
             )
         }
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
     }
+
+
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_19
         targetCompatibility = JavaVersion.VERSION_19
@@ -34,6 +43,7 @@ android {
         jvmTarget = "19"
     }
     buildFeatures {
+        buildConfig = true
         viewBinding = true
     }
 }
