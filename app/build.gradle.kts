@@ -11,8 +11,8 @@ android {
         applicationId = "com.xc.air3upgrader" // Changed applicationId
         minSdk = 27
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 1 // You can change this number for each new version
+        versionName = "1.0" // You can change this string for each new version
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -39,7 +39,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
