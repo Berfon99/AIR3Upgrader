@@ -6,46 +6,26 @@
     android:layout_height="match_parent"
     tools:context=".SettingsActivity">
 
-    <LinearLayout
-        android:id="@+id/buttons_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="26dp"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <TextView
-            android:id="@+id/model_selection_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Model selection:"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <Spinner
-            android:id="@+id/model_spinner"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="0dp"
-            android:minHeight="48dp"
-            android:padding="30dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/device_info_text_view" />
-
-    </LinearLayout>
-
     <TextView
-        android:id="@+id/device_info_text_view"
-        android:layout_width="match_parent"
+        android:id="@+id/model_selection_label"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Device Information:\n--------------------\nDevice: \nProduct: "
-        android:textSize="16sp"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="26dp"
+        android:layout_marginTop="26dp"
+        android:text="Model selection:"
+        android:textSize="18sp"
+        android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <Spinner
+        android:id="@+id/model_spinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:minHeight="48dp"
+        android:padding="30dp"
+        app:layout_constraintStart_toStartOf="@+id/model_selection_label"
+        app:layout_constraintTop_toBottomOf="@+id/model_selection_label" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

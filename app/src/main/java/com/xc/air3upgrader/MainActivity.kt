@@ -551,11 +551,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun onInstallationComplete() {
-        isInstalling = false
-        Log.d("MainActivity", "onInstallationComplete() called, isInstalling set to false")
-    }
-
     private fun showNoInternetDialog() {
         val dialog = AlertDialog.Builder(this)
             .setTitle(getString(R.string.no_internet_connection))

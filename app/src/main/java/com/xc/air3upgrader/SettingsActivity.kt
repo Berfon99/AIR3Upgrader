@@ -7,12 +7,11 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.xc.air3upgrader.R.string.*
+import com.xc.air3upgrader.R.string.error_invalid_file
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import android.content.Intent
@@ -25,7 +24,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private lateinit var modelSpinner: Spinner
-    private lateinit var deviceInfoTextView: TextView
     private lateinit var dataStoreManager: DataStoreManager
     private lateinit var deviceName: String
     private var previousSelection: String? = null
@@ -58,7 +56,6 @@ class SettingsActivity : AppCompatActivity() {
         dataStoreManager = DataStoreManager(this)
 
         modelSpinner = findViewById(R.id.model_spinner)
-        deviceInfoTextView = findViewById(R.id.device_info_text_view)
 
         // Initialize the model list
         modelList = allowedModels.toMutableList()
@@ -70,7 +67,7 @@ class SettingsActivity : AppCompatActivity() {
         modelDisplayMap = mutableMapOf()
         for (model in modelList) {
             val displayString = if (model == deviceName) {
-                getString(device_name) + " " + deviceName // Use string resource
+                getString(R.string.device_name) + " " + deviceName // Use string resource
             } else {
                 model
             }
@@ -139,8 +136,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
         modelSpinner.onItemSelectedListener = spinnerListener
-        // Get device information
-        getDeviceInfo()
     }
 
     override fun onUserInteraction() {
@@ -150,16 +145,16 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showDeviceNameConfirmationDialog() {
         val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(device_name_confirmation_title))
-            .setMessage(getString(device_name_confirmation_message))
-            .setPositiveButton(getString(ok)) { dialog, _ ->
+            .setTitle(getString(R.string.device_name_confirmation_title))
+            .setMessage(getString(R.string.device_name_confirmation_message))
+            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
                 // User confirmed, save the device name (null)
                 saveSelectedModel(null)
                 previousSelection = deviceName
                 isModelChanged = true // Set the flag
                 dialog.dismiss()
             }
-            .setNegativeButton(getString(cancel)) { dialog, _ ->
+            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
                 // User canceled, reset the selection
                 modelSpinner.setSelection(modelList.indexOf(previousSelection))
                 dialog.dismiss()
@@ -186,28 +181,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun getDeviceName(): String {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
-            ?: getString(unknown_device) // Use string resource
-    }
-
-    private fun getDeviceInfo() {
-        val deviceInfo = StringBuilder()
-        // Device
-        deviceInfo.append(getString(device) + " " + Build.DEVICE + "\n") // Use string resource
-        // Product
-        deviceInfo.append(getString(product) + " " + Build.PRODUCT + "\n") // Use string resource
-        // Model
-        deviceInfo.append(getString(model) + " " + Build.MODEL + "\n") // Use string resource
-        // Brand
-        deviceInfo.append(getString(brand) + " " + Build.BRAND + "\n") // Use string resource
-        // Manufacturer
-        deviceInfo.append(getString(manufacturer) + " " + Build.MANUFACTURER + "\n") // Use string resource
-        // Android Version
-        deviceInfo.append(getString(android_version) + " " + Build.VERSION.RELEASE + "\n") // Use string resource
-        // SDK Version
-        deviceInfo.append(getString(sdk_version) + " " + Build.VERSION.SDK_INT + "\n") // Use string resource
-
-        // Display the information in the TextView
-        deviceInfoTextView.text = deviceInfo.toString()
+            ?: getString(R.string.unknown_device) // Use string resource
     }
 
     override fun finish() {

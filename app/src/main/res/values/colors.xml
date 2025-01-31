@@ -13,6 +13,6 @@
     <color name="teal_700">#FF018786</color>
     <color name="update_available">#FFFF00</color>
     <color name="not_installed_color">#FFCCCCCC</color> <!-- Light Gray -->
-    <color name="up_to_date_color">#FF00FF00</color> <!-- Green -->
+    <color name="up_to_date_color">#689F38</color>
     <color name="update_available_color">#FFFFCC00</color> <!-- Yellow -->
 </resources>
