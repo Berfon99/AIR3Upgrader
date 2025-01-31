@@ -51,10 +51,21 @@
     <string name="refresh">Refresh</string>
     <string name="close">Close</string>
     <string name="server_version">Server: %1$s</string>
-    <string name="device_name_confirmation_title">Use Device Name?</string>
     <string name="refresh_data_title">Refresh Required</string>
     <string name="refresh_data_message">Please Refresh the data to take it into account</string>
     <string name="app_version">Version</string>
     <string name="copyright">Copyright: Bertrand Fontaine - 2025</string>
     <string name="device_name_confirmation_message">Are you sure you want to use your Device name instead of the detected device model? The device name should strictly follow the following structure to work "AIR3-?.?". Please "Refresh" the data to take it into account</string>
+    <string name="device_name_confirmation_title">Device Name Confirmation</string>
+    <string name="upgrade_check_interval_label">Upgrade Check Interval:</string>
+    <string name="days">Days</string>
+    <string name="hours">Hours</string>
+    <string name="minutes">Minutes</string>
+    <string name="model_selection">Model selection:</string>
+    <string name="time_remaining">Time Remaining</string>
+    <string name="time_remaining_hours_minutes">%1$d hours %2$d minutes</string>
+    <string name="time_remaining_minutes">%1$d minutes</string>
+    <string name="time_remaining_seconds">%1$d seconds</string>
+    <string name="time_remaining_less_than_a_second">Less than a second</string>
+    <string name="set">Set</string>
 </resources>

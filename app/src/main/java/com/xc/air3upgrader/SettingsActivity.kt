@@ -2,10 +2,10 @@ package com.xc.air3upgrader
 
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -14,8 +14,16 @@ import androidx.lifecycle.lifecycleScope
 import com.xc.air3upgrader.R.string.error_invalid_file
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import android.content.Intent
 import timber.log.Timber
+import java.util.Calendar
+import android.widget.TextView
+import android.widget.Button
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequest
+import androidx.work.WorkManager
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -31,6 +39,11 @@ class SettingsActivity : AppCompatActivity() {
     private var spinnerListener: AdapterView.OnItemSelectedListener? = null
     private var isUserInteracting = false
     private var isModelChanged = false
+    private lateinit var upgradeCheckIntervalDaysEditText: EditText
+    private lateinit var upgradeCheckIntervalHoursEditText: EditText
+    private lateinit var upgradeCheckIntervalMinutesEditText: EditText
+    private lateinit var timeRemainingValue: TextView
+    private lateinit var setUpgradeCheckIntervalButton: Button
 
     // List of allowed models
     private val allowedModels = listOf(
@@ -56,6 +69,11 @@ class SettingsActivity : AppCompatActivity() {
         dataStoreManager = DataStoreManager(this)
 
         modelSpinner = findViewById(R.id.model_spinner)
+        upgradeCheckIntervalDaysEditText = findViewById(R.id.upgrade_check_interval_days)
+        upgradeCheckIntervalHoursEditText = findViewById(R.id.upgrade_check_interval_hours)
+        upgradeCheckIntervalMinutesEditText = findViewById(R.id.upgrade_check_interval_minutes)
+        timeRemainingValue = findViewById(R.id.time_remaining_value)
+        setUpgradeCheckIntervalButton = findViewById(R.id.set_upgrade_check_interval_button)
 
         // Initialize the model list
         modelList = allowedModels.toMutableList()
@@ -119,7 +137,7 @@ class SettingsActivity : AppCompatActivity() {
                     showDeviceNameConfirmationDialog()
                 } else {
                     // Validate the selected model
-                    if (!dataStoreManager.isDeviceModelSupported(selectedModel, allowedModels)) {
+                    if (!dataStoreManager.isDeviceModelSupported(selectedModel, getAllowedModels())) {
                         // Display an error message and reset the selection
                         Toast.makeText(this@SettingsActivity, getString(error_invalid_file), Toast.LENGTH_SHORT).show()
                         modelSpinner.setSelection(modelList.indexOf(previousSelection)) // Reset to previous selection
@@ -136,6 +154,28 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
         modelSpinner.onItemSelectedListener = spinnerListener
+        // Load and set the saved interval values
+        loadUpgradeCheckInterval()
+        // Set the click listener for the button
+        setUpgradeCheckIntervalButton.setOnClickListener {
+            setUpgradeCheckInterval()
+        }
+    }
+
+    private fun loadUpgradeCheckInterval() {
+        lifecycleScope.launch {
+            val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull()
+            if (interval != null) {
+                upgradeCheckIntervalDaysEditText.setText(String.format(Locale.getDefault(), "%d", interval.days))
+                upgradeCheckIntervalHoursEditText.setText(String.format(Locale.getDefault(), "%d", interval.hours))
+                upgradeCheckIntervalMinutesEditText.setText(String.format(Locale.getDefault(), "%d", interval.minutes))
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateTimeRemaining()
     }
 
     override fun onUserInteraction() {
@@ -159,36 +199,93 @@ class SettingsActivity : AppCompatActivity() {
                 modelSpinner.setSelection(modelList.indexOf(previousSelection))
                 dialog.dismiss()
             }
-            .setCancelable(false) // Prevent dismissing by tapping outside
-            .create() // Create the dialog
-        dialog.show() // Show the dialog
+            .create()
+        dialog.show()
     }
 
     private fun saveSelectedModel(selectedModel: String?) {
         lifecycleScope.launch {
-            try {
-                dataStoreManager.saveSelectedModel(selectedModel)
-                previousSelection = selectedModel
-            } catch (e: Exception) {
-                Timber.e(e, "Error saving selected model")
-            }
+            dataStoreManager.saveSelectedModel(selectedModel)
+            previousSelection = selectedModel
         }
     }
 
-    fun getAllowedModels(): List<String> {
+    private fun updateTimeRemaining() {
+        lifecycleScope.launch {
+            val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0, 0, 0)
+            val lastCheckTime = dataStoreManager.getLastCheckTime().firstOrNull() ?: 0L
+            val currentTime = Calendar.getInstance().timeInMillis
+
+            val intervalMillis = (interval.days * 24 * 60 * 60 * 1000L) + (interval.hours * 60 * 60 * 1000L) + (interval.minutes * 60 * 1000L)
+            val timeElapsed = currentTime - lastCheckTime
+            val timeRemaining = intervalMillis - timeElapsed
+
+            timeRemainingValue.text = formatTimeRemaining(timeRemaining)
+        }
+    }
+
+    private fun formatTimeRemaining(timeRemainingMillis: Long): String {
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(timeRemainingMillis)
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(timeRemainingMillis) % 60
+
+        return when {
+            minutes > 0 -> {
+                val hours = TimeUnit.MILLISECONDS.toHours(timeRemainingMillis)
+                val remainingMinutes = minutes % 60
+                if (hours > 0) {
+                    getString(R.string.time_remaining_hours_minutes, hours, remainingMinutes)
+                } else {
+                    getString(R.string.time_remaining_minutes, minutes)
+                }
+            }
+            seconds > 0 -> getString(R.string.time_remaining_seconds, seconds)
+            else -> getString(R.string.time_remaining_less_than_a_second)
+        }
+    }
+
+    internal fun getAllowedModels(): List<String> {
         return allowedModels
     }
 
     private fun getDeviceName(): String {
-        return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
-            ?: getString(R.string.unknown_device) // Use string resource
+        val manufacturer = Build.MANUFACTURER
+        val model = Build.MODEL
+        return if (model.startsWith(manufacturer)) {
+            model.uppercase()
+        } else {
+            "$manufacturer $model".uppercase()
+        }
     }
 
-    override fun finish() {
-        if (isModelChanged) {
-            val returnIntent = Intent()
-            setResult(MODEL_CHANGED_RESULT_CODE, returnIntent)
+    private fun setUpgradeCheckInterval() {
+        val days = upgradeCheckIntervalDaysEditText.text.toString().toIntOrNull() ?: 0
+        val hours = upgradeCheckIntervalHoursEditText.text.toString().toIntOrNull() ?: 0
+        val minutes = upgradeCheckIntervalMinutesEditText.text.toString().toIntOrNull() ?: 0
+        lifecycleScope.launch {
+            dataStoreManager.saveUpgradeCheckInterval(Interval(days, hours, minutes))
+            // Call updateTimeRemaining() after saving the new values
+            updateTimeRemaining()
+            // Schedule the UpgradeCheckWorker
+            scheduleUpgradeCheckWorker(days, hours, minutes)
         }
-        super.finish()
+    }
+
+    private fun scheduleUpgradeCheckWorker(days: Int, hours: Int, minutes: Int) {
+        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker called")
+        val initialDelayMinutes = (hours * 60) + minutes
+        val periodicWorkRequest = PeriodicWorkRequest.Builder(
+            UpgradeCheckWorker::class.java,
+            days.toLong(),
+            TimeUnit.DAYS
+        )
+            .setInitialDelay(initialDelayMinutes.toLong(), TimeUnit.MINUTES)
+            .addTag("UpgradeCheck")
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "UpgradeCheck",
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodicWorkRequest
+        )
     }
 }

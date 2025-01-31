@@ -33,6 +33,11 @@ import java.util.LinkedList
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequest
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -99,6 +104,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         dataStoreManager = DataStoreManager(this)
+        scheduleUpgradeCheck()
+
 
         // Set the action bar title with device info
         setActionBarTitleWithSelectedModel()
@@ -617,4 +624,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-}
+
+    private fun scheduleUpgradeCheck() {
+        val dataStoreManager = DataStoreManager(this)
+        val context = this // Get the context here
+        lifecycleScope.launch {
+            val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0, 0, 0)
+            val periodicWorkRequest = PeriodicWorkRequest.Builder(
+                UpgradeCheckWorker::class.java,
+                interval.days.toLong(),
+                TimeUnit.DAYS
+            )
+                .setInitialDelay(interval.minutes.toLong(), TimeUnit.MINUTES)
+                .build()
+
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork( // Use the context here
+                "UpgradeCheck",
+                ExistingPeriodicWorkPolicy.KEEP,
+                periodicWorkRequest
+            )
+        }
+    }}
