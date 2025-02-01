@@ -215,6 +215,16 @@ class SettingsActivity : AppCompatActivity() {
                 cancelUpgradeCheck()
             }
         }
+        // Initialize shouldLaunchOnReboot if it's not set
+        lifecycleScope.launch {
+            val shouldLaunch = dataStoreManager.getShouldLaunchOnReboot().firstOrNull()
+            Timber.d("SettingsActivity: onCreate - shouldLaunchOnReboot: $shouldLaunch") // <--- Added this line
+
+            if (shouldLaunch == null) {
+                Timber.d("SettingsActivity: shouldLaunchOnReboot is null, setting to false")
+                dataStoreManager.saveShouldLaunchOnReboot(false)
+            }
+        }
     }
 
     private fun updateUiState(isEnabled: Boolean) {
@@ -418,32 +428,37 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun scheduleUpgradeCheck() {
+        Timber.d("SettingsActivity: scheduleUpgradeCheck called")
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
-
         lifecycleScope.launch {
             val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0, 0, 0)
-            val intervalInMinutes = (interval.days * 24 * 60) + (interval.hours * 60) + interval.minutes
-
-            val upgradeCheckRequest = PeriodicWorkRequest.Builder(
+            val intervalMillis = (interval.days * 24 * 60 * 60 * 1000L) + (interval.hours * 60 * 60 * 1000L) + (interval.minutes * 60 * 1000L)
+            val periodicWorkRequest = PeriodicWorkRequest.Builder(
                 UpgradeCheckWorker::class.java,
-                intervalInMinutes.toLong(),
-                TimeUnit.MINUTES
+                intervalMillis,
+                TimeUnit.MILLISECONDS
             )
                 .setConstraints(constraints)
                 .build()
-
             workManager.enqueueUniquePeriodicWork(
-                "upgradeCheck",
+                "UpgradeCheck",
                 ExistingPeriodicWorkPolicy.REPLACE,
-                upgradeCheckRequest
+                periodicWorkRequest
             )
+            dataStoreManager.saveShouldLaunchOnReboot(true)
+            Timber.d("SettingsActivity: scheduleUpgradeCheck - shouldLaunchOnReboot set to true") // <--- Added this line
         }
     }
 
     private fun cancelUpgradeCheck() {
-        workManager.cancelUniqueWork("upgradeCheck")
+        Timber.d("SettingsActivity: cancelUpgradeCheck called")
+        workManager.cancelUniqueWork("UpgradeCheck")
+        lifecycleScope.launch {
+            dataStoreManager.saveShouldLaunchOnReboot(false)
+            Timber.d("SettingsActivity: cancelUpgradeCheck - shouldLaunchOnReboot set to false") // <--- Added this line
+        }
     }
 }
 

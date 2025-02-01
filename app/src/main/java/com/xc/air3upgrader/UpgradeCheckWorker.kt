@@ -19,18 +19,26 @@ class UpgradeCheckWorker(appContext: Context, workerParams: WorkerParameters) :
         val lastCheckTime = runBlocking { dataStoreManager.getLastCheckTime().first() ?: 0L }
         val upgradeCheckInterval = runBlocking { dataStoreManager.getUpgradeCheckInterval().first() }
         val currentTime = Calendar.getInstance().timeInMillis
+        val shouldLaunchOnReboot = runBlocking { dataStoreManager.getShouldLaunchOnReboot().first() }
 
         // Convert Interval to milliseconds
         val intervalMillis = (upgradeCheckInterval.days * 24 * 60 * 60 * 1000L) +
                 (upgradeCheckInterval.hours * 60 * 60 * 1000L) +
                 (upgradeCheckInterval.minutes * 60 * 1000L)
+        Timber.d("UpgradeCheckWorker: shouldLaunchOnReboot flag value: $shouldLaunchOnReboot")
 
         if (currentTime - lastCheckTime >= intervalMillis) {
-            Timber.d("UpgradeCheckWorker: Time to launch the app")
-            // Time to launch the app (not hidden)
-            val intent = Intent(applicationContext, MainActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            applicationContext.startActivity(intent)
+            Timber.d("UpgradeCheckWorker: Time to check if we should launch the app")
+            if (shouldLaunchOnReboot) {
+                Timber.d("UpgradeCheckWorker: Time to launch the app")
+                launchMainActivity()
+                // Set the flag to false after launching
+                runBlocking {
+                    dataStoreManager.saveShouldLaunchOnReboot(false)
+                }
+            } else {
+                Timber.d("UpgradeCheckWorker: Not time to launch the app")
+            }
             // Use runBlocking to call the suspend function
             runBlocking {
                 dataStoreManager.saveLastCheckTime(currentTime)
@@ -40,5 +48,12 @@ class UpgradeCheckWorker(appContext: Context, workerParams: WorkerParameters) :
         }
 
         return Result.success()
+    }
+    private fun launchMainActivity() {
+        Timber.d("UpgradeCheckWorker: launchMainActivity called")
+        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        applicationContext.startActivity(intent)
     }
 }
