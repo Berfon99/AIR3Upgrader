@@ -1,5 +1,6 @@
 package com.xc.air3upgrader
 
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,6 +11,9 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import timber.log.Timber
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+import android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
 
 class AppLaunchService : Service() {
 
@@ -26,8 +30,19 @@ class AppLaunchService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Timber.d("AppLaunchService: onStartCommand called")
-        startForeground(NOTIFICATION_ID, createNotification())
-        // Your code to check for upgrades goes here
+        // Check if the app is already running
+        if (!isAppRunning(applicationContext)) {
+            // Launch the main activity
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            launchIntent?.let {
+                it.addFlags(FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP)
+                startActivity(it)
+            }
+        } else {
+            Timber.d("AppLaunchService: App is already running")
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
         return START_NOT_STICKY
     }
 
@@ -55,5 +70,18 @@ class AppLaunchService : Service() {
             .setContentText("Running...")
             .setSmallIcon(R.drawable.ic_launcher_foreground) // Replace with your icon
             .build()
+    }
+
+    private fun isAppRunning(context: Context): Boolean {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val runningProcesses = activityManager.runningAppProcesses
+        if (runningProcesses != null) {
+            for (processInfo in runningProcesses) {
+                if (processInfo.processName == context.packageName) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }
