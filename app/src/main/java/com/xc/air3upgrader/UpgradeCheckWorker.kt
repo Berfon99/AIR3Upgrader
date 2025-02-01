@@ -2,18 +2,17 @@ package com.xc.air3upgrader
 
 import android.content.Context
 import android.content.Intent
-import androidx.work.CoroutineWorker
+import androidx.work.Worker
 import androidx.work.WorkerParameters
 import timber.log.Timber
 
 class UpgradeCheckWorker(appContext: Context, workerParams: WorkerParameters) :
-    CoroutineWorker(appContext, workerParams) {
+    Worker(appContext, workerParams) {
 
-    override suspend fun doWork(): Result {
+    override fun doWork(): Result {
         Timber.d("UpgradeCheckWorker: doWork called")
-        // Start the AppLaunchService
-        val serviceIntent = Intent(applicationContext, AppLaunchService::class.java)
-        applicationContext.startForegroundService(serviceIntent)
+        val intent = Intent(applicationContext, AppLaunchService::class.java)
+        applicationContext.startService(intent)
         return Result.success()
     }
 }

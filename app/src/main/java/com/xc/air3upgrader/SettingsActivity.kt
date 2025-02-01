@@ -23,6 +23,8 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import android.os.Handler
+import android.os.Looper
 
 
 class SettingsActivity : AppCompatActivity() {
@@ -44,6 +46,17 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var upgradeCheckIntervalMinutesEditText: EditText
     private lateinit var timeRemainingValue: TextView
     private lateinit var setUpgradeCheckIntervalButton: Button
+    private var isSettingInterval = false
+    private var lastClickTime = 0L
+    private val clickDebounceThreshold = 500L // milliseconds
+    private val handler = Handler(Looper.getMainLooper())
+    private var isButtonClickEnabled = true
+    private val updateTimeRemainingRunnable = object : Runnable {
+        override fun run() {
+            updateTimeRemaining()
+            handler.postDelayed(this, 1000) // Update every 1 second
+        }
+    }
 
     // List of allowed models
     private val allowedModels = listOf(
@@ -61,9 +74,9 @@ class SettingsActivity : AppCompatActivity() {
     // Map to link display strings to models
     private lateinit var modelDisplayMap: MutableMap<String, String?>
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Timber.d("SettingsActivity: onCreate called")
         setContentView(R.layout.activity_settings)
 
         dataStoreManager = DataStoreManager(this)
@@ -158,7 +171,16 @@ class SettingsActivity : AppCompatActivity() {
         loadUpgradeCheckInterval()
         // Set the click listener for the button
         setUpgradeCheckIntervalButton.setOnClickListener {
-            setUpgradeCheckInterval()
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastClickTime > clickDebounceThreshold && isButtonClickEnabled) {
+                isButtonClickEnabled = false
+                lastClickTime = currentTime
+                Timber.d("SettingsActivity: setUpgradeCheckIntervalButton onClick called")
+                setUpgradeCheckInterval()
+                handler.postDelayed({ isButtonClickEnabled = true }, clickDebounceThreshold)
+            } else {
+                Timber.d("SettingsActivity: setUpgradeCheckIntervalButton onClick ignored")
+            }
         }
     }
 
@@ -175,117 +197,157 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateTimeRemaining()
-    }
-
-    override fun onUserInteraction() {
-        super.onUserInteraction()
-        isUserInteracting = true
-    }
-
-    private fun showDeviceNameConfirmationDialog() {
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.device_name_confirmation_title))
-            .setMessage(getString(R.string.device_name_confirmation_message))
-            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
-                // User confirmed, save the device name (null)
-                saveSelectedModel(null)
-                previousSelection = deviceName
-                isModelChanged = true // Set the flag
-                dialog.dismiss()
-            }
-            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
-                // User canceled, reset the selection
-                modelSpinner.setSelection(modelList.indexOf(previousSelection))
-                dialog.dismiss()
-            }
-            .create()
-        dialog.show()
-    }
-
-    private fun saveSelectedModel(selectedModel: String?) {
+        Timber.d("SettingsActivity: onResume called")
         lifecycleScope.launch {
-            dataStoreManager.saveSelectedModel(selectedModel)
-            previousSelection = selectedModel
+            val lastCheckTime = dataStoreManager.getLastCheckTime().firstOrNull() ?: 0L
+            Timber.d("SettingsActivity: onResume - lastCheckTime (before check): $lastCheckTime")
+            if (lastCheckTime == 0L) {
+                Timber.d("SettingsActivity: onResume - lastCheckTime is 0, updating it")
+                dataStoreManager.saveLastCheckTime(Calendar.getInstance().timeInMillis)
+                val lastCheckTimeUpdated = dataStoreManager.getLastCheckTime().firstOrNull() ?: 0L
+                Timber.d("SettingsActivity: onResume - lastCheckTime (after update): $lastCheckTimeUpdated")
+            }
         }
+        handler.post(updateTimeRemainingRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        Timber.d("SettingsActivity: onPause called")
+        handler.removeCallbacks(updateTimeRemainingRunnable)
+    }
+
+    private fun setUpgradeCheckInterval() {
+        Timber.d("SettingsActivity: setUpgradeCheckInterval called")
+        Timber.d("SettingsActivity: setUpgradeCheckInterval - isSettingInterval (before check): $isSettingInterval")
+        // Check if the function is already running
+        if (isSettingInterval) {
+            Timber.d("SettingsActivity: setUpgradeCheckInterval already running, skipping")
+            return
+        }
+        isSettingInterval = true
+        val days = upgradeCheckIntervalDaysEditText.text.toString().toIntOrNull() ?: 0
+        val hours = upgradeCheckIntervalHoursEditText.text.toString().toIntOrNull() ?: 0
+        val minutes = upgradeCheckIntervalMinutesEditText.text.toString().toIntOrNull() ?: 0
+        Timber.d("SettingsActivity: setUpgradeCheckInterval - days: $days, hours: $hours, minutes: $minutes")
+        lifecycleScope.launch {
+            dataStoreManager.saveUpgradeCheckInterval(Interval(days, hours, minutes))
+            // Schedule the UpgradeCheckWorker
+            scheduleUpgradeCheckWorker(days, hours, minutes)
+            // Update the lastCheckTime
+            val currentTime = Calendar.getInstance().timeInMillis
+            dataStoreManager.saveLastCheckTime(currentTime)
+            // Call updateTimeRemaining() after saving the new values
+            updateTimeRemaining()
+        }
+        isSettingInterval = false
+        Timber.d("SettingsActivity: setUpgradeCheckInterval - isSettingInterval (after reset): $isSettingInterval")
     }
 
     private fun updateTimeRemaining() {
+        Timber.d("SettingsActivity: updateTimeRemaining called")
         lifecycleScope.launch {
             val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0, 0, 0)
-            val lastCheckTime = dataStoreManager.getLastCheckTime().firstOrNull() ?: 0L
+            var lastCheckTime = dataStoreManager.getLastCheckTime().firstOrNull() ?: 0L
             val currentTime = Calendar.getInstance().timeInMillis
 
-            val intervalMillis = (interval.days * 24 * 60 * 60 * 1000L) + (interval.hours * 60 * 60 * 1000L) + (interval.minutes * 60 * 1000L)
-            val timeElapsed = currentTime - lastCheckTime
-            val timeRemaining = intervalMillis - timeElapsed
+            Timber.d("SettingsActivity: updateTimeRemaining - interval: $interval")
+            Timber.d("SettingsActivity: updateTimeRemaining - lastCheckTime: $lastCheckTime")
+            Timber.d("SettingsActivity: updateTimeRemaining - currentTime: $currentTime")
 
+            val intervalMillis = (interval.days * 24 * 60 * 60 * 1000L) + (interval.hours * 60 * 60 * 1000L) + (interval.minutes * 60 * 1000L)
+            var timeElapsed = currentTime - lastCheckTime
+            var timeRemaining = intervalMillis - timeElapsed
+
+            Timber.d("SettingsActivity: updateTimeRemaining - intervalMillis: $intervalMillis")
+            Timber.d("SettingsActivity: updateTimeRemaining - timeElapsed: $timeElapsed")
+            Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining (before check): $timeRemaining")
+
+            // Check if timeRemaining is negative
+            if (timeRemaining < 0) {
+                timeRemaining = intervalMillis
+                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining (after negative check): $timeRemaining")
+                lastCheckTime = currentTime
+            }
+            // Check if timeRemaining is close to 0
+            if (timeRemaining > 0 && timeRemaining < 1000) {
+                timeRemaining = 0
+                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining (after close to 0 check): $timeRemaining")
+            }
+            // Update the lastCheckTime
+            dataStoreManager.saveLastCheckTime(lastCheckTime)
             timeRemainingValue.text = formatTimeRemaining(timeRemaining)
+            Timber.d("SettingsActivity: updateTimeRemaining - timeRemainingValue.text: ${timeRemainingValue.text}")
         }
     }
 
     private fun formatTimeRemaining(timeRemainingMillis: Long): String {
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(timeRemainingMillis)
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(timeRemainingMillis) % 60
+        Timber.d("SettingsActivity: formatTimeRemaining called")
+        Timber.d("SettingsActivity: formatTimeRemaining - timeRemainingMillis: $timeRemainingMillis")
+        if (timeRemainingMillis < 0) {
+            return getString(R.string.less_than_a_second)
+        }
+        val seconds = timeRemainingMillis / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+        val days = hours / 24
 
         return when {
-            minutes > 0 -> {
-                val hours = TimeUnit.MILLISECONDS.toHours(timeRemainingMillis)
-                val remainingMinutes = minutes % 60
-                if (hours > 0) {
-                    getString(R.string.time_remaining_hours_minutes, hours, remainingMinutes)
-                } else {
-                    getString(R.string.time_remaining_minutes, minutes)
-                }
-            }
-            seconds > 0 -> getString(R.string.time_remaining_seconds, seconds)
-            else -> getString(R.string.time_remaining_less_than_a_second)
-        }
-    }
-
-    internal fun getAllowedModels(): List<String> {
-        return allowedModels
-    }
-
-    private fun getDeviceName(): String {
-        val manufacturer = Build.MANUFACTURER
-        val model = Build.MODEL
-        return if (model.startsWith(manufacturer)) {
-            model.uppercase()
-        } else {
-            "$manufacturer $model".uppercase()
-        }
-    }
-
-    private fun setUpgradeCheckInterval() {
-        val days = upgradeCheckIntervalDaysEditText.text.toString().toIntOrNull() ?: 0
-        val hours = upgradeCheckIntervalHoursEditText.text.toString().toIntOrNull() ?: 0
-        val minutes = upgradeCheckIntervalMinutesEditText.text.toString().toIntOrNull() ?: 0
-        lifecycleScope.launch {
-            dataStoreManager.saveUpgradeCheckInterval(Interval(days, hours, minutes))
-            // Call updateTimeRemaining() after saving the new values
-            updateTimeRemaining()
-            // Schedule the UpgradeCheckWorker
-            scheduleUpgradeCheckWorker(days, hours, minutes)
+            days > 0 -> String.format(Locale.getDefault(), "%d %s", days, if (days == 1L) getString(R.string.day) else getString(R.string.days))
+            hours > 0 -> String.format(Locale.getDefault(), "%d %s", hours, if (hours == 1L) getString(R.string.hour) else getString(R.string.hours))
+            minutes > 0 -> String.format(Locale.getDefault(), "%d %s", minutes, if (minutes == 1L) getString(R.string.minute) else getString(R.string.minutes))
+            seconds > 0 -> String.format(Locale.getDefault(), "%d %s", seconds, if (seconds == 1L) getString(R.string.second) else getString(R.string.seconds))
+            else -> getString(R.string.less_than_a_second)
         }
     }
 
     private fun scheduleUpgradeCheckWorker(days: Int, hours: Int, minutes: Int) {
         Timber.d("SettingsActivity: scheduleUpgradeCheckWorker called")
-        val initialDelayMinutes = (hours * 60) + minutes
-        val periodicWorkRequest = PeriodicWorkRequest.Builder(
-            UpgradeCheckWorker::class.java,
-            days.toLong(),
-            TimeUnit.DAYS
-        )
+        val initialDelayMinutes = (days * 24 * 60) + (hours * 60) + minutes
+        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - initialDelayMinutes: $initialDelayMinutes")
+        val upgradeCheckRequest = PeriodicWorkRequest.Builder(UpgradeCheckWorker::class.java, 1, TimeUnit.DAYS)
             .setInitialDelay(initialDelayMinutes.toLong(), TimeUnit.MINUTES)
-            .addTag("UpgradeCheck")
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "UpgradeCheck",
-            ExistingPeriodicWorkPolicy.KEEP,
-            periodicWorkRequest
+            ExistingPeriodicWorkPolicy.REPLACE,
+            upgradeCheckRequest
         )
     }
+
+    private fun showDeviceNameConfirmationDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(getString(R.string.device_name_confirmation_title))
+        builder.setMessage(getString(R.string.device_name_confirmation_message))
+        builder.setPositiveButton(getString(R.string.yes)) { dialog, _ ->
+            // Save the device name as the selected model
+            saveSelectedModel(null)
+            isModelChanged = true
+            dialog.dismiss()
+        }
+        builder.setNegativeButton(getString(R.string.no)) { dialog, _ ->
+            // Reset the selection to the previous one
+            modelSpinner.setSelection(modelList.indexOf(previousSelection))
+            dialog.dismiss()
+        }
+        builder.show()
+    }
+
+    private fun saveSelectedModel(selectedModel: String?) {
+        lifecycleScope.launch {
+            dataStoreManager.saveSelectedModel(selectedModel ?: deviceName)
+        }
+    }
+
+    private fun getDeviceName(): String {
+        return Build.MODEL
+    }
+
+    internal fun getAllowedModels(): List<String> {
+        return allowedModels
+    }
 }
+
+
+
