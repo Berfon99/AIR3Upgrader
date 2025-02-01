@@ -184,6 +184,7 @@ class SettingsActivity : AppCompatActivity() {
                 Timber.d("SettingsActivity: setUpgradeCheckIntervalButton onClick ignored")
             }
         }
+        handler.post(updateTimeRemainingRunnable) // <--- Moved to the end of onCreate()
     }
 
     private fun updateTimeRemaining() {
@@ -238,7 +239,6 @@ class SettingsActivity : AppCompatActivity() {
                 Timber.d("SettingsActivity: onResume - lastCheckTime (after update): $lastCheckTimeUpdated")
             }
         }
-        handler.post(updateTimeRemainingRunnable)
     }
 
     override fun onPause() {
@@ -308,13 +308,15 @@ class SettingsActivity : AppCompatActivity() {
         Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - initialDelayHours: $initialDelayHours")
         Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - initialDelayMinutes: $initialDelayMinutes")
         Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - initialDelay: $initialDelay")
-        val upgradeCheckRequest = PeriodicWorkRequest.Builder(UpgradeCheckWorker::class.java, 1, TimeUnit.DAYS)
+        //val upgradeCheckRequest = PeriodicWorkRequest.Builder(UpgradeCheckWorker::class.java, 1, TimeUnit.DAYS) // <--- Remove this line
+        val upgradeCheckRequest = PeriodicWorkRequest.Builder(UpgradeCheckWorker::class.java, 15, TimeUnit.MINUTES) // <--- Add this line
             .setInitialDelay(initialDelay.toLong(), TimeUnit.MINUTES)
             .build()
         Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - before enqueueUniquePeriodicWork")
+        WorkManager.getInstance(this).cancelUniqueWork("UpgradeCheck") // <--- Add this line
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "UpgradeCheck",
-            ExistingPeriodicWorkPolicy.REPLACE,
+            ExistingPeriodicWorkPolicy.KEEP, // <--- Change this line
             upgradeCheckRequest
         )
         Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - after enqueueUniquePeriodicWork")

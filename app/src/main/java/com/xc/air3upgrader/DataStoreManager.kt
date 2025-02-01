@@ -12,7 +12,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import timber.log.Timber
 
-data class Interval(val days: Int, val hours: Int, val minutes: Int)
 
 class DataStoreManager(private val context: Context) {
 

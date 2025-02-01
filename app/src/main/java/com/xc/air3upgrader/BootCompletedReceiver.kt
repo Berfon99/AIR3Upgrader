@@ -13,8 +13,10 @@ import java.util.concurrent.TimeUnit
 
 class BootCompletedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        Timber.d("BootCompletedReceiver: onReceive called")
+        Timber.d("BootCompletedReceiver: onReceive called") // <--- Changed log
+        Timber.d("BootCompletedReceiver: intent.action = ${intent.action}") // <--- Add this line
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            Timber.d("BootCompletedReceiver: ACTION_BOOT_COMPLETED received") // <--- Add this line
             // Reschedule the UpgradeCheckWorker
             val dataStoreManager = DataStoreManager(context)
             runBlocking {
@@ -30,13 +32,17 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     )
                     .addTag("UpgradeCheck")
                     .build()
-
+                Timber.d("BootCompletedReceiver: before enqueueUniquePeriodicWork") // <--- Add this line
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                     "UpgradeCheck",
                     ExistingPeriodicWorkPolicy.KEEP,
                     periodicWorkRequest
                 )
+                Timber.d("BootCompletedReceiver: after enqueueUniquePeriodicWork") // <--- Add this line
             }
+        }
+        if (intent.action == "android.intent.action.QUICKBOOT_POWERON") {
+            Timber.d("BootCompletedReceiver: QUICKBOOT_POWERON received") // <--- Add this line
         }
     }
 }
