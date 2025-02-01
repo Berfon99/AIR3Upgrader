@@ -77,4 +77,7 @@
     <string name="second">second</string>
     <string name="seconds">seconds</string>
     <string name="error_interval_too_short">Interval must be at least 15 minutes</string>
+    <string name="enable_background_upgrade_check">Enable background upgrade check</string>
+    <string name="disabled">Disabled</string> <!-- Add this line -->
+
 </resources>

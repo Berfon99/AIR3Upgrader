@@ -25,6 +25,9 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import android.os.Handler
 import android.os.Looper
+import android.widget.CheckBox
+import androidx.work.Constraints
+import androidx.work.NetworkType
 
 
 class SettingsActivity : AppCompatActivity() {
@@ -52,9 +55,16 @@ class SettingsActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var isButtonClickEnabled = true
     private var isTimeRemainingNegative = false
+    private lateinit var enableBackgroundCheckCheckbox: CheckBox
+    private lateinit var workManager: WorkManager
     private val updateTimeRemainingRunnable = object : Runnable {
         override fun run() {
-            updateTimeRemaining()
+            lifecycleScope.launch {
+                val isEnabled = dataStoreManager.getIsUpgradeCheckEnabled().firstOrNull() ?: false
+                if (isEnabled) {
+                    updateTimeRemaining()
+                }
+            }
             handler.postDelayed(this, 1000) // Update every 1 second
         }
     }
@@ -81,6 +91,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         dataStoreManager = DataStoreManager(this)
+        workManager = WorkManager.getInstance(this)
 
         modelSpinner = findViewById(R.id.model_spinner)
         upgradeCheckIntervalDaysEditText = findViewById(R.id.upgrade_check_interval_days)
@@ -88,6 +99,7 @@ class SettingsActivity : AppCompatActivity() {
         upgradeCheckIntervalMinutesEditText = findViewById(R.id.upgrade_check_interval_minutes)
         timeRemainingValue = findViewById(R.id.time_remaining_value)
         setUpgradeCheckIntervalButton = findViewById(R.id.set_upgrade_check_interval_button)
+        enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
 
         // Initialize the model list
         modelList = allowedModels.toMutableList()
@@ -184,7 +196,37 @@ class SettingsActivity : AppCompatActivity() {
                 Timber.d("SettingsActivity: setUpgradeCheckIntervalButton onClick ignored")
             }
         }
-        handler.post(updateTimeRemainingRunnable) // <--- Moved to the end of onCreate()
+        // Load saved checkbox state
+        lifecycleScope.launch {
+            val isEnabled = dataStoreManager.getIsUpgradeCheckEnabled().firstOrNull() ?: false
+            enableBackgroundCheckCheckbox.isChecked = isEnabled
+            updateUiState(isEnabled)
+        }
+
+        // Checkbox listener
+        enableBackgroundCheckCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            lifecycleScope.launch { // <--- Re-add this line
+                dataStoreManager.saveIsUpgradeCheckEnabled(isChecked)
+            } // <--- Re-add this line
+            updateUiState(isChecked)
+            if(isChecked){
+                scheduleUpgradeCheck()
+            }else{
+                cancelUpgradeCheck()
+            }
+        }
+    }
+
+    private fun updateUiState(isEnabled: Boolean) {
+        upgradeCheckIntervalDaysEditText.isEnabled = isEnabled
+        upgradeCheckIntervalHoursEditText.isEnabled = isEnabled
+        upgradeCheckIntervalMinutesEditText.isEnabled = isEnabled
+        setUpgradeCheckIntervalButton.isEnabled = isEnabled
+        if (!isEnabled) {
+            timeRemainingValue.text = getString(R.string.disabled)
+        }else{
+            updateTimeRemaining()
+        }
     }
 
     private fun updateTimeRemaining() {
@@ -229,6 +271,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Timber.d("SettingsActivity: onResume called")
+        handler.post(updateTimeRemainingRunnable)
         lifecycleScope.launch {
             val lastCheckTime = dataStoreManager.getLastCheckTime().firstOrNull() ?: 0L
             Timber.d("SettingsActivity: onResume - lastCheckTime (before check): $lastCheckTime")
@@ -275,10 +318,10 @@ class SettingsActivity : AppCompatActivity() {
         // Check if the interval is less than 15 minutes
         val totalMinutes = (days * 24 * 60) + (hours * 60) + minutes
         //if (totalMinutes < 15) {
-          //  Timber.e("SettingsActivity: setUpgradeCheckInterval - Interval is less than 15 minutes")
-            //Toast.makeText(this, getString(R.string.error_interval_too_short), Toast.LENGTH_SHORT).show()
-            //isSettingInterval = false
-            //return
+        //  Timber.e("SettingsActivity: setUpgradeCheckInterval - Interval is less than 15 minutes")
+        //Toast.makeText(this, getString(R.string.error_interval_too_short), Toast.LENGTH_SHORT).show()
+        //isSettingInterval = false
+        //return
         //}
 
         lifecycleScope.launch {
@@ -373,4 +416,34 @@ class SettingsActivity : AppCompatActivity() {
     internal fun getAllowedModels(): List<String> {
         return allowedModels
     }
+
+    private fun scheduleUpgradeCheck() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        lifecycleScope.launch {
+            val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0, 0, 0)
+            val intervalInMinutes = (interval.days * 24 * 60) + (interval.hours * 60) + interval.minutes
+
+            val upgradeCheckRequest = PeriodicWorkRequest.Builder(
+                UpgradeCheckWorker::class.java,
+                intervalInMinutes.toLong(),
+                TimeUnit.MINUTES
+            )
+                .setConstraints(constraints)
+                .build()
+
+            workManager.enqueueUniquePeriodicWork(
+                "upgradeCheck",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                upgradeCheckRequest
+            )
+        }
+    }
+
+    private fun cancelUpgradeCheck() {
+        workManager.cancelUniqueWork("upgradeCheck")
+    }
 }
+
