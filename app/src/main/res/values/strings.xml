@@ -78,6 +78,9 @@
     <string name="seconds">seconds</string>
     <string name="error_interval_too_short">Interval must be at least 15 minutes</string>
     <string name="enable_background_upgrade_check">Enable background upgrade check</string>
-    <string name="disabled">Disabled</string> <!-- Add this line -->
-
+    <string name="disabled">Disabled</string>
+    <string name="starting_time">Starting Time:</string>
+    <string name="not_available">N/A</string>
+    <string name="automatic_upgrade_reminder">Automatic Upgrade Reminder</string>
+    <string name="reminder_timeframe">Reminder Timeframe</string>
 </resources>
