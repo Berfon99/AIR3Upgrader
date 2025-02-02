@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit
 import android.os.Handler
 import android.os.Looper
 import android.widget.CheckBox
+import android.widget.CompoundButton
 import androidx.work.Constraints
 import androidx.work.NetworkType
 import kotlinx.coroutines.runBlocking
@@ -58,6 +59,23 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var workManager: WorkManager
     private var isUpdatingTimeRemaining = false
     private var isSchedulingWorker = false
+
+// Checkbox listener
+    private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
+        Timber.d("SettingsActivity: checkboxListener - onCheckedChanged called")
+        Timber.d("SettingsActivity: checkboxListener - isChecked: $isChecked")
+        lifecycleScope.launch {
+            dataStoreManager.saveIsUpgradeCheckEnabled(isChecked)
+        }
+        updateUiState(isChecked)
+        if (isChecked) {
+            Timber.d("SettingsActivity: checkboxListener - calling scheduleUpgradeCheck")
+            scheduleUpgradeCheck()
+        } else {
+            Timber.d("SettingsActivity: checkboxListener - calling cancelUpgradeCheck")
+            cancelUpgradeCheck()
+        }
+    }
     private val updateTimeRemainingRunnable = object : Runnable {
         override fun run() {
             lifecycleScope.launch {
@@ -68,8 +86,7 @@ class SettingsActivity : AppCompatActivity() {
             }
             handler.postDelayed(this, 1000) // Update every 1 second
         }
-    }
-    // List of allowed models
+    }    // List of allowed models
     private val allowedModels = listOf(
         "AIR3-7.2",
         "AIR3-7.3",
@@ -146,7 +163,7 @@ class SettingsActivity : AppCompatActivity() {
             modelSpinner.onItemSelectedListener = spinnerListener
         }
 
-// Set a listener to respond to user selections
+        // Set a listener to respond to user selections
         spinnerListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 Timber.d("onItemSelected called")
@@ -181,6 +198,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         modelSpinner.onItemSelectedListener = spinnerListener
         // Load and set the saved interval values
+        Timber.d("SettingsActivity: onCreate - calling loadUpgradeCheckInterval")
         loadUpgradeCheckInterval()
         // Set the click listener for the button
         setUpgradeCheckIntervalButton.setOnClickListener {
@@ -204,17 +222,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // Checkbox listener
-        enableBackgroundCheckCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            lifecycleScope.launch {
-                dataStoreManager.saveIsUpgradeCheckEnabled(isChecked)
-            }
-            updateUiState(isChecked)
-            if(isChecked){
-                scheduleUpgradeCheck()
-            }else{
-                cancelUpgradeCheck()
-            }
-        }
+        enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
         // Initialize shouldLaunchOnReboot if it's not set
         lifecycleScope.launch {
             val shouldLaunch = dataStoreManager.getShouldLaunchOnReboot().firstOrNull()
@@ -225,9 +233,12 @@ class SettingsActivity : AppCompatActivity() {
                 dataStoreManager.saveShouldLaunchOnReboot(false)
             }
         }
+        Timber.d("SettingsActivity: onCreate - END")
     }
 
     private fun updateUiState(isEnabled: Boolean) {
+        Timber.d("SettingsActivity: updateUiState called")
+        Timber.d("SettingsActivity: updateUiState - isEnabled: $isEnabled")
         upgradeCheckIntervalDaysEditText.isEnabled = isEnabled
         upgradeCheckIntervalHoursEditText.isEnabled = isEnabled
         upgradeCheckIntervalMinutesEditText.isEnabled = isEnabled
@@ -235,6 +246,7 @@ class SettingsActivity : AppCompatActivity() {
         if (!isEnabled) {
             timeRemainingValue.text = getString(R.string.disabled)
         }
+        Timber.d("SettingsActivity: updateUiState - END")
     }
 
     private fun updateTimeRemaining() {
@@ -310,13 +322,22 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun loadUpgradeCheckInterval() {
+        Timber.d("SettingsActivity: loadUpgradeCheckInterval called")
         lifecycleScope.launch {
-            val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull()
-            if (interval != null) {
-                upgradeCheckIntervalDaysEditText.setText(String.format(Locale.getDefault(), "%d", interval.days))
-                upgradeCheckIntervalHoursEditText.setText(String.format(Locale.getDefault(), "%d", interval.hours))
-                upgradeCheckIntervalMinutesEditText.setText(String.format(Locale.getDefault(), "%d", interval.minutes))
+            var interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull()
+            Timber.d("SettingsActivity: loadUpgradeCheckInterval - interval before check: $interval")
+            if (interval == null) {
+                // If interval is null, set a default of 1 minute
+                Timber.d("SettingsActivity: loadUpgradeCheckInterval - interval is null, creating default")
+                interval = Interval(0, 0, 1)
+                dataStoreManager.saveUpgradeCheckInterval(interval)
             }
+            Timber.d("SettingsActivity: loadUpgradeCheckInterval - interval.days: ${interval.days}, interval.hours: ${interval.hours}, interval.minutes: ${interval.minutes}")
+            // Set the EditText values, even if they were just set to default
+            upgradeCheckIntervalDaysEditText.setText(String.format(Locale.getDefault(), "%d", interval.days))
+            upgradeCheckIntervalHoursEditText.setText(String.format(Locale.getDefault(), "%d", interval.hours))
+            upgradeCheckIntervalMinutesEditText.setText(String.format(Locale.getDefault(), "%d", interval.minutes))
+            Timber.d("SettingsActivity: loadUpgradeCheckInterval - END")
         }
     }
 
@@ -336,9 +357,11 @@ class SettingsActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val interval = Interval(days, hours, minutes)
+            Timber.d("SettingsActivity: setUpgradeCheckInterval - interval before save: $interval")
             dataStoreManager.saveUpgradeCheckInterval(interval)
             Timber.d("SettingsActivity: setUpgradeCheckInterval - interval saved: $interval")
             // Schedule the UpgradeCheckWorker
+            Timber.d("SettingsActivity: setUpgradeCheckInterval - calling scheduleUpgradeCheckWorker")
             scheduleUpgradeCheckWorker(days, hours, minutes)
             // Update the lastCheckTime
             val currentTime = Calendar.getInstance().timeInMillis
@@ -347,7 +370,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         isSettingInterval = false
         Timber.d("SettingsActivity: setUpgradeCheckInterval - isSettingInterval (after reset): $isSettingInterval")
-        Timber.d("SettingsActivity: setUpgradeCheckInterval - END") // <--- Add this line
+        Timber.d("SettingsActivity: setUpgradeCheckInterval - END")
     }
 
     private fun scheduleUpgradeCheckWorker(days: Int, hours: Int, minutes: Int) {
@@ -441,30 +464,12 @@ class SettingsActivity : AppCompatActivity() {
             .build()
         lifecycleScope.launch {
             val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0, 0, 0)
-            val intervalMillis = (interval.days * 24 * 60 * 60 * 1000L) + (interval.hours * 60 * 60 * 1000L) + (interval.minutes * 60 * 1000L)
-            val periodicWorkRequest = PeriodicWorkRequest.Builder(
-                UpgradeCheckWorker::class.java,
-                intervalMillis,
-                TimeUnit.MILLISECONDS
-            )
-                .setConstraints(constraints)
-                .build()
-            workManager.enqueueUniquePeriodicWork(
-                "UpgradeCheck",
-                ExistingPeriodicWorkPolicy.KEEP, // <--- Changed from REPLACE to KEEP
-                periodicWorkRequest
-            )
-            dataStoreManager.saveShouldLaunchOnReboot(true)
-            Timber.d("SettingsActivity: scheduleUpgradeCheck - shouldLaunchOnReboot set to true")
+            scheduleUpgradeCheckWorker(interval.days, interval.hours, interval.minutes)
         }
     }
 
     private fun cancelUpgradeCheck() {
         Timber.d("SettingsActivity: cancelUpgradeCheck called")
         workManager.cancelUniqueWork("UpgradeCheck")
-        lifecycleScope.launch {
-            dataStoreManager.saveShouldLaunchOnReboot(false)
-            Timber.d("SettingsActivity: cancelUpgradeCheck - shouldLaunchOnReboot set to false") // <--- Added this line
-        }
     }
 }
