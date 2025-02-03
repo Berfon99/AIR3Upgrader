@@ -29,6 +29,8 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.CheckBox
 import android.widget.CompoundButton
+import androidx.compose.foundation.layout.add
+import androidx.compose.ui.semantics.text
 import androidx.work.NetworkType
 import kotlinx.coroutines.runBlocking
 
@@ -63,199 +65,10 @@ class SettingsActivity : AppCompatActivity() {
     private var isUpdatingTimeRemaining = false
     private var isSchedulingWorker = false
 
-// Checkbox listener
-    private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
-        Timber.d("SettingsActivity: checkboxListener - onCheckedChanged called")
-        Timber.d("SettingsActivity: checkboxListener - isChecked: $isChecked")
-        lifecycleScope.launch {
-            dataStoreManager.saveIsUpgradeCheckEnabled(isChecked)
-        }
-        updateUiState(isChecked)
-        if (isChecked) {
-            Timber.d("SettingsActivity: checkboxListener - calling scheduleUpgradeCheck")
-            scheduleUpgradeCheck()
-        } else {
-            Timber.d("SettingsActivity: checkboxListener - calling cancelUpgradeCheck")
-            cancelUpgradeCheck()
-        }
-    }
-    private val updateTimeRemainingRunnable = object : Runnable {
+// --- End of Part 1 ---
 
-        override fun run() {
-            lifecycleScope.launch {
-                val isEnabled = dataStoreManager.getIsUpgradeCheckEnabled().firstOrNull() ?: false
-                if (isEnabled) {
-                    updateTimeRemaining()
-                }
-            }
-            handler.postDelayed(this, 1000) // Update every 1 second
-        }
-    }
-    // List of allowed models
-    private val allowedModels = listOf(
-        "AIR3-7.2",
-        "AIR3-7.3",
-        "AIR3-7.3+",
-        "AIR3-7.35",
-        "AIR3-7.35+"
-    )
 
-    // List of models for the spinner
-    private lateinit var modelList: MutableList<String>
-    // List of models for the spinner display
-    private lateinit var modelDisplayList: MutableList<String>
-    // Map to link display strings to models
-    private lateinit var modelDisplayMap: MutableMap<String, String?>
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        Timber.d("SettingsActivity: onCreate called")
-        setContentView(R.layout.activity_settings)
-
-        dataStoreManager = DataStoreManager(this)
-        workManager = WorkManager.getInstance(this)
-
-        modelSpinner = findViewById(R.id.model_spinner)
-        upgradeCheckIntervalDaysEditText = findViewById(R.id.upgrade_check_interval_days)
-        upgradeCheckIntervalHoursEditText = findViewById(R.id.upgrade_check_interval_hours)
-        upgradeCheckIntervalMinutesEditText = findViewById(R.id.upgrade_check_interval_minutes)
-        timeRemainingValue = findViewById(R.id.time_remaining_value)
-        setUpgradeCheckIntervalButton = findViewById(R.id.set_upgrade_check_interval_button)
-        enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
-        startingTimeValue = findViewById(R.id.starting_time_value)
-        shouldLaunchOnRebootValue = findViewById(R.id.should_launch_on_reboot_value)
-
-        // Initialize the model list
-        modelList = allowedModels.toMutableList()
-        deviceName = getDeviceName()
-        modelList.add(deviceName)
-
-        // Initialize the display list and map
-        modelDisplayList = mutableListOf()
-        modelDisplayMap = mutableMapOf()
-        for (model in modelList) {
-            val displayString = if (model == deviceName) {
-                getString(R.string.device_name) + " " + deviceName // Use string resource
-            } else {
-                model
-            }
-            modelDisplayList.add(displayString)
-            modelDisplayMap[displayString] = if (model == deviceName) null else model
-        }
-
-        // Create an ArrayAdapter using the string array and a default spinner layout
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelDisplayList)
-        // Specify the layout to use when the list of choices appears
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        // Apply the adapter to the spinner
-        modelSpinner.adapter = adapter
-
-        // Set the default selection based on the device model
-        lifecycleScope.launch {
-            val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
-            val defaultSelection = when {
-                selectedModel != null -> selectedModel
-                else -> Build.MODEL // Default to device model on fresh install
-            }
-
-            // Remove the listener temporarily
-            spinnerListener = modelSpinner.onItemSelectedListener
-            modelSpinner.onItemSelectedListener = null
-
-            modelSpinner.setSelection(modelList.indexOf(defaultSelection))
-            previousSelection = defaultSelection
-            isSpinnerInitialized = true
-
-            // Re-add the listener
-            modelSpinner.onItemSelectedListener = spinnerListener
-        }
-
-        // Set a listener to respond to user selections
-        spinnerListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                Timber.d("onItemSelected called")
-                if (!isSpinnerInitialized || !isUserInteracting) {
-                    // Ignore the initial selection
-                    return
-                }
-                val selectedDisplayString = parent.getItemAtPosition(position).toString()
-                val selectedModel = modelDisplayMap[selectedDisplayString]
-
-                // Check if the user selected the device name
-                if (selectedModel == null) {
-                    // Show the confirmation dialog
-                    showDeviceNameConfirmationDialog()
-                } else {
-                    // Validate the selected model
-                    if (!dataStoreManager.isDeviceModelSupported(selectedModel, getAllowedModels())) {
-                        // Display an error message and reset the selection
-                        Toast.makeText(this@SettingsActivity, getString(error_invalid_file), Toast.LENGTH_SHORT).show()
-                        modelSpinner.setSelection(modelList.indexOf(previousSelection)) // Reset to previous selection
-                        return
-                    }
-                    // Save the selected model
-                    saveSelectedModel(selectedModel)
-                    isModelChanged = true
-                }
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>) {
-                // Another interface callback
-            }
-        }
-        modelSpinner.onItemSelectedListener = spinnerListener
-        // Load and set the saved interval values
-        Timber.d("SettingsActivity: onCreate - calling loadUpgradeCheckInterval")
-        loadUpgradeCheckInterval()
-        // Set the click listener for the button
-        setUpgradeCheckIntervalButton.setOnClickListener {
-            Timber.d("SettingsActivity: setUpgradeCheckIntervalButton onClick listener called")
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastClickTime > clickDebounceThreshold && isButtonClickEnabled) {
-                isButtonClickEnabled = false
-                lastClickTime = currentTime
-                Timber.d("SettingsActivity: setUpgradeCheckIntervalButton onClick called")
-                setUpgradeCheckInterval()
-                handler.postDelayed({ isButtonClickEnabled = true }, clickDebounceThreshold)
-            } else {
-                Timber.d("SettingsActivity: setUpgradeCheckIntervalButton onClick ignored")
-            }
-        }
-        // Load saved checkbox state
-        lifecycleScope.launch {
-            val isEnabled = dataStoreManager.getIsUpgradeCheckEnabled().firstOrNull() ?: false
-            enableBackgroundCheckCheckbox.isChecked = isEnabled
-            updateUiState(isEnabled)
-        }
-
-        // Checkbox listener
-        enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
-        // Initialize shouldLaunchOnReboot if it's not set
-        lifecycleScope.launch {
-            val shouldLaunch = dataStoreManager.getShouldLaunchOnReboot().firstOrNull()
-            Timber.d("SettingsActivity: onCreate - shouldLaunchOnReboot: $shouldLaunch")
-
-            if (shouldLaunch == null) {
-                Timber.d("SettingsActivity: shouldLaunchOnReboot is null, setting to false")
-                dataStoreManager.saveShouldLaunchOnReboot(false)
-                updateShouldLaunchOnRebootValue()
-            }
-        }
-        Timber.d("SettingsActivity: onCreate - END")
-    }
-
-    private fun updateUiState(isEnabled: Boolean) {
-        Timber.d("SettingsActivity: updateUiState called")
-        Timber.d("SettingsActivity: updateUiState - isEnabled: $isEnabled")
-        upgradeCheckIntervalDaysEditText.isEnabled = isEnabled
-        upgradeCheckIntervalHoursEditText.isEnabled = isEnabled
-        upgradeCheckIntervalMinutesEditText.isEnabled = isEnabled
-        setUpgradeCheckIntervalButton.isEnabled = isEnabled
-        if (!isEnabled) {
-            timeRemainingValue.text = getString(R.string.disabled)
-        }
-        Timber.d("SettingsActivity: updateUiState - END")
-    }
 
 
     private fun updateTimeRemaining() {
@@ -281,24 +94,18 @@ class SettingsActivity : AppCompatActivity() {
             Timber.d("SettingsActivity: updateTimeRemaining - timeElapsed: $timeElapsed")
             Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining (before check): $timeRemaining")
 
-            // Check if timeRemaining is negative
-            if (timeRemaining < 0) {
-                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining is negative")
-                lastCheckTime = currentTime
-                dataStoreManager.saveLastCheckTime(lastCheckTime)
-                Timber.d("SettingsActivity: updateTimeRemaining - lastCheckTime saved: $lastCheckTime")
-                timeRemaining = intervalMillis // Set timeRemaining to intervalMillis
-                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining (after negative check): $timeRemaining")
-                scheduleUpgradeCheckWorker(interval.days, interval.hours, interval.minutes)
-            }
-            // Check if timeRemaining is close to 0
-            if (timeRemaining in 0..999) {
-                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining is close to 0")
-                timeRemaining = 0
-                lastCheckTime = currentTime
-                dataStoreManager.saveLastCheckTime(lastCheckTime)
-                Timber.d("SettingsActivity: updateTimeRemaining - lastCheckTime saved: $lastCheckTime")
-                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining (after close to 0 check): $timeRemaining")
+            // Check if timeRemaining is negative or close to 0
+            if (timeRemaining <= 0) {
+                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining is negative or close to 0")
+                dataStoreManager.saveUnhiddenLaunchOnReboot(true) // Set unhiddenLaunchOnReboot to true
+                Timber.d("SettingsActivity: updateTimeRemaining - unhiddenLaunchOnReboot saved: true")
+                updateUnhiddenLaunchOnRebootValue()
+                updateStartingTime()
+                timeRemainingValue.text = formatTimeRemaining(0)
+                Timber.d("SettingsActivity: updateTimeRemaining - timeRemainingValue.text: ${timeRemainingValue.text}")
+                Timber.d("SettingsActivity: updateTimeRemaining - END")
+                isUpdatingTimeRemaining = false
+                return@launch
             }
             timeRemainingValue.text = formatTimeRemaining(timeRemaining)
             Timber.d("SettingsActivity: updateTimeRemaining - timeRemainingValue.text: ${timeRemainingValue.text}")
@@ -310,11 +117,22 @@ class SettingsActivity : AppCompatActivity() {
     private fun updateShouldLaunchOnRebootValue() {
         Timber.d("SettingsActivity: updateShouldLaunchOnRebootValue called")
         lifecycleScope.launch {
-            val shouldLaunch = dataStoreManager.getShouldLaunchOnReboot().first()
+            val shouldLaunch = dataStoreManager.getShouldLaunchOnReboot().firstOrNull() ?: false
             Timber.d("SettingsActivity: updateShouldLaunchOnRebootValue - shouldLaunch: $shouldLaunch")
             val shouldLaunchString = if (shouldLaunch) "true" else "false"
             shouldLaunchOnRebootValue.text = shouldLaunchString
             Timber.d("SettingsActivity: updateShouldLaunchOnRebootValue - END")
+        }
+    }
+
+    private fun updateUnhiddenLaunchOnRebootValue() {
+        Timber.d("SettingsActivity: updateUnhiddenLaunchOnRebootValue called")
+        lifecycleScope.launch {
+            val unhiddenLaunch = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+            Timber.d("SettingsActivity: updateUnhiddenLaunchOnRebootValue - unhiddenLaunch: $unhiddenLaunch")
+            val unhiddenLaunchString = if (unhiddenLaunch) "true" else "false"
+            unhiddenLaunchOnRebootValue.text = unhiddenLaunchString
+            Timber.d("SettingsActivity: updateUnhiddenLaunchOnRebootValue - END")
         }
     }
 
@@ -334,21 +152,139 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+// --- End of Part 2 ---
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    Timber.d("SettingsActivity: onCreate called")
+    setContentView(R.layout.activity_settings)
+
+    dataStoreManager = DataStoreManager(this)
+    workManager = WorkManager.getInstance(this)
+
+    modelSpinner = findViewById(R.id.model_spinner)
+    upgradeCheckIntervalDaysEditText = findViewById(R.id.upgrade_check_interval_days)
+    upgradeCheckIntervalHoursEditText = findViewById(R.id.upgrade_check_interval_hours)
+    upgradeCheckIntervalMinutesEditText = findViewById(R.id.upgrade_check_interval_minutes)
+    timeRemainingValue = findViewById(R.id.time_remaining_value)
+    setUpgradeCheckIntervalButton = findViewById(R.id.set_upgrade_check_interval_button)
+    enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
+    startingTimeValue = findViewById(R.id.starting_time_value)
+    shouldLaunchOnRebootValue = findViewById(R.id.should_launch_on_reboot_value)
+    unhiddenLaunchOnRebootValue = findViewById(R.id.UNHIDDEN_LAUNCH_ON_REBOOT)
+
+    // Initialize the model list
+    modelList = allowedModels.toMutableList()
+    deviceName = getDeviceName()
+    modelList.add(deviceName)
+
+    // Initialize the display list and map
+    modelDisplayList = mutableListOf()
+    modelDisplayMap = mutableMapOf()
+    for (model in modelList) {
+        val displayString = if (model == deviceName) {
+            getString(R.string.device_name) + " " + deviceName // Use string resource
+        } else {
+            model
+        }
+        modelDisplayList.add(displayString)
+        modelDisplayMap[displayString] = if (model == deviceName) null else model
+    }
+
+    // Create an ArrayAdapter using the string array and a default spinner layout
+    val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelDisplayList)
+    // Specify the layout to use when the list of choices appears
+    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+    // Apply the adapter to the spinner
+    modelSpinner.adapter = adapter
+
+    // Set the default selection based on the device model
+    lifecycleScope.launch {
+        val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
+        val defaultSelection = when {
+            selectedModel != null -> selectedModel
+            else -> Build.MODEL // Default to device model on fresh install
+        }
+
+        // Remove the listener temporarily
+        spinnerListener = modelSpinner.onItemSelectedListener
+        modelSpinner.onItemSelectedListener = null
+
+        modelSpinner.setSelection(modelList.indexOf(defaultSelection))
+        previousSelection = defaultSelection
+        isSpinnerInitialized = true
+
+        // Re-add the listener
+        modelSpinner.onItemSelectedListener = spinnerListener
+    }
+
+    // Set a listener to respond to user selections
+    spinnerListener = object : AdapterView.OnItemSelectedListener {
+        override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+            Timber.d("onItemSelected called")
+            if (!isSpinnerInitialized || !isUserInteracting) {
+                // Ignore the initial selection
+                return
+            }
+            val selectedDisplayString = parent.getItemAtPosition(position).toString()
+            val selectedModel = modelDisplayMap[selectedDisplayString]
+
+            // Check if the user selected the device name
+            if (selectedModel == null) {
+                // Show the confirmation dialog
+                showDeviceNameConfirmationDialog()
+            } else {
+                // Validate the selected model
+                if (!dataStoreManager.isDeviceModelSupported(selectedModel, getAllowedModels())) {
+                    // Display an error message and reset the selection
+                    Toast.makeText(this@SettingsActivity, getString(error_invalid_file), Toast.LENGTH_SHORT).show()
+                    modelSpinner.setSelection(modelList.indexOf(previousSelection)) // Reset to previous selection
+                    return
+                }
+                // Save the selected model
+                saveSelectedModel(selectedModel)
+                isModelChanged = true
+            }
+        }
+
+        override fun onNothingSelected(parent: AdapterView<*>) {
+            // Another interface callback
+        }
+    }
+    modelSpinner.onItemSelectedListener = spinnerListener
+    // Load and set the saved interval values
+    Timber.d("SettingsActivity: onCreate - calling loadUpgradeCheckInterval")
+    loadUpgradeCheckInterval()
+
+    lifecycleScope.launch {
+        val shouldLaunchOnReboot = dataStoreManager.getShouldLaunchOnReboot().firstOrNull() ?: false
+        enableBackgroundCheckCheckbox.isChecked = shouldLaunchOnReboot
+        enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
+        dataStoreManager.saveUnhiddenLaunchOnReboot(false)
+    }
+}
+
     override fun onResume() {
         super.onResume()
         Timber.d("SettingsActivity: onResume called")
-        runBlocking {
-            val shouldLaunchOnReboot = dataStoreManager.getShouldLaunchOnReboot().firstOrNull() ?: false
-            Timber.d("SettingsActivity: onResume - shouldLaunchOnReboot: $shouldLaunchOnReboot")
-            if (shouldLaunchOnReboot) {
-                Timber.d("SettingsActivity: onResume - shouldLaunchOnReboot is true, updating lastCheckTime")
+        lifecycleScope.launch {
+            val unhiddenLaunchOnReboot = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+            Timber.d("SettingsActivity: onResume - unhiddenLaunchOnReboot: $unhiddenLaunchOnReboot")
+            if (unhiddenLaunchOnReboot) {
+                Timber.d("SettingsActivity: onResume - unhiddenLaunchOnReboot is true, updating lastCheckTime")
                 val currentTime = Calendar.getInstance().timeInMillis
                 dataStoreManager.saveLastCheckTime(currentTime)
-                dataStoreManager.saveShouldLaunchOnReboot(false)
+                dataStoreManager.saveUnhiddenLaunchOnReboot(false) // Reset unhiddenLaunchOnReboot
                 Timber.d("SettingsActivity: onResume - lastCheckTime updated: $currentTime")
                 updateStartingTime()
             }
+            val shouldLaunchOnReboot = dataStoreManager.getShouldLaunchOnReboot().firstOrNull() ?: false
+            if (shouldLaunchOnReboot) {
+                handler.post(updateTimeRemainingRunnable)
+            }
         }
+        updateShouldLaunchOnRebootValue()
+        updateUnhiddenLaunchOnRebootValue()
+        updateUiElementsState(enableBackgroundCheckCheckbox.isChecked)
     }
 
     override fun onPause() {
@@ -374,9 +310,8 @@ class SettingsActivity : AppCompatActivity() {
             upgradeCheckIntervalHoursEditText.setText(String.format(Locale.getDefault(), "%d", interval.hours))
             upgradeCheckIntervalMinutesEditText.setText(String.format(Locale.getDefault(), "%d", interval.minutes))
             Timber.d("SettingsActivity: loadUpgradeCheckInterval - END")
+            updateUiElementsState(enableBackgroundCheckCheckbox.isChecked)
         }
-        // Start updating the time remaining after the interval is loaded
-        handler.post(updateTimeRemainingRunnable)
     }
 
     private fun setUpgradeCheckInterval() {
@@ -398,92 +333,36 @@ class SettingsActivity : AppCompatActivity() {
             Timber.d("SettingsActivity: setUpgradeCheckInterval - interval before save: $interval")
             dataStoreManager.saveUpgradeCheckInterval(interval)
             Timber.d("SettingsActivity: setUpgradeCheckInterval - interval saved: $interval")
-            // Schedule the UpgradeCheckWorker
-            Timber.d("SettingsActivity: setUpgradeCheckInterval - calling scheduleUpgradeCheckWorker")
-            scheduleUpgradeCheckWorker(days, hours, minutes)
-            // Update the lastCheckTime
-            val currentTime = Calendar.getInstance().timeInMillis
-            dataStoreManager.saveLastCheckTime(currentTime)
-            Timber.d("SettingsActivity: setUpgradeCheckInterval - lastCheckTime saved: $currentTime")
-        }
-        isSettingInterval = false
-        Timber.d("SettingsActivity: setUpgradeCheckInterval - isSettingInterval (after reset): $isSettingInterval")
-        Timber.d("SettingsActivity: setUpgradeCheckInterval - END")
-    }
-
-    private fun scheduleUpgradeCheckWorker(days: Int, hours: Int, minutes: Int) {
-        if (isSchedulingWorker) {
-            return
-        }
-        isSchedulingWorker = true
-        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker called")
-        val initialDelay = (days * 24 * 60) + (hours * 60) + minutes
-        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - initialDelayDays: $days")
-        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - initialDelayHours: $hours")
-        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - initialDelayMinutes: $minutes")
-        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - initialDelay: $initialDelay")
-        val intervalMillis = (days * 24 * 60 * 60 * 1000L) + (hours * 60 * 60 * 1000L) + (minutes * 60 * 1000L)
-        val intervalMinutes = intervalMillis / (60 * 1000)
-        val upgradeCheckRequest = PeriodicWorkRequest.Builder(
-            UpgradeCheckWorker::class.java,
-            intervalMinutes,
-            TimeUnit.MINUTES
-        )
-            .setInitialDelay(initialDelay.toLong(), TimeUnit.MINUTES)
-            .build()
-        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - before enqueueUniquePeriodicWork")
-        WorkManager.getInstance(this).cancelUniqueWork("UpgradeCheck")
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "UpgradeCheck",
-            ExistingPeriodicWorkPolicy.KEEP,
-            upgradeCheckRequest
-        )
-        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - after enqueueUniquePeriodicWork")
-        Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - END")
-        isSchedulingWorker = false
-    }
-
-    private fun formatTimeRemaining(timeRemainingMillis: Long): String {
-        Timber.d("SettingsActivity: formatTimeRemaining called")
-        Timber.d("SettingsActivity: formatTimeRemaining - timeRemainingMillis: $timeRemainingMillis")
-        if (timeRemainingMillis < 0) {
-            return getString(R.string.less_than_a_second)
-        }
-        val seconds = timeRemainingMillis / 1000
-        val minutes = seconds / 60
-        val hours = minutes / 60
-        val days = hours / 24
-
-        return when {
-            days > 0 -> String.format(Locale.getDefault(), "%d %s", days, if (days == 1L) getString(R.string.day) else getString(R.string.days))
-            hours > 0 -> String.format(Locale.getDefault(), "%d %s", hours, if (hours == 1L) getString(R.string.hour) else getString(R.string.hours))
-            minutes > 0 -> String.format(Locale.getDefault(), "%d %s", minutes, if (minutes == 1L) getString(R.string.minute) else getString(R.string.minutes))
-            seconds > 0 -> String.format(Locale.getDefault(), "%d %s", seconds, if (seconds == 1L) getString(R.string.second) else getString(R.string.seconds))
-            else -> getString(R.string.less_than_a_second)
+            updateTimeRemaining()
+            updateUiElementsState(enableBackgroundCheckCheckbox.isChecked)
+            isSettingInterval = false
         }
     }
-
     private fun showDeviceNameConfirmationDialog() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle(getString(R.string.device_name_confirmation_title))
         builder.setMessage(getString(R.string.device_name_confirmation_message))
-        builder.setPositiveButton(getString(R.string.yes)) { dialog, _ ->
-            // Save the device name as the selected model
+        builder.setPositiveButton(getString(R.string.yes)) { _, _ ->
+            // Save null to indicate device name selected
             saveSelectedModel(null)
             isModelChanged = true
-            dialog.dismiss()
         }
         builder.setNegativeButton(getString(R.string.no)) { dialog, _ ->
-            // Reset the selection to the previous one
+            // Reset to previous selection
             modelSpinner.setSelection(modelList.indexOf(previousSelection))
             dialog.dismiss()
         }
         builder.show()
     }
 
-    private fun saveSelectedModel(selectedModel: String?) {
+    private fun saveSelectedModel(model: String?) {
+        Timber.d("SettingsActivity: saveSelectedModel called")
         lifecycleScope.launch {
-            dataStoreManager.saveSelectedModel(selectedModel ?: deviceName)
+            if (model != null) {
+                dataStoreManager.saveSelectedModel(model)
+            } else {
+                dataStoreManager.saveSelectedModel(deviceName)
+            }
         }
     }
 
@@ -491,15 +370,38 @@ class SettingsActivity : AppCompatActivity() {
         return Build.MODEL
     }
 
-    internal fun getAllowedModels(): List<String> {
+    private fun getAllowedModels(): List<String> {
         return allowedModels
     }
 
+    private fun formatTimeRemaining(timeRemaining: Long): String {
+        val seconds = timeRemaining / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+        val days = hours / 24
+
+        return when {
+            days > 0 -> String.format(Locale.getDefault(), "%d day%s, %d hour%s, %d minute%s", days, if (days > 1) "s" else "", hours % 24, if (hours % 24 > 1) "s" else "", minutes % 60, if (minutes % 60 > 1) "s" else "")
+            hours > 0 -> String.format(Locale.getDefault(), "%d hour%s, %d minute%s", hours, if (hours > 1) "s" else "", minutes % 60, if (minutes % 60 > 1) "s" else "")
+            minutes > 0 -> String.format(Locale.getDefault(), "%d minute%s", minutes, if (minutes > 1) "s" else "")
+            seconds > 0 -> String.format(Locale.getDefault(), "%d second%s", seconds, if (seconds > 1) "s" else "")
+            else -> getString(R.string.less_than_a_second)
+        }
+    }
+
     private fun scheduleUpgradeCheck() {
+        if (isSchedulingWorker) {
+            return
+        }
+        isSchedulingWorker = true
         Timber.d("SettingsActivity: scheduleUpgradeCheck called")
         lifecycleScope.launch {
             val interval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0, 0, 0)
-            scheduleUpgradeCheckWorker(interval.days, interval.hours, interval.minutes)
+            val intervalMillis = (interval.days * 24 * 60 * 60) + (interval.hours * 60 * 60) + (interval.minutes * 60)
+            val periodicWorkRequest = PeriodicWorkRequest.Builder(UpgradeCheckWorker::class.java, intervalMillis.toLong(), TimeUnit.SECONDS)
+                .build()
+            workManager.enqueueUniquePeriodicWork("UpgradeCheck", ExistingPeriodicWorkPolicy.REPLACE, periodicWorkRequest)
+            isSchedulingWorker = false
         }
     }
 
@@ -507,4 +409,19 @@ class SettingsActivity : AppCompatActivity() {
         Timber.d("SettingsActivity: cancelUpgradeCheck called")
         workManager.cancelUniqueWork("UpgradeCheck")
     }
+
+    private fun updateUiElementsState(isChecked: Boolean) {
+        Timber.d("SettingsActivity: updateUiElementsState called - isChecked: $isChecked")
+        upgradeCheckIntervalDaysEditText.isEnabled = isChecked
+        upgradeCheckIntervalHoursEditText.isEnabled = isChecked
+        upgradeCheckIntervalMinutesEditText.isEnabled = isChecked
+        setUpgradeCheckIntervalButton.isEnabled = isChecked
+        if (!isChecked) {
+            upgradeCheckIntervalDaysEditText.setText("")
+            upgradeCheckIntervalHoursEditText.setText("")
+            upgradeCheckIntervalMinutesEditText.setText("")
+        }
+        Timber.d("SettingsActivity: updateUiElementsState - END")
+    }
 }
+// --- End of Part 3 ---

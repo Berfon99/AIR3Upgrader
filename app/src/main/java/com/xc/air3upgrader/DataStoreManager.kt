@@ -23,8 +23,8 @@ class DataStoreManager(private val context: Context) {
         val UPGRADE_CHECK_INTERVAL_HOURS = intPreferencesKey("upgrade_check_interval_hours")
         val UPGRADE_CHECK_INTERVAL_MINUTES = intPreferencesKey("upgrade_check_interval_minutes")
         val LAST_CHECK_TIME = longPreferencesKey("last_check_time")
-        val IS_UPGRADE_CHECK_ENABLED = booleanPreferencesKey("is_upgrade_check_enabled")
-        val SHOULD_LAUNCH_ON_REBOOT = booleanPreferencesKey("should_launch_on_reboot") // <--- New key
+        val SHOULD_LAUNCH_ON_REBOOT = booleanPreferencesKey("should_launch_on_reboot")
+        val UNHIDDEN_LAUNCH_ON_REBOOT = booleanPreferencesKey("unhidden_launch_on_reboot")
     }
 
     suspend fun saveSelectedModel(model: String) {
@@ -75,24 +75,12 @@ class DataStoreManager(private val context: Context) {
             preferences[LAST_CHECK_TIME]
         }
     }
-    suspend fun saveIsUpgradeCheckEnabled(isEnabled: Boolean) { // <--- Add this function
-        Timber.d("DataStoreManager: saveIsUpgradeCheckEnabled called - isEnabled: $isEnabled")
-        context.dataStore.edit { preferences ->
-            preferences[IS_UPGRADE_CHECK_ENABLED] = isEnabled
-        }
-    }
-
-    fun getIsUpgradeCheckEnabled(): Flow<Boolean> { // <--- Add this function
-        Timber.d("DataStoreManager: getIsUpgradeCheckEnabled called")
-        return context.dataStore.data.map { preferences ->
-            preferences[IS_UPGRADE_CHECK_ENABLED] ?: false
-        }
-    }
 
     fun isDeviceModelSupported(model: String, allowedModels: List<String>): Boolean {
         Timber.d("DataStoreManager: isDeviceModelSupported called")
         return allowedModels.contains(model)
     }
+
     suspend fun saveShouldLaunchOnReboot(shouldLaunch: Boolean) {
         Timber.d("DataStoreManager: saveShouldLaunchOnReboot called - shouldLaunch: $shouldLaunch")
         context.dataStore.edit { preferences ->
@@ -104,6 +92,20 @@ class DataStoreManager(private val context: Context) {
         Timber.d("DataStoreManager: getShouldLaunchOnReboot called")
         return context.dataStore.data.map { preferences ->
             preferences[SHOULD_LAUNCH_ON_REBOOT] ?: false
+        }
+    }
+
+    suspend fun saveUnhiddenLaunchOnReboot(unhiddenLaunch: Boolean) {
+        Timber.d("DataStoreManager: saveUnhiddenLaunchOnReboot called - unhiddenLaunch: $unhiddenLaunch")
+        context.dataStore.edit { preferences ->
+            preferences[UNHIDDEN_LAUNCH_ON_REBOOT] = unhiddenLaunch
+        }
+    }
+
+    fun getUnhiddenLaunchOnReboot(): Flow<Boolean> {
+        Timber.d("DataStoreManager: getUnhiddenLaunchOnReboot called")
+        return context.dataStore.data.map { preferences ->
+            preferences[UNHIDDEN_LAUNCH_ON_REBOOT] ?: false
         }
     }
 }

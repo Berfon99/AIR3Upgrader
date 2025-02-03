@@ -644,5 +644,4 @@ class MainActivity : AppCompatActivity() {
                 periodicWorkRequest
             )
         }
-    }
-}
+    }}
