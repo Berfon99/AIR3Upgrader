@@ -244,6 +244,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateUiState(isEnabled: Boolean) {
+        updateShouldLaunchOnRebootValue()
         Timber.d("SettingsActivity: updateUiState called")
         Timber.d("SettingsActivity: updateUiState - isEnabled: $isEnabled")
         upgradeCheckIntervalDaysEditText.isEnabled = isEnabled
@@ -311,6 +312,7 @@ class SettingsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val shouldLaunch = dataStoreManager.getShouldLaunchOnReboot().first()
             Timber.d("SettingsActivity: updateShouldLaunchOnRebootValue - shouldLaunch: $shouldLaunch")
+            Timber.d("SettingsActivity: updateShouldLaunchOnRebootValue - shouldLaunchOnRebootValue: ${shouldLaunchOnRebootValue.text}")
             val shouldLaunchString = if (shouldLaunch) "true" else "false"
             shouldLaunchOnRebootValue.text = shouldLaunchString
             Timber.d("SettingsActivity: updateShouldLaunchOnRebootValue - END")
@@ -337,16 +339,20 @@ class SettingsActivity : AppCompatActivity() {
         super.onResume()
         Timber.d("SettingsActivity: onResume called")
         runBlocking {
+            updateShouldLaunchOnRebootValue()
             val shouldLaunchOnReboot = dataStoreManager.getShouldLaunchOnReboot().firstOrNull() ?: false
             Timber.d("SettingsActivity: onResume - shouldLaunchOnReboot: $shouldLaunchOnReboot")
             if (shouldLaunchOnReboot) {
                 Timber.d("SettingsActivity: onResume - shouldLaunchOnReboot is true, updating lastCheckTime")
+                dataStoreManager.saveShouldLaunchOnReboot(false)
                 val currentTime = Calendar.getInstance().timeInMillis
                 dataStoreManager.saveLastCheckTime(currentTime)
-                dataStoreManager.saveShouldLaunchOnReboot(false)
                 Timber.d("SettingsActivity: onResume - lastCheckTime updated: $currentTime")
                 updateStartingTime()
             }
+        }
+        if (enableBackgroundCheckCheckbox.isChecked) {
+            updateTimeRemaining()
         }
     }
 
