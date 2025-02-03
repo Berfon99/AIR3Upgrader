@@ -25,6 +25,7 @@ class DataStoreManager(private val context: Context) {
         val LAST_CHECK_TIME = longPreferencesKey("last_check_time")
         val SHOULD_LAUNCH_ON_REBOOT = booleanPreferencesKey("should_launch_on_reboot")
         val UNHIDDEN_LAUNCH_ON_REBOOT = booleanPreferencesKey("unhidden_launch_on_reboot")
+        val IS_UPGRADE_CHECK_ENABLED = booleanPreferencesKey("is_upgrade_check_enabled") // Added this line
     }
 
     suspend fun saveSelectedModel(model: String) {
@@ -106,6 +107,14 @@ class DataStoreManager(private val context: Context) {
         Timber.d("DataStoreManager: getUnhiddenLaunchOnReboot called")
         return context.dataStore.data.map { preferences ->
             preferences[UNHIDDEN_LAUNCH_ON_REBOOT] ?: false
+        }
+    }
+
+    // Added this function
+    suspend fun saveIsUpgradeCheckEnabled(isEnabled: Boolean) {
+        Timber.d("DataStoreManager: saveIsUpgradeCheckEnabled called - isEnabled: $isEnabled")
+        context.dataStore.edit { preferences ->
+            preferences[IS_UPGRADE_CHECK_ENABLED] = isEnabled
         }
     }
 }
