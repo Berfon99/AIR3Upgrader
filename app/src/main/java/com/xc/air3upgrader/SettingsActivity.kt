@@ -70,8 +70,9 @@ class SettingsActivity : AppCompatActivity() {
         Timber.d("SettingsActivity: checkboxListener - isChecked: $isChecked")
         lifecycleScope.launch {
             dataStoreManager.saveAutomaticUpgradeReminder(isChecked)
+            updateFlagsValues()
+            updateStartingTime()
         }
-        updateUiState(isChecked)
     }
     // List of allowed models
     private val allowedModels = listOf(
@@ -201,13 +202,10 @@ class SettingsActivity : AppCompatActivity() {
         // Checkbox listener
         enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
 
-        // Initialize shouldLaunchOnReboot if it's not set
         lifecycleScope.launch {
             val shouldLaunch = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull()
-            Timber.d("SettingsActivity: onCreate - shouldLaunchOnReboot: $shouldLaunch")
 
             if (shouldLaunch == null) {
-                Timber.d("SettingsActivity: shouldLaunchOnReboot is null, setting to false")
                 dataStoreManager.saveUnhiddenLaunchOnReboot(false)
             }
         }
@@ -215,7 +213,10 @@ class SettingsActivity : AppCompatActivity() {
         // Initialize UI values
         updateStartingTime()
         updateFlagsValues()
-
+        lifecycleScope.launch {
+            val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
+            updateUiState(isEnabled)
+        }
         Timber.d("SettingsActivity: onCreate - END")
     }
     private fun updateFlagsValues() {
@@ -264,6 +265,7 @@ class SettingsActivity : AppCompatActivity() {
             val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             if (!isEnabled) {
                 timeRemainingValue.text = getString(R.string.disabled)
+                updateStartingTime()
                 isUpdatingTimeRemaining = false
                 return@launch
             }
@@ -308,6 +310,7 @@ class SettingsActivity : AppCompatActivity() {
             Timber.d("SettingsActivity: updateTimeRemaining - timeRemainingValue.text: ${timeRemainingValue.text}")
             Timber.d("SettingsActivity: updateTimeRemaining - END")
             isUpdatingTimeRemaining = false
+            updateStartingTime()
         }
     }
 
@@ -330,6 +333,10 @@ class SettingsActivity : AppCompatActivity() {
         Timber.d("SettingsActivity: onResume called")
         handler.post(updateTimeRemainingRunnable)
         updateFlagsValues()
+        lifecycleScope.launch {
+            val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
+            updateUiState(isEnabled)
+        }
     }
 
     override fun onPause() {
