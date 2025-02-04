@@ -93,7 +93,7 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/should_launch_on_reboot_value"
+                android:id="@+id/automatic_upgrade_reminder_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
@@ -101,7 +101,7 @@
                 android:textSize="16sp" />
 
             <TextView
-                android:id="@+id/UNHIDDEN_LAUNCH_ON_REBOOT"
+                android:id="@+id/unhidden_launch_on_reboot_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"

@@ -1,7 +1,6 @@
 package com.xc.air3upgrader
 
 import android.content.Context
-import android.content.Intent
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.flow.first
@@ -19,47 +18,30 @@ class UpgradeCheckWorker(appContext: Context, workerParams: WorkerParameters) :
         val lastCheckTime = runBlocking { dataStoreManager.getLastCheckTime().first() ?: 0L }
         val upgradeCheckInterval = runBlocking { dataStoreManager.getUpgradeCheckInterval().first() }
         val currentTime = Calendar.getInstance().timeInMillis
-        val shouldLaunchOnReboot = runBlocking { dataStoreManager.getUnhiddenLaunchOnReboot().first() }
-        val isAutomaticUpgradeReminderEnabled = runBlocking { dataStoreManager.getAutomaticUpgradeReminder().first() }
+        val isAutomaticUpgradeReminderEnabled =
+            runBlocking { dataStoreManager.getAutomaticUpgradeReminder().first() }
 
+        // Set IS_MANUAL_LAUNCH to false for automatic launch
+        runBlocking {
+            dataStoreManager.saveIsManualLaunch(false)
+        }
         // Convert Interval to milliseconds
         val intervalMillis = (upgradeCheckInterval.days * 24 * 60 * 60 * 1000L) +
                 (upgradeCheckInterval.hours * 60 * 60 * 1000L) +
                 (upgradeCheckInterval.minutes * 60 * 1000L)
-        Timber.d("UpgradeCheckWorker: shouldLaunchOnReboot flag value: $shouldLaunchOnReboot")
-        Timber.d("UpgradeCheckWorker: isAutomaticUpgradeReminderEnabled flag value: $isAutomaticUpgradeReminderEnabled")
-
-        if (currentTime - lastCheckTime >= intervalMillis) {
-            Timber.d("UpgradeCheckWorker: Time to check if we should launch the app")
-            if (isAutomaticUpgradeReminderEnabled) {
-                if (shouldLaunchOnReboot) {
-                    Timber.d("UpgradeCheckWorker: Time to launch the app")
-                    launchMainActivity()
-                    // Set the flag to false after launching
-                    runBlocking {
-                        dataStoreManager.saveUnhiddenLaunchOnReboot(false)
-                    }
-                } else {
-                    Timber.d("UpgradeCheckWorker: Not time to launch the app")
+        if (isAutomaticUpgradeReminderEnabled) {
+            if (currentTime - lastCheckTime >= intervalMillis) {
+                Timber.d("UpgradeCheckWorker: Countdown is zero, setting UNHIDDEN_LAUNCH_ON_REBOOT to true")
+                runBlocking {
+                    dataStoreManager.saveUnhiddenLaunchOnReboot(true)
                 }
             } else {
-                Timber.d("UpgradeCheckWorker: Automatic Upgrade Reminder is disabled")
-            }
-            // Use runBlocking to call the suspend function
-            runBlocking {
-                dataStoreManager.saveLastCheckTime(currentTime)
+                Timber.d("UpgradeCheckWorker: Countdown is not zero")
             }
         } else {
-            Timber.d("UpgradeCheckWorker: Not time to launch the app")
+            Timber.d("UpgradeCheckWorker: Automatic Upgrade Reminder is disabled")
         }
 
         return Result.success()
-    }
-    private fun launchMainActivity() {
-        Timber.d("UpgradeCheckWorker: launchMainActivity called")
-        val intent = Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        applicationContext.startActivity(intent)
     }
 }
