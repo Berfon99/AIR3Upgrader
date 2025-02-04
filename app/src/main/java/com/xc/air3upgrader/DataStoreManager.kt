@@ -23,9 +23,8 @@ class DataStoreManager(private val context: Context) {
         val UPGRADE_CHECK_INTERVAL_HOURS = intPreferencesKey("upgrade_check_interval_hours")
         val UPGRADE_CHECK_INTERVAL_MINUTES = intPreferencesKey("upgrade_check_interval_minutes")
         val LAST_CHECK_TIME = longPreferencesKey("last_check_time")
-        val SHOULD_LAUNCH_ON_REBOOT = booleanPreferencesKey("should_launch_on_reboot")
         val UNHIDDEN_LAUNCH_ON_REBOOT = booleanPreferencesKey("unhidden_launch_on_reboot")
-        val IS_UPGRADE_CHECK_ENABLED = booleanPreferencesKey("is_upgrade_check_enabled") // Added this line
+        val AUTOMATIC_UPGRADE_REMINDER = booleanPreferencesKey("automatic_upgrade_reminder")
     }
 
     suspend fun saveSelectedModel(model: String) {
@@ -82,20 +81,6 @@ class DataStoreManager(private val context: Context) {
         return allowedModels.contains(model)
     }
 
-    suspend fun saveShouldLaunchOnReboot(shouldLaunch: Boolean) {
-        Timber.d("DataStoreManager: saveShouldLaunchOnReboot called - shouldLaunch: $shouldLaunch")
-        context.dataStore.edit { preferences ->
-            preferences[SHOULD_LAUNCH_ON_REBOOT] = shouldLaunch
-        }
-    }
-
-    fun getShouldLaunchOnReboot(): Flow<Boolean> {
-        Timber.d("DataStoreManager: getShouldLaunchOnReboot called")
-        return context.dataStore.data.map { preferences ->
-            preferences[SHOULD_LAUNCH_ON_REBOOT] ?: false
-        }
-    }
-
     suspend fun saveUnhiddenLaunchOnReboot(unhiddenLaunch: Boolean) {
         Timber.d("DataStoreManager: saveUnhiddenLaunchOnReboot called - unhiddenLaunch: $unhiddenLaunch")
         context.dataStore.edit { preferences ->
@@ -110,11 +95,16 @@ class DataStoreManager(private val context: Context) {
         }
     }
 
-    // Added this function
-    suspend fun saveIsUpgradeCheckEnabled(isEnabled: Boolean) {
-        Timber.d("DataStoreManager: saveIsUpgradeCheckEnabled called - isEnabled: $isEnabled")
+    suspend fun saveAutomaticUpgradeReminder(isEnabled: Boolean) {
+        Timber.d("DataStoreManager: saveAutomaticUpgradeReminder called - isEnabled: $isEnabled")
         context.dataStore.edit { preferences ->
-            preferences[IS_UPGRADE_CHECK_ENABLED] = isEnabled
+            preferences[AUTOMATIC_UPGRADE_REMINDER] = isEnabled
+        }
+    }
+    fun getAutomaticUpgradeReminder(): Flow<Boolean> {
+        Timber.d("DataStoreManager: getAutomaticUpgradeReminder called")
+        return context.dataStore.data.map { preferences ->
+            preferences[AUTOMATIC_UPGRADE_REMINDER] ?: false
         }
     }
 }
