@@ -64,7 +64,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var automaticUpgradeReminderValue: TextView
     private lateinit var unhiddenLaunchOnRebootValue: TextView
 
-// Checkbox listener
+    // Checkbox listener
     private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
         Timber.d("SettingsActivity: checkboxListener - onCheckedChanged called")
         Timber.d("SettingsActivity: checkboxListener - isChecked: $isChecked")
@@ -72,6 +72,8 @@ class SettingsActivity : AppCompatActivity() {
             dataStoreManager.saveAutomaticUpgradeReminder(isChecked)
             updateFlagsValues()
             updateUiState(isChecked)
+            val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+            unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled" // Add this line
         }
     }
     // List of allowed models
@@ -220,8 +222,7 @@ class SettingsActivity : AppCompatActivity() {
     }
     private fun updateFlagsValues() {
         Timber.d("SettingsActivity: updateFlagsValues called")
-        //lifecycleScope.launch { // Remove this line
-        runBlocking { // Add this line
+        runBlocking {
             val isAutomaticUpgradeReminderEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
             Timber.d("SettingsActivity: updateFlagsValues - isAutomaticUpgradeReminderEnabled: $isAutomaticUpgradeReminderEnabled")
@@ -231,13 +232,12 @@ class SettingsActivity : AppCompatActivity() {
             enableBackgroundCheckCheckbox.isChecked = isAutomaticUpgradeReminderEnabled
             if (!isAutomaticUpgradeReminderEnabled) {
                 startingTimeValue.text = getString(R.string.not_set)
-                dataStoreManager.saveUnhiddenLaunchOnReboot(false)
+                dataStoreManager.saveUnhiddenLaunchOnReboot(false) // Add this line
                 dataStoreManager.removeLastCheckTime()
-                handler.removeCallbacks(updateTimeRemainingRunnable) // Add this line
+                handler.removeCallbacks(updateTimeRemainingRunnable)
             }
             updateStartingTime()
-        } // Add this line
-        //} // Remove this line
+        }
     }
     private val updateTimeRemainingRunnable = object : Runnable {
         override fun run() {
