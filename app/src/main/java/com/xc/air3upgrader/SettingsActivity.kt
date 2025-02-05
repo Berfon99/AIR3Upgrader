@@ -30,11 +30,15 @@ import android.os.Looper
 import android.widget.CheckBox
 import android.widget.CompoundButton
 import kotlinx.coroutines.runBlocking
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 
 class SettingsActivity : AppCompatActivity() {
 
     companion object {
         const val MODEL_CHANGED_RESULT_CODE = 100
+        private const val OVERLAY_PERMISSION_REQUEST_CODE = 101
     }
 
     private lateinit var modelSpinner: Spinner
@@ -58,7 +62,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var enableBackgroundCheckCheckbox: CheckBox
     private lateinit var workManager: WorkManager
     private lateinit var startingTimeValue: TextView
-    private lateinit var shouldLaunchOnRebootValue: TextView
     private var isUpdatingTimeRemaining = false
     private var isSchedulingWorker = false
     private lateinit var automaticUpgradeReminderValue: TextView
@@ -69,14 +72,47 @@ class SettingsActivity : AppCompatActivity() {
         Timber.d("SettingsActivity: checkboxListener - onCheckedChanged called")
         Timber.d("SettingsActivity: checkboxListener - isChecked: $isChecked")
         lifecycleScope.launch {
-            dataStoreManager.saveAutomaticUpgradeReminder(isChecked)
-            updateFlagsValues()
-            updateUiState(isChecked)
-            val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-            unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled" // Add this line
+            if (isChecked) {
+                // Show an alert dialog to explain the permission
+                val builder = AlertDialog.Builder(this@SettingsActivity)
+                builder.setTitle("Permission Required") // You can change the title
+                builder.setMessage("The 'Display over other apps' permission is necessary to show the upgrade reminder on top of other apps.") // You can change the message
+                builder.setPositiveButton("OK") { dialog, _ ->
+                    // User clicked OK, proceed to check and request permission
+                    if (!Settings.canDrawOverlays(this@SettingsActivity)) {
+                        Timber.d("SettingsActivity: Display over other apps permission not granted")
+                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${packageName}"))
+                        startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE)
+                    } else {
+                        Timber.d("SettingsActivity: Display over other apps permission granted")
+                        lifecycleScope.launch { // Add this line
+                            dataStoreManager.saveAutomaticUpgradeReminder(true)
+                            updateFlagsValues()
+                            updateUiState(true)
+                            val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+                            unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
+                        } // Add this line
+                    }
+                    dialog.dismiss()
+                }
+                builder.setNegativeButton("Cancel") { dialog, _ ->
+                    // User clicked Cancel, do nothing
+                    enableBackgroundCheckCheckbox.isChecked = false
+                    dialog.dismiss()
+                }
+                builder.show()
+            } else {
+                lifecycleScope.launch { // Add this line
+                    dataStoreManager.saveAutomaticUpgradeReminder(false)
+                    updateFlagsValues()
+                    updateUiState(false)
+                    val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+                    unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
+                } // Add this line
+            }
         }
     }
-    // List of allowed models
+
     private val allowedModels = listOf(
         "AIR3-7.2",
         "AIR3-7.3",
@@ -111,6 +147,7 @@ class SettingsActivity : AppCompatActivity() {
         automaticUpgradeReminderValue = findViewById(R.id.automatic_upgrade_reminder_value)
         unhiddenLaunchOnRebootValue = findViewById(R.id.unhidden_launch_on_reboot_value)
         enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
+        enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
         startingTimeValue = findViewById(R.id.starting_time_value)
 
         // Initialize the model list
@@ -492,5 +529,26 @@ class SettingsActivity : AppCompatActivity() {
 
     internal fun getAllowedModels(): List<String> {
         return allowedModels
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == OVERLAY_PERMISSION_REQUEST_CODE) {
+            if (Settings.canDrawOverlays(this)) {
+                Timber.d("SettingsActivity: Display over other apps permission granted")
+                lifecycleScope.launch {
+                    dataStoreManager.saveAutomaticUpgradeReminder(true)
+                    updateFlagsValues()
+                    updateUiState(true)
+                }
+            } else {
+                Timber.d("SettingsActivity: Display over other apps permission not granted")
+                enableBackgroundCheckCheckbox.isChecked = false
+                lifecycleScope.launch {
+                    dataStoreManager.saveAutomaticUpgradeReminder(false)
+                    updateFlagsValues()
+                    updateUiState(false)
+                }
+            }
+        }
     }
 }
