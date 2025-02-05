@@ -113,4 +113,10 @@ class DataStoreManager(private val context: Context) {
     fun getIsManualLaunch(): Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[IS_MANUAL_LAUNCH] ?: false
     }
+    suspend fun removeLastCheckTime() {
+        Timber.d("DataStoreManager: removeLastCheckTime called")
+        context.dataStore.edit { preferences ->
+            preferences.remove(LAST_CHECK_TIME)
+        }
+    }
 }
