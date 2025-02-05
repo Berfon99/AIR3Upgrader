@@ -1,5 +1,6 @@
 package com.xc.air3upgrader
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.Context
@@ -37,7 +38,8 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
-
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.geometry.isEmpty
 
 class MainActivity : AppCompatActivity() {
 
@@ -98,6 +100,8 @@ class MainActivity : AppCompatActivity() {
 
         // Request storage permission
         requestStoragePermission()
+        // Request notification permission
+        requestNotificationPermission()
 
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
@@ -357,7 +361,7 @@ class MainActivity : AppCompatActivity() {
                         xcguidePackageName -> xcguideCheckbox.isChecked = false
                         air3managerPackageName -> air3managerCheckbox.isChecked = false
                     }
-                    // Activer la case pour permettre à l'utilisateur de la sélectionner manuellement
+// Activer la case pour permettre à l'utilisateur de la sélectionner manuellement
                     when (packageName) {
                         xctrackPackageName -> xctrackCheckbox.isEnabled = true
                         xcguidePackageName -> xcguideCheckbox.isEnabled = true
@@ -624,6 +628,32 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    private val requestPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                // Permission is granted. Continue the action or workflow in your
+                Log.d("MainActivity", "Notification permission granted")
+            } else {
+                Log.d("MainActivity", "Notification permission denied")
+            }
+        }
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // Permission is not granted, request it
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                // Permission is already granted
+                Log.d("MainActivity", "Notification permission already granted")
+            }
+        }
+    }
 
     private fun scheduleUpgradeCheck() {
         val dataStoreManager = DataStoreManager(this)
@@ -644,4 +674,5 @@ class MainActivity : AppCompatActivity() {
                 periodicWorkRequest
             )
         }
-    }}
+    }
+}
