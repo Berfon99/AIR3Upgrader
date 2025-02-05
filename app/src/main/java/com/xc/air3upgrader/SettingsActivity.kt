@@ -220,7 +220,8 @@ class SettingsActivity : AppCompatActivity() {
     }
     private fun updateFlagsValues() {
         Timber.d("SettingsActivity: updateFlagsValues called")
-        lifecycleScope.launch {
+        //lifecycleScope.launch { // Remove this line
+        runBlocking { // Add this line
             val isAutomaticUpgradeReminderEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
             Timber.d("SettingsActivity: updateFlagsValues - isAutomaticUpgradeReminderEnabled: $isAutomaticUpgradeReminderEnabled")
@@ -235,7 +236,8 @@ class SettingsActivity : AppCompatActivity() {
                 handler.removeCallbacks(updateTimeRemainingRunnable) // Add this line
             }
             updateStartingTime()
-        }
+        } // Add this line
+        //} // Remove this line
     }
     private val updateTimeRemainingRunnable = object : Runnable {
         override fun run() {
