@@ -290,7 +290,16 @@ class SettingsActivity : AppCompatActivity() {
             Timber.d("SettingsActivity: updateTimeRemaining - timeElapsed: $timeElapsed")
             Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining (before check): $timeRemaining")
 
-// Check if timeRemaining is negative
+            // Check if timeRemaining is equal to 0
+            if (timeRemaining == 0L) {
+                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining is equal to 0")
+                lastCheckTime = currentTime
+                dataStoreManager.saveLastCheckTime(lastCheckTime)
+                Timber.d("SettingsActivity: updateTimeRemaining - lastCheckTime saved: $lastCheckTime")
+                scheduleUpgradeCheckWorker(interval.days, interval.hours, interval.minutes)
+                dataStoreManager.saveUnhiddenLaunchOnReboot(true)
+            }
+            // Check if timeRemaining is negative
             if (timeRemaining < 0) {
                 Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining is negative")
                 lastCheckTime = currentTime
@@ -301,23 +310,18 @@ class SettingsActivity : AppCompatActivity() {
                 scheduleUpgradeCheckWorker(interval.days, interval.hours, interval.minutes)
                 dataStoreManager.saveUnhiddenLaunchOnReboot(true)
             }
-// Check if timeRemaining is close to 0
-            if (timeRemaining in 0..999) {
+            // Check if timeRemaining is close to 0
+            if (timeRemaining in 1..999) {
                 Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining is close to 0")
-                timeRemaining = 0
-                lastCheckTime = currentTime
-                dataStoreManager.saveLastCheckTime(lastCheckTime)
-                Timber.d("SettingsActivity: updateTimeRemaining - lastCheckTime saved: $lastCheckTime")
-                Timber.d("SettingsActivity: updateTimeRemaining - timeRemaining (after close to 0 check): $timeRemaining")
                 dataStoreManager.saveUnhiddenLaunchOnReboot(true)
             }
             timeRemainingValue.text = formatTimeRemaining(timeRemaining)
             Timber.d("SettingsActivity: updateTimeRemaining - timeRemainingValue.text: ${timeRemainingValue.text}")
             Timber.d("SettingsActivity: updateTimeRemaining - END")
+            updateFlagsValues() // Add this line
             isUpdatingTimeRemaining = false
         }
     }
-
     private fun updateStartingTime() {
         Timber.d("SettingsActivity: updateStartingTime called")
         lifecycleScope.launch {
