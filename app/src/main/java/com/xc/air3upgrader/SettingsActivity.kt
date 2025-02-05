@@ -229,9 +229,10 @@ class SettingsActivity : AppCompatActivity() {
             unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
             enableBackgroundCheckCheckbox.isChecked = isAutomaticUpgradeReminderEnabled
             if (!isAutomaticUpgradeReminderEnabled) {
-                dataStoreManager.removeLastCheckTime()
                 startingTimeValue.text = getString(R.string.not_set)
                 dataStoreManager.saveUnhiddenLaunchOnReboot(false)
+                dataStoreManager.removeLastCheckTime()
+                handler.removeCallbacks(updateTimeRemainingRunnable) // Add this line
             }
             updateStartingTime()
         }
@@ -396,13 +397,13 @@ class SettingsActivity : AppCompatActivity() {
             val currentTime = Calendar.getInstance().timeInMillis
             dataStoreManager.saveLastCheckTime(currentTime)
             Timber.d("SettingsActivity: setUpgradeCheckInterval - lastCheckTime saved: $currentTime")
+            updateStartingTime() // Add this line
+            handler.post(updateTimeRemainingRunnable) // Add this line
         }
         isSettingInterval = false
         Timber.d("SettingsActivity: setUpgradeCheckInterval - isSettingInterval (after reset): $isSettingInterval")
         Timber.d("SettingsActivity: setUpgradeCheckInterval - END")
-        updateTimeRemaining()
     }
-
     private fun scheduleUpgradeCheckWorker(days: Int, hours: Int, minutes: Int) {
         if (isSchedulingWorker) {
             return
