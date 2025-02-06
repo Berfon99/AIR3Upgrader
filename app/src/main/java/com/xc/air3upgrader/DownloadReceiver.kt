@@ -24,22 +24,29 @@ class DownloadReceiver : BroadcastReceiver() {
                     if (columnIndex != -1) {
                         val status = cursor.getInt(columnIndex)
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            val downloadedApkFilePath = getDownloadedApkFilePath(context, downloadId)
-                            Timber.d("getDownloadedApkFilePath: $downloadedApkFilePath")
-                            if (downloadedApkFilePath != null) {
-                                Timber.d("File Path: $downloadedApkFilePath")
-                                val file = File(downloadedApkFilePath)
-                                if (file.exists()) {
-                                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-                                    val installIntent = Intent(Intent.ACTION_VIEW)
-                                    installIntent.setDataAndType(uri, "application/vnd.android.package-archive")
-                                    installIntent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-                                    context.startActivity(installIntent)
+                            val uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                            if (uriIndex != -1) {
+                                val localUri = cursor.getString(uriIndex)
+                                Timber.d("Local URI: $localUri")
+                                if (localUri != null) {
+                                    val apkFile = File(Uri.parse(localUri).path)
+                                    Timber.d("File path: ${apkFile.absolutePath}")
+                                    if (apkFile.exists()) {
+                                        val authority = "${context.packageName}.provider"
+                                        val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
+                                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(apkUri, "application/vnd.android.package-archive")
+                                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(installIntent)
+                                    } else {
+                                        Timber.e("File does not exist: ${apkFile.absolutePath}")
+                                    }
                                 } else {
-                                    Timber.e("File does not exist: $downloadedApkFilePath")
+                                    Timber.e("Local URI is null")
                                 }
                             } else {
-                                Timber.e("Downloaded APK file path is null")
+                                Timber.e("COLUMN_LOCAL_URI not found")
                             }
                         } else {
                             Timber.e("Download failed with status: $status")
@@ -53,23 +60,5 @@ class DownloadReceiver : BroadcastReceiver() {
                 cursor.close()
             }
         }
-    }
-
-    private fun getDownloadedApkFilePath(context: Context, downloadId: Long): String? {
-        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val query = DownloadManager.Query().setFilterById(downloadId)
-        val cursor = downloadManager.query(query)
-        var filePath: String? = null
-        if (cursor.moveToFirst()) {
-            val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-            if (columnIndex != -1) {
-                val uriString = cursor.getString(columnIndex)
-                if (uriString != null) {
-                    filePath = Uri.parse(uriString).path
-                }
-            }
-        }
-        cursor.close()
-        return filePath
     }
 }

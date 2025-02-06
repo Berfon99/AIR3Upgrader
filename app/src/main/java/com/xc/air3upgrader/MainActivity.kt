@@ -57,7 +57,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val SETTINGS_REQUEST_CODE = 1
         private const val REQUEST_CODE_INSTALL_PACKAGES = 2
-        private const val REQUEST_CODE_OVERLAY_PERMISSION = 3
     }
 
     private lateinit var xctrackName: TextView
@@ -76,9 +75,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var air3managerCheckbox: CheckBox
     private lateinit var refreshButton: Button
     private lateinit var dataStoreManager: DataStoreManager
-    private val REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 1001
-    private val REQUEST_CODE_QUERY_ALL_PACKAGES = 1002
-    private val REQUEST_CODE_INSTALL_PACKAGES = 1003
+    private val REQUEST_CODE_INSTALL_PACKAGES = 1001
+    private var installPermissionGranted = false
+
 
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
@@ -88,7 +87,6 @@ class MainActivity : AppCompatActivity() {
     private var storagePermissionGranted = false
     private var notificationPermissionGranted = false
     private var overlayPermissionGranted = false
-    private var installPermissionGranted = false
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
@@ -105,6 +103,8 @@ class MainActivity : AppCompatActivity() {
     private val versionChecker by lazy { VersionChecker(this) }
     private var onCreateCounter = 0
     private var isFirstLaunch = true
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,40 +116,65 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         dataStoreManager = DataStoreManager(this)
 
-        // Check if the app was launched manually
-        val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-        Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
-        if (isManualLaunchFromIntent && isFirstLaunch) {
-            runBlocking {
-                dataStoreManager.saveIsManualLaunch(true)
-                Timber.d("onCreate: App launched manually")
+        // Register the ActivityResultLauncher in onCreate()
+        requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                // Permission is granted, proceed with install permission
+                Timber.d("Notification permission granted")
+                requestInstallPermission()
+            } else {
+                // Permission is denied, handle accordingly
+                Timber.e("Notification permission denied")
             }
-            isFirstLaunch = false
         }
 
-        val isManualLaunch: Boolean = runBlocking {
-            val value = dataStoreManager.getIsManualLaunch().first()
-            Timber.d("onCreate: isManualLaunch from DataStore: $value")
-            return@runBlocking value
-        }
-        val unhiddenLaunchOnReboot: Boolean = runBlocking {
-            val value = dataStoreManager.getUnhiddenLaunchOnReboot().first()
-            Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $value")
-            return@runBlocking value
-        }
-        if (isManualLaunch || unhiddenLaunchOnReboot) {
-            // App was launched manually or unhidden, so we show the UI
-            Timber.d("App launched manually or unhidden, showing activity")
+        // Check if the app was launched manually
+        val isManualLaunchFromIntent =
+            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+        Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
+        if (isManualLaunchFromIntent && isFirstLaunch) {
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    dataStoreManager.saveIsManualLaunch(true)
+                    Timber.d("onCreate: App launched manually")
+                }
+                // Switch to the main thread to show the UI
+                withContext(Dispatchers.Main) {
+                    showUI()
+                }
+            }
+            isFirstLaunch = false
         } else {
-            // App was launched automatically and hidden, so we don't show the UI
-            Timber.d("App launched hidden, finishing activity")
-            finish()
-            return
+            // Not the first launch, check DataStore
+            lifecycleScope.launch {
+                val isManualLaunch: Boolean
+                val unhiddenLaunchOnReboot: Boolean
+                withContext(Dispatchers.IO) {
+                    isManualLaunch = dataStoreManager.getIsManualLaunch().first()
+                    unhiddenLaunchOnReboot = dataStoreManager.getUnhiddenLaunchOnReboot().first()
+                }
+                Timber.d("onCreate: isManualLaunch from DataStore: $isManualLaunch")
+                Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
+                if (isManualLaunch || unhiddenLaunchOnReboot) {
+                    // App was launched manually or unhidden, so we show the UI
+                    showUI()
+                } else {
+                    // App was launched automatically and hidden, so we don't show the UI
+                    Timber.d("App launched hidden, finishing activity")
+                    finish()
+                    return@launch
+                }
+            }
         }
+    }
+    private fun showUI() {
+        Timber.d("showUI: called")
         setContentView(R.layout.activity_main)
         // Set the status and navigation bar color
-        window.statusBarColor = ContextCompat.getColor(this, R.color.black)
-        window.navigationBarColor = ContextCompat.getColor(this, R.color.black)
+        window.statusBarColor = ContextCompat.getColor(this@MainActivity, R.color.black)
+        window.navigationBarColor = ContextCompat.getColor(this@MainActivity, R.color.black)
         Timber.d("onCreate() called")
 
         // Show the explanatory dialog
@@ -161,7 +186,6 @@ class MainActivity : AppCompatActivity() {
 
         scheduleUpgradeCheck()
     }
-
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         Timber.d("onSaveInstanceState: called")
@@ -173,7 +197,9 @@ class MainActivity : AppCompatActivity() {
             requestInstallPermission()
         }
         // Set the action bar title with device info
-        setActionBarTitleWithSelectedModel()
+        lifecycleScope.launch {
+            setActionBarTitleWithSelectedModel()
+        }
 
         // Initialize TextViews and Checkboxes
         xctrackName = findViewById(R.id.xctrack_name)
@@ -211,7 +237,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Get the latest version from the server
-        getLatestVersionFromServer()
+        lifecycleScope.launch {
+            getLatestVersionFromServer()
+        }
 
         // Keep the screen on
         acquireWakeLock()
@@ -230,7 +258,6 @@ class MainActivity : AppCompatActivity() {
         setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
         setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
     }
-
     private fun setupCheckboxListener(
         checkBox: CheckBox,
         packageName: String,
@@ -476,7 +503,7 @@ class MainActivity : AppCompatActivity() {
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
-            .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName) // Set the correct file name here
+            .setDestinationInExternalFilesDir(this, null, fileName) // Save to app's private directory
         Log.d("MainActivity", "Request: $request")
         val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         try {
@@ -646,65 +673,26 @@ class MainActivity : AppCompatActivity() {
         return true // No need to check on older versions
     }
     private fun requestInstallPermission() {
+        Timber.d("requestInstallPermission: called")
         if (checkInstallPermission()) {
             Timber.d("requestInstallPermission: Install permission already granted")
             installPermissionGranted = true
-            continueSetup()
+            checkAllPermissionsGrantedAndContinue()
         } else {
             Timber.d("requestInstallPermission: Install permission not granted, requesting permission")
             val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
             intent.data = Uri.parse("package:$packageName")
             startActivityForResult(intent, REQUEST_CODE_INSTALL_PACKAGES)
         }
+        Timber.d("requestInstallPermission: end")
     }
-    private fun requestOverlayPermission() {
-        if (!Settings.canDrawOverlays(this)) {
-            Timber.d("requestOverlayPermission: SYSTEM_ALERT_WINDOW permission not granted, requesting permission")
-            overlayPermissionLauncher = registerForActivityResult(
-                ActivityResultContracts.StartActivityForResult()
-            ) { result ->
-                val currentTime = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date())
-                Timber.d("overlayPermissionLauncher: Activity result received at $currentTime, resultCode: ${result.resultCode}")
-                if (result.resultCode == RESULT_OK) {
-                    Timber.d("overlayPermissionLauncher: Entering IF block - Permission granted")
-                    overlayPermissionGranted = true
-                    checkAllPermissionsGrantedAndContinue()
-                } else {
-                    Timber.d("overlayPermissionLauncher: Entering ELSE block - Display over other apps permission not granted")
-                    Toast.makeText(this, "Display over other apps permission is required.", Toast.LENGTH_LONG).show()
-                }
-            }
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            overlayPermissionLauncher.launch(intent)
-        } else {
-            Timber.d("requestOverlayPermission: SYSTEM_ALERT_WINDOW permission already granted")
-            overlayPermissionGranted = true
-            checkAllPermissionsGrantedAndContinue()
-        }
-    }
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
-            REQUEST_CODE_WRITE_EXTERNAL_STORAGE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Timber.d("onRequestPermissionsResult: Storage permission granted")
-                    storagePermissionGranted = true
-                    requestNotificationPermission() // Request the next permission
-                } else {
-                    Timber.d("onRequestPermissionsResult: Storage permission denied")
-                    Toast.makeText(this, "Storage permission is required.", Toast.LENGTH_LONG).show()
-                }
-            }
-
             0 -> { // Notification permission request code
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Timber.d("onRequestPermissionsResult: Notification permission granted")
-                    notificationPermissionGranted = true
-                    checkAllPermissionsGrantedAndContinue() // Check if all permissions are granted
+                    requestInstallPermission() // Request the next permission
                 } else {
                     Timber.d("onRequestPermissionsResult: Notification permission denied")
                     Toast.makeText(this, "Notification permission is required.", Toast.LENGTH_LONG).show()
@@ -722,54 +710,54 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    private fun requestStoragePermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            Timber.d("requestStoragePermission: Storage permission not granted, requesting permission")
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), REQUEST_CODE_WRITE_EXTERNAL_STORAGE)
-        } else {
-            Timber.d("requestStoragePermission: Storage permission already granted")
-            storagePermissionGranted = true
-            requestNotificationPermission() // Request the next permission
-        }
-    }
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                Timber.d("requestNotificationPermission: Notification permission not granted, requesting permission")
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
-            } else {
-                Timber.d("requestNotificationPermission: Notification permission already granted")
-                notificationPermissionGranted = true
-                checkAllPermissionsGrantedAndContinue() // Check if all permissions are granted
-            }
-        } else {
-            Timber.d("requestNotificationPermission: Notification permission not required")
-            notificationPermissionGranted = true
-            checkAllPermissionsGrantedAndContinue() // Check if all permissions are granted
-        }
-    }
     private fun showPermissionExplanationDialog() {
+        Timber.d("showPermissionExplanationDialog: called")
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.permissions_required_title))
             .setMessage(getString(R.string.permissions_required_message))
             .setPositiveButton(getString(R.string.ok)) { _, _ ->
+                Timber.d("showPermissionExplanationDialog: OK button clicked")
                 requestAllPermissions()
+                Timber.d("showPermissionExplanationDialog: requestAllPermissions() called")
             }
             .setNegativeButton(getString(R.string.cancel)) { _, _ ->
                 finish()
             }
             .setCancelable(false) // Prevent dismissing by tapping outside
             .show()
+        Timber.d("showPermissionExplanationDialog: end")
     }
-    private fun checkAllPermissionsGrantedAndContinue() {
-        Timber.d("checkAllPermissionsGrantedAndContinue: storagePermissionGranted: $storagePermissionGranted, notificationPermissionGranted: $notificationPermissionGranted, installPermissionGranted: $installPermissionGranted")
-        if (storagePermissionGranted && notificationPermissionGranted) {
-            Timber.d("checkAllPermissionsGrantedAndContinue: All permissions granted, calling requestInstallPermission()")
+    private fun requestNotificationPermission() {
+        Timber.d("requestNotificationPermission: called")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Check if the permission is already granted
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                // Permission is already granted, proceed with install permission
+                Timber.d("Notification permission already granted")
+                requestInstallPermission()
+            } else {
+                // Permission is not granted, request it
+                Timber.d("Notification permission not granted, requesting it")
+                // Launch the permission request
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        } else {
+            // On older versions, the permission is granted at install time
+            Timber.d("Notification permission granted at install time")
             requestInstallPermission()
         }
+        Timber.d("requestNotificationPermission: end")
     }
-    private fun requestAllPermissions() {
-        requestStoragePermission()
+    private fun checkAllPermissionsGrantedAndContinue() {
+        Timber.d("checkAllPermissionsGrantedAndContinue: installPermissionGranted: $installPermissionGranted")
+        if (installPermissionGranted) {
+            Timber.d("checkAllPermissionsGrantedAndContinue: All permissions granted, calling continueSetup()")
+            continueSetup()
+        }
     }
     private fun scheduleUpgradeCheck() {
         val dataStoreManager = DataStoreManager(this)
@@ -790,6 +778,11 @@ class MainActivity : AppCompatActivity() {
                 periodicWorkRequest
             )
         }
+    }
+    private fun requestAllPermissions() {
+        Timber.d("requestAllPermissions: called")
+        requestNotificationPermission()
+        Timber.d("requestAllPermissions: end")
     }
     override fun onStart() {
         super.onStart()

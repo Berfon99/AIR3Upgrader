@@ -1,38 +1,39 @@
 package com.xc.air3upgrader
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
-import android.text.format.DateFormat
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.text.format.DateFormat
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.CompoundButton
 import android.widget.EditText
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.xc.air3upgrader.R.string.error_invalid_file
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import timber.log.Timber
-import java.util.Calendar
-import android.widget.TextView
-import android.widget.Button
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
+import com.xc.air3upgrader.R.string
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import timber.log.Timber
+import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import android.os.Handler
-import android.os.Looper
-import android.widget.CheckBox
-import android.widget.CompoundButton
-import kotlinx.coroutines.runBlocking
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -66,6 +67,8 @@ class SettingsActivity : AppCompatActivity() {
     private var isSchedulingWorker = false
     private lateinit var automaticUpgradeReminderValue: TextView
     private lateinit var unhiddenLaunchOnRebootValue: TextView
+    private var overlayPermissionGranted = false
+    private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
 
     // Checkbox listener
     private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
@@ -160,7 +163,7 @@ class SettingsActivity : AppCompatActivity() {
         modelDisplayMap = mutableMapOf()
         for (model in modelList) {
             val displayString = if (model == deviceName) {
-                getString(R.string.device_name) + " " + deviceName
+                getString(string.device_name) + " " + deviceName
             } else {
                 model
             }
@@ -178,7 +181,7 @@ class SettingsActivity : AppCompatActivity() {
             val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
             val defaultSelection = selectedModel ?: Build.MODEL
 
-            // Remove the listener temporarily
+// Remove the listener temporarily
             spinnerListener = modelSpinner.onItemSelectedListener
             modelSpinner.onItemSelectedListener = null
 
@@ -204,7 +207,7 @@ class SettingsActivity : AppCompatActivity() {
                     showDeviceNameConfirmationDialog()
                 } else {
                     if (!dataStoreManager.isDeviceModelSupported(selectedModel, getAllowedModels())) {
-                        Toast.makeText(this@SettingsActivity, getString(R.string.error_invalid_file), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@SettingsActivity, getString(string.error_invalid_file), Toast.LENGTH_SHORT).show()
                         modelSpinner.setSelection(modelList.indexOf(previousSelection))
                         return
                     }
@@ -257,6 +260,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         Timber.d("SettingsActivity: onCreate - END")
     }
+
     private fun updateFlagsValues() {
         Timber.d("SettingsActivity: updateFlagsValues called")
         runBlocking {
@@ -478,7 +482,6 @@ class SettingsActivity : AppCompatActivity() {
         Timber.d("SettingsActivity: scheduleUpgradeCheckWorker - END")
         isSchedulingWorker = false
     }
-
     private fun formatTimeRemaining(timeRemainingMillis: Long): String {
         Timber.d("SettingsActivity: formatTimeRemaining called")
         Timber.d("SettingsActivity: formatTimeRemaining - timeRemainingMillis: $timeRemainingMillis")
@@ -551,4 +554,35 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
     }
+    private fun setupOverlayPermissionLauncher() {
+        overlayPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            Timber.d("overlayPermissionLauncher: Activity result received, resultCode: ${result.resultCode}")
+            if (result.resultCode == RESULT_OK) {
+                Timber.d("overlayPermissionLauncher: Permission granted")
+                overlayPermissionGranted = true
+            } else {
+                Timber.d("overlayPermissionLauncher: Permission not granted")
+                Toast.makeText(this, "Display over other apps permission is required.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    private fun checkOverlayPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            Timber.d("checkOverlayPermission: SYSTEM_ALERT_WINDOW permission not granted, requesting permission")
+            requestOverlayPermission()
+        } else {
+            Timber.d("checkOverlayPermission: SYSTEM_ALERT_WINDOW permission already granted")
+            overlayPermissionGranted = true
+        }
+    }
+    private fun requestOverlayPermission() {
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:$packageName")
+        )
+        overlayPermissionLauncher.launch(intent)
+    }
 }
+
