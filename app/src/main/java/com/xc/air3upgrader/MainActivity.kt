@@ -108,6 +108,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
+        Timber.d("onCreate: called")
         onCreateCounter++
         Timber.d("onCreate: onCreate() called - Count: $onCreateCounter")
         Timber.d("onCreate: savedInstanceState is null: ${savedInstanceState == null}")
@@ -135,14 +136,11 @@ class MainActivity : AppCompatActivity() {
             intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
         if (isManualLaunchFromIntent && isFirstLaunch) {
+            showPermissionExplanationDialog()
             lifecycleScope.launch {
                 withContext(Dispatchers.IO) {
                     dataStoreManager.saveIsManualLaunch(true)
                     Timber.d("onCreate: App launched manually")
-                }
-                // Switch to the main thread to show the UI
-                withContext(Dispatchers.Main) {
-                    showUI()
                 }
             }
             isFirstLaunch = false
@@ -167,7 +165,9 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
             }
+            requestAllPermissions()
         }
+        Timber.d("onCreate: end")
     }
     private fun showUI() {
         Timber.d("showUI: called")
@@ -175,27 +175,15 @@ class MainActivity : AppCompatActivity() {
         // Set the status and navigation bar color
         window.statusBarColor = ContextCompat.getColor(this@MainActivity, R.color.black)
         window.navigationBarColor = ContextCompat.getColor(this@MainActivity, R.color.black)
-        Timber.d("onCreate() called")
-
-        // Show the explanatory dialog
-        showPermissionExplanationDialog()
+        Timber.d("showUI: setContentView() called")
 
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
-
-        scheduleUpgradeCheck()
-    }
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        Timber.d("onSaveInstanceState: called")
-    }
-
-    private fun continueSetup() {
-        Timber.d("MainActivity: continueSetup() called")
-        if (!checkInstallPermission()) {
-            requestInstallPermission()
+        if (!isFirstLaunch) {
+            requestAllPermissions()
         }
+        scheduleUpgradeCheck()
         // Set the action bar title with device info
         lifecycleScope.launch {
             setActionBarTitleWithSelectedModel()
@@ -257,6 +245,53 @@ class MainActivity : AppCompatActivity() {
         setupCheckboxListener(xctrackCheckbox, xctrackPackageName, xctrackName, xctrackServerVersion, xctrackVersion)
         setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
         setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
+        Timber.d("showUI: end")
+    }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        Timber.d("onSaveInstanceState: called")
+    }
+
+    private fun continueSetup() {
+        Timber.d("continueSetup: called")
+        // Check if the app was launched manually
+        val isManualLaunchFromIntent =
+            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+        Timber.d("continueSetup: isManualLaunchFromIntent: $isManualLaunchFromIntent")
+        if (isManualLaunchFromIntent) {
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    dataStoreManager.saveIsManualLaunch(true)
+                    Timber.d("continueSetup: App launched manually")
+                }
+                // Switch to the main thread to show the UI
+                withContext(Dispatchers.Main) {
+                    showUI()
+                }
+            }
+        } else {
+            // Not the first launch, check DataStore
+            lifecycleScope.launch {
+                val isManualLaunch: Boolean
+                val unhiddenLaunchOnReboot: Boolean
+                withContext(Dispatchers.IO) {
+                    isManualLaunch = dataStoreManager.getIsManualLaunch().first()
+                    unhiddenLaunchOnReboot = dataStoreManager.getUnhiddenLaunchOnReboot().first()
+                }
+                Timber.d("continueSetup: isManualLaunch from DataStore: $isManualLaunch")
+                Timber.d("continueSetup: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
+                if (isManualLaunch || unhiddenLaunchOnReboot) {
+                    // App was launched manually or unhidden, so we show the UI
+                    showUI()
+                } else {
+                    // App was launched automatically and hidden, so we don't show the UI
+                    Timber.d("App launched hidden, finishing activity")
+                    finish()
+                    return@launch
+                }
+            }
+        }
+        Timber.d("continueSetup: end")
     }
     private fun setupCheckboxListener(
         checkBox: CheckBox,
@@ -301,6 +336,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        Timber.d("onActivityResult: called")
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SETTINGS_REQUEST_CODE) {
             if (resultCode == SettingsActivity.MODEL_CHANGED_RESULT_CODE) {
@@ -311,16 +347,18 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_CODE_INSTALL_PACKAGES) {
             if (checkInstallPermission()) {
                 // Install permission granted
-                Log.d("MainActivity", "Install permission granted")
+                Timber.d("onActivityResult: Install permission granted")
+                installPermissionGranted = true
+                continueSetup()
             } else {
                 // Install permission denied
-                Log.d("MainActivity", "Install permission denied")
+                Timber.d("onActivityResult: Install permission denied")
                 // Handle the case where the user denied install permission
                 Toast.makeText(this, "Install permission is required to install apps.", Toast.LENGTH_LONG).show()
             }
         }
+        Timber.d("onActivityResult: end")
     }
-
     private fun refreshData() {
         // Example: Re-fetch server versions (replace with your actual code)
         getLatestVersionFromServer()
@@ -663,21 +701,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkInstallPermission(): Boolean {
+        Timber.d("checkInstallPermission: called")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val packageManager = packageManager
             val canRequestPackageInstalls = packageManager.canRequestPackageInstalls()
-            Timber.d("checkInstallPermission: canRequestPackageInstalls: $canRequestPackageInstalls")
             return canRequestPackageInstalls
         }
-        Timber.d("checkInstallPermission: Install permission not required")
+        Timber.d("checkInstallPermission: end")
         return true // No need to check on older versions
     }
     private fun requestInstallPermission() {
         Timber.d("requestInstallPermission: called")
         if (checkInstallPermission()) {
             Timber.d("requestInstallPermission: Install permission already granted")
-            installPermissionGranted = true
-            checkAllPermissionsGrantedAndContinue()
         } else {
             Timber.d("requestInstallPermission: Install permission not granted, requesting permission")
             val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
@@ -687,6 +723,7 @@ class MainActivity : AppCompatActivity() {
         Timber.d("requestInstallPermission: end")
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        Timber.d("onRequestPermissionsResult: called")
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
             0 -> { // Notification permission request code
@@ -698,17 +735,8 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Notification permission is required.", Toast.LENGTH_LONG).show()
                 }
             }
-            REQUEST_CODE_INSTALL_PACKAGES -> {
-                if (checkInstallPermission()) {
-                    Timber.d("onRequestPermissionsResult: Install permission granted")
-                    installPermissionGranted = true
-                    checkAllPermissionsGrantedAndContinue()
-                } else {
-                    Timber.d("onRequestPermissionsResult: Install permission denied")
-                    Toast.makeText(this, "Install permission is required.", Toast.LENGTH_LONG).show()
-                }
-            }
         }
+        Timber.d("onRequestPermissionsResult: end")
     }
     private fun showPermissionExplanationDialog() {
         Timber.d("showPermissionExplanationDialog: called")
@@ -717,7 +745,7 @@ class MainActivity : AppCompatActivity() {
             .setMessage(getString(R.string.permissions_required_message))
             .setPositiveButton(getString(R.string.ok)) { _, _ ->
                 Timber.d("showPermissionExplanationDialog: OK button clicked")
-                requestAllPermissions()
+                requestAllPermissions() // This line is the key change!
                 Timber.d("showPermissionExplanationDialog: requestAllPermissions() called")
             }
             .setNegativeButton(getString(R.string.cancel)) { _, _ ->
@@ -736,9 +764,8 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                // Permission is already granted, proceed with install permission
+                // Permission is already granted
                 Timber.d("Notification permission already granted")
-                requestInstallPermission()
             } else {
                 // Permission is not granted, request it
                 Timber.d("Notification permission not granted, requesting it")
@@ -748,16 +775,17 @@ class MainActivity : AppCompatActivity() {
         } else {
             // On older versions, the permission is granted at install time
             Timber.d("Notification permission granted at install time")
-            requestInstallPermission()
         }
         Timber.d("requestNotificationPermission: end")
     }
     private fun checkAllPermissionsGrantedAndContinue() {
+        Timber.d("checkAllPermissionsGrantedAndContinue: called")
         Timber.d("checkAllPermissionsGrantedAndContinue: installPermissionGranted: $installPermissionGranted")
         if (installPermissionGranted) {
             Timber.d("checkAllPermissionsGrantedAndContinue: All permissions granted, calling continueSetup()")
             continueSetup()
         }
+        Timber.d("checkAllPermissionsGrantedAndContinue: end")
     }
     private fun scheduleUpgradeCheck() {
         val dataStoreManager = DataStoreManager(this)
