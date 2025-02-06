@@ -136,7 +136,12 @@ class MainActivity : AppCompatActivity() {
             intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
         if (isManualLaunchFromIntent && isFirstLaunch) {
-            showPermissionExplanationDialog()
+            if (checkAllPermissionsGranted()) {
+                Timber.d("onCreate: All permissions already granted on first launch")
+                continueSetup()
+            } else {
+                showPermissionExplanationDialog()
+            }
             lifecycleScope.launch {
                 withContext(Dispatchers.IO) {
                     dataStoreManager.saveIsManualLaunch(true)
@@ -165,7 +170,7 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
             }
-            requestAllPermissions()
+            checkAllPermissionsGrantedAndContinue()
         }
         Timber.d("onCreate: end")
     }
@@ -778,12 +783,29 @@ class MainActivity : AppCompatActivity() {
         }
         Timber.d("requestNotificationPermission: end")
     }
+    private fun checkAllPermissionsGranted(): Boolean {
+        Timber.d("checkAllPermissionsGranted: called")
+        val notificationPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // No notification permission needed before Android 13
+        }
+        val installPermissionGranted = checkInstallPermission()
+        Timber.d("checkAllPermissionsGranted: notificationPermissionGranted: $notificationPermissionGranted")
+        Timber.d("checkAllPermissionsGranted: installPermissionGranted: $installPermissionGranted")
+        Timber.d("checkAllPermissionsGranted: end")
+        return notificationPermissionGranted && installPermissionGranted
+    }
     private fun checkAllPermissionsGrantedAndContinue() {
         Timber.d("checkAllPermissionsGrantedAndContinue: called")
-        Timber.d("checkAllPermissionsGrantedAndContinue: installPermissionGranted: $installPermissionGranted")
-        if (installPermissionGranted) {
+        if (checkAllPermissionsGranted()) {
             Timber.d("checkAllPermissionsGrantedAndContinue: All permissions granted, calling continueSetup()")
             continueSetup()
+        } else {
+            Timber.d("checkAllPermissionsGrantedAndContinue: Not all permissions granted")
         }
         Timber.d("checkAllPermissionsGrantedAndContinue: end")
     }
