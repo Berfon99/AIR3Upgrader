@@ -540,20 +540,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        Timber.d("onDestroy: called")
-        if (::downloadCompleteReceiver.isInitialized) {
-            unregisterReceiver(downloadCompleteReceiver)
-        }
-        finishAffinity() // Ensure the app is fully closed
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-            }
-        }
-    }
-
     internal fun getLatestVersionFromServer() {
         Log.d("MainActivity", "getLatestVersionFromServer() called")
         lifecycleScope.launch {
@@ -706,6 +692,20 @@ class MainActivity : AppCompatActivity() {
                 ExistingPeriodicWorkPolicy.KEEP,
                 periodicWorkRequest
             )
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Timber.d("onDestroy: called")
+        if (::downloadCompleteReceiver.isInitialized) {
+            unregisterReceiver(downloadCompleteReceiver)
+        }
+        finishAffinity() // Ensure the app is fully closed
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
         }
     }
     override fun onStart() {
