@@ -98,6 +98,30 @@ class MainActivity : AppCompatActivity() {
         dataStoreManager = DataStoreManager(this)
         permissionsManager = PermissionsManager(this, dataStoreManager)
 
+        // Check if the app was launched manually
+        val isManualLaunchFromIntent =
+            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+        Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
+        if (isManualLaunchFromIntent) {
+            permissionsManager.checkAllPermissionsGrantedAndContinue { continueSetup() }
+        } else {
+            lifecycleScope.launch {
+                val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
+                val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+
+                Timber.d("onCreate: isManualLaunch from DataStore: $isManualLaunch")
+                Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
+
+                if (!isManualLaunch && !unhiddenLaunchOnReboot) {
+                    Timber.d("App launched hidden, finishing activity")
+                    finish()
+                    return@launch
+                } else {
+                    permissionsManager.checkAllPermissionsGrantedAndContinue { continueSetup() }
+                }
+            }
+        }
+
         // Register the ActivityResultLauncher in onCreate()
         requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -111,53 +135,9 @@ class MainActivity : AppCompatActivity() {
                 Timber.e("Notification permission denied")
             }
         }
-
-        // Check if the app was launched manually
-        val isManualLaunchFromIntent =
-            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-        Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
-        if (isManualLaunchFromIntent) {
-            permissionsManager.showPermissionExplanationDialog(
-                onPermissionRequested = {
-                    permissionsManager.requestAllPermissions(requestPermissionLauncher) {
-                        permissionsManager.checkAllPermissionsGrantedAndContinue {
-                            continueSetup()
-                        }
-                    }
-                },
-                onInstallPermissionResult = {
-                    permissionsManager.checkAllPermissionsGrantedAndContinue {
-                        continueSetup()
-                    }
-                }
-            )
-        } else {
-            // Not the first launch, check DataStore
-            lifecycleScope.launch {
-                val isManualLaunch: Boolean
-                val unhiddenLaunchOnReboot: Boolean
-                withContext(Dispatchers.IO) {
-                    isManualLaunch = dataStoreManager.getIsManualLaunch().first()
-                    unhiddenLaunchOnReboot = dataStoreManager.getUnhiddenLaunchOnReboot().first()
-                }
-                Timber.d("onCreate: isManualLaunch from DataStore: $isManualLaunch")
-                Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
-                if (isManualLaunch || unhiddenLaunchOnReboot) {
-                    // App was launched manually or unhidden, so we show the UI
-                    showUI()
-                } else {
-                    // App was launched automatically and hidden, so we don't show the UI
-                    Timber.d("App launched hidden, finishing activity")
-                    finish()
-                    return@launch
-                }
-            }
-            permissionsManager.checkAllPermissionsGrantedAndContinue {
-                continueSetup()
-            }
-        }
         Timber.d("onCreate: end")
     }
+
     private fun showUI() {
         Timber.d("showUI: called")
         setContentView(R.layout.activity_main)
@@ -240,43 +220,15 @@ class MainActivity : AppCompatActivity() {
     }
     private fun continueSetup() {
         Timber.d("continueSetup: called")
-        // Check if the app was launched manually
-        val isManualLaunchFromIntent =
-            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-        Timber.d("continueSetup: isManualLaunchFromIntent: $isManualLaunchFromIntent")
+        val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         if (isManualLaunchFromIntent) {
             lifecycleScope.launch {
                 withContext(Dispatchers.IO) {
-                    dataStoreManager.saveIsManualLaunch(true)
-                    Timber.d("continueSetup: App launched manually")
-                }
-                // Switch to the main thread to show the UI
-                withContext(Dispatchers.Main) {
-                    showUI()
-                }
-            }
-        } else {
-            // Not the first launch, check DataStore
-            lifecycleScope.launch {
-                val isManualLaunch: Boolean
-                val unhiddenLaunchOnReboot: Boolean
-                withContext(Dispatchers.IO) {
-                    isManualLaunch = dataStoreManager.getIsManualLaunch().first()
-                    unhiddenLaunchOnReboot = dataStoreManager.getUnhiddenLaunchOnReboot().first()
-                }
-                Timber.d("continueSetup: isManualLaunch from DataStore: $isManualLaunch")
-                Timber.d("continueSetup: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
-                if (isManualLaunch || unhiddenLaunchOnReboot) {
-                    // App was launched manually or unhidden, so we show the UI
-                    showUI()
-                } else {
-                    // App was launched automatically and hidden, so we don't show the UI
-                    Timber.d("App launched hidden, finishing activity")
-                    finish()
-                    return@launch
+                    dataStoreManager.saveIsManualLaunch(false)
                 }
             }
         }
+        showUI()
         Timber.d("continueSetup: end")
     }
     private fun setupCheckboxListener(
