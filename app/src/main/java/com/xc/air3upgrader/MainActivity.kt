@@ -36,6 +36,7 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.ui.geometry.isEmpty
 
 import kotlinx.coroutines.flow.first
 
@@ -116,20 +117,20 @@ class MainActivity : AppCompatActivity() {
             intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
         if (isManualLaunchFromIntent) {
-            if (permissionsManager.checkAllPermissionsGranted()) {
-                Timber.d("onCreate: All permissions already granted on first launch")
-                continueSetup()
-            } else {
-                permissionsManager.showPermissionExplanationDialog {
-                    permissionsManager.requestAllPermissions(requestPermissionLauncher)
+            permissionsManager.showPermissionExplanationDialog(
+                onPermissionRequested = {
+                    permissionsManager.requestAllPermissions(requestPermissionLauncher) {
+                        permissionsManager.checkAllPermissionsGrantedAndContinue {
+                            continueSetup()
+                        }
+                    }
+                },
+                onInstallPermissionResult = {
+                    permissionsManager.checkAllPermissionsGrantedAndContinue {
+                        continueSetup()
+                    }
                 }
-            }
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    dataStoreManager.saveIsManualLaunch(true)
-                    Timber.d("onCreate: App launched manually")
-                }
-            }
+            )
         } else {
             // Not the first launch, check DataStore
             lifecycleScope.launch {
@@ -237,7 +238,6 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         Timber.d("onSaveInstanceState: called")
     }
-
     private fun continueSetup() {
         Timber.d("continueSetup: called")
         // Check if the app was launched manually
@@ -330,19 +330,6 @@ class MainActivity : AppCompatActivity() {
                 refreshData()
             }
         }
-        if (requestCode == PermissionsManager.REQUEST_CODE_INSTALL_PACKAGES) {
-            if (permissionsManager.checkInstallPermission()) {
-                // Install permission granted
-                Timber.d("onActivityResult: Install permission granted")
-                continueSetup()
-            } else {
-                // Install permission denied
-                Timber.d("onActivityResult: Install permission denied")
-                // Handle the case where the user denied install permission
-                Toast.makeText(this, "Install permission is required to install apps.", Toast.LENGTH_LONG).show()
-            }
-        }
-        Timber.d("onActivityResult: end")
     }
     private fun refreshData() {
         // Example: Re-fetch server versions (replace with your actual code)
@@ -499,7 +486,6 @@ class MainActivity : AppCompatActivity() {
             downloadAndInstallApk(nextApp)
         }
     }
-
     private fun downloadAndInstallApk(appInfo: AppInfo) {
         Log.d("MainActivity", "downloadAndInstallApk() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
         val url = if (appInfo.apkPath.startsWith("http")) {
