@@ -98,27 +98,16 @@ class MainActivity : AppCompatActivity() {
         dataStoreManager = DataStoreManager(this)
         permissionsManager = PermissionsManager(this, dataStoreManager)
 
-        // Check if the app was launched manually
-        val isManualLaunchFromIntent =
-            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-        Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
-        if (isManualLaunchFromIntent) {
-            permissionsManager.checkAllPermissionsGrantedAndContinue { continueSetup() }
-        } else {
-            lifecycleScope.launch {
-                val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
-                val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-
-                Timber.d("onCreate: isManualLaunch from DataStore: $isManualLaunch")
-                Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
-
-                if (!isManualLaunch && !unhiddenLaunchOnReboot) {
-                    Timber.d("App launched hidden, finishing activity")
-                    finish()
-                    return@launch
-                } else {
-                    permissionsManager.checkAllPermissionsGrantedAndContinue { continueSetup() }
-                }
+        // Register the ActivityResultLauncher in onCreate()
+        requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                // Permission is granted, proceed with install permission
+                Timber.d("Notification permission granted")
+            } else {
+                // Permission is denied, handle accordingly
+                Timber.e("Notification permission denied")
             }
         }
 
@@ -129,13 +118,44 @@ class MainActivity : AppCompatActivity() {
             if (isGranted) {
                 // Permission is granted, proceed with install permission
                 Timber.d("Notification permission granted")
-                permissionsManager.requestInstallPermission()
+                //permissionsManager.requestInstallPermission()
             } else {
                 // Permission is denied, handle accordingly
                 Timber.e("Notification permission denied")
             }
         }
+
+        // Check if the app was launched manually        
+        val isManualLaunchFromIntent =
+            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+        Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
+        if (isManualLaunchFromIntent) {
+            permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher) { }
+        } else {
+            lifecycleScope.launch {
+                val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
+                val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+
+                Timber.d("onCreate: isManualLaunch from DataStore: $isManualLaunch")
+                Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")                
+
+                if (!isManualLaunch && !unhiddenLaunchOnReboot) {
+                    Timber.d("App launched hidden, finishing activity")
+                    finish()
+                    return@launch
+                } else {
+                    permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher) { continueSetup() }
+                }                
+            }
+        }
         Timber.d("onCreate: end")
+    }
+    override fun onResume() {
+        super.onResume()
+        Timber.d("onResume: called")
+        if (permissionsManager.checkAllPermissionsGranted()) {
+            continueSetup()
+        }
     }
 
     private fun showUI() {
@@ -647,10 +667,7 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         Timber.d("onStart: called")
     }
-    override fun onResume() {
-        super.onResume()
-        Timber.d("onResume: called")
-    }
+
     override fun onPause() {
         super.onPause()
         Timber.d("onPause: called")
