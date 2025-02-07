@@ -1,5 +1,6 @@
 package com.xc.air3upgrader
 
+import android.app.Activity
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -55,6 +56,13 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         return canRequestPackageInstalls
     }
 
+    private fun isInstallPermissionGranted(): Boolean {
+        Timber.d("isInstallPermissionGranted: called")
+        val isGranted = checkInstallPermission()
+        Timber.d("isInstallPermissionGranted: end")
+        return isGranted
+    }
+
     fun requestInstallPermission(onInstallPermissionResult: () -> Unit) {
         Timber.d("requestInstallPermission: called")
         this.onInstallPermissionResult = onInstallPermissionResult
@@ -65,14 +73,32 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
                 intent.data = Uri.parse("package:${context.packageName}")
                 installPermissionLauncher.launch(intent)
             } else {
+                Timber.d("requestInstallPermission: Install permission already granted")
                 onInstallPermissionResult()
             }
         } else {
+            Timber.d("requestInstallPermission: Install permission granted at install time")
             onInstallPermissionResult()
+        }
+        if (!isInstallPermissionGranted()) {
+            Timber.d("requestInstallPermission: Install permission denied")
+            showInstallPermissionDeniedMessage()
         }
         Timber.d("requestInstallPermission: end")
     }
 
+    private fun showInstallPermissionDeniedMessage() {
+        Timber.d("showInstallPermissionDeniedMessage: called")
+        AlertDialog.Builder(context)
+            .setTitle("Install Permission Required")
+            .setMessage("Install permission is required to install apps. Please grant the permission.")
+            .setPositiveButton("OK") { _, _ ->
+                (context as? Activity)?.finish()
+            }
+            .show()
+        Timber.d("showInstallPermissionDeniedMessage: end")
+    }
+    
     fun showPermissionExplanationDialog(onPermissionRequested: () -> Unit, onInstallPermissionResult: () -> Unit) {
         Timber.d("showPermissionExplanationDialog: called")
         this.onInstallPermissionResult = onInstallPermissionResult
@@ -93,9 +119,8 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         Timber.d("showPermissionExplanationDialog: end")
     }
 
-    fun requestNotificationPermission(requestPermissionLauncher: ActivityResultLauncher<String>, onInstallPermissionResult: () -> Unit) {
+    fun requestNotificationPermission(requestPermissionLauncher: ActivityResultLauncher<String>) {
         Timber.d("requestNotificationPermission: called")
-        this.onInstallPermissionResult = onInstallPermissionResult
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     context,
@@ -106,41 +131,33 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
                 Timber.d("Notification permission already granted")
-                onInstallPermissionResult()
             }
         } else {
-            Timber.d("Notification permission granted at install time")
-            onInstallPermissionResult()
+            Timber.d("Notification permission granted at install time")            
         }
-        Timber.d("requestNotificationPermission: end")
     }
 
-    fun checkAllPermissionsGrantedAndContinue(requestPermissionLauncher: ActivityResultLauncher<String>, onContinueSetup: () -> Unit) {
+    internal fun showNotificationPermissionDeniedMessage() {
+        AlertDialog.Builder(context)
+            .setTitle("Notification Permission Required")
+            .setMessage("Notification permission is required to receive notifications. Please grant the permission.")
+            .setPositiveButton("OK") { _, _ -> (context as? Activity)?.finish() }
+            .show()
+        }
+
+    fun checkAllPermissionsGrantedAndContinue(requestPermissionLauncher: ActivityResultLauncher<String>) {
         Timber.d("checkAllPermissionsGrantedAndContinue: called")
         if (checkAllPermissionsGranted()) {
             Timber.d("checkAllPermissionsGrantedAndContinue: All permissions granted, calling continueSetup()")
-            onContinueSetup()
-        } else {            
+        } else {
             Timber.d("checkAllPermissionsGrantedAndContinue: Permissions not granted, showing explanation dialog")
             showPermissionExplanationDialog(
-                onPermissionRequested = {
-                    Timber.d("onPermissionRequested: called")
-                    Timber.d("requestAllPermissions: calling")
-                    try {
-                        requestAllPermissions(requestPermissionLauncher)
-                    } catch (e: Exception) {
-                        Timber.e(e, "Error calling requestAllPermissions")
-                    }
-                },
-                onInstallPermissionResult = {
-                    Timber.d("checkAllPermissionsGrantedAndContinue: onInstallPermissionResult called")
-                }
-            )
+                onPermissionRequested = { requestInstallPermission { requestNotificationPermission(requestPermissionLauncher) } },
+                onInstallPermissionResult = { }
+            ) // Added the missing closing parenthesis here
         }
-
         Timber.d("checkAllPermissionsGrantedAndContinue: end")
     }
-
     fun checkAllPermissionsGranted(): Boolean {
         Timber.d("checkAllPermissionsGranted: called")
         val notificationPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -153,21 +170,11 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         }
         val installPermissionGranted = checkInstallPermission()
         Timber.d("checkAllPermissionsGranted: notificationPermissionGranted: $notificationPermissionGranted")
-        Timber.d("checkAllPermissionsGranted: installPermissionGranted: $installPermissionGranted")
+        Timber.d("checkAllPermissionsGranted: installPermissionGranted: $installPermissionGranted")        
         Timber.d("checkAllPermissionsGranted: end")
         return notificationPermissionGranted && installPermissionGranted
     }
-
-    fun requestAllPermissions(requestPermissionLauncher: ActivityResultLauncher<String>) {
-        Timber.d("requestAllPermissions: called")
-        requestInstallPermission {
-            Timber.d("requestAllPermissions: onInstallPermissionResult called")
-            requestNotificationPermission(requestPermissionLauncher) {
-                Timber.d("requestAllPermissions: onNotificationPermissionResult called")
-            }
-        }
-        Timber.d("requestAllPermissions: end")
-    }
+    
 
     fun setupOverlayPermissionLauncher(
         overlayPermissionLauncher: ActivityResultLauncher<Intent>,
