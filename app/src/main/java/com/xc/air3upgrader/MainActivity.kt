@@ -96,7 +96,7 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         dataStoreManager = DataStoreManager(this)
-        permissionsManager = PermissionsManager(this)
+        permissionsManager = PermissionsManager(this, dataStoreManager)
 
         // Register the ActivityResultLauncher in onCreate()
         requestPermissionLauncher = registerForActivityResult(
