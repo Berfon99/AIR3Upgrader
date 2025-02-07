@@ -1,33 +1,34 @@
 package com.xc.air3upgrader
 
 import android.Manifest
-import android.app.Activity
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.widget.CheckBox
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleCoroutineScope
-import androidx.lifecycle.lifecycleScope
 import timber.log.Timber
 
+@SuppressLint("unused")
 class PermissionsManager(private val activity: ComponentActivity) {
 
     companion object {
+        fun getClassName(): String {
+            return PermissionsManager::class.java.name
+        }
         const val REQUEST_CODE_INSTALL_PACKAGES = 1001
         const val REQUEST_CODE_OVERLAY_PERMISSION = 1002
     }
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
+    @SuppressLint("unused")
     private var installPermissionGranted = false
     private var overlayPermissionGranted = false
     private lateinit var lifecycleScope: LifecycleCoroutineScope
@@ -36,19 +37,14 @@ class PermissionsManager(private val activity: ComponentActivity) {
 
     fun checkInstallPermission(): Boolean {
         Timber.d("checkInstallPermission: called")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val packageManager = activity.packageManager
-            val canRequestPackageInstalls = packageManager.canRequestPackageInstalls()
-            return canRequestPackageInstalls
-        }
+        val packageManager = activity.packageManager
+        val canRequestPackageInstalls = packageManager.canRequestPackageInstalls()
         Timber.d("checkInstallPermission: end")
-        return true // No need to check on older versions
+        return canRequestPackageInstalls
     }
     fun requestInstallPermission() {
         Timber.d("requestInstallPermission: called")
-        if (checkInstallPermission()) {
-            Timber.d("requestInstallPermission: Install permission already granted")
-        } else {
+        if (!checkInstallPermission()) {
             Timber.d("requestInstallPermission: Install permission not granted, requesting permission")
             val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
             intent.data = Uri.parse("package:${activity.packageName}")
@@ -70,6 +66,22 @@ class PermissionsManager(private val activity: ComponentActivity) {
             }
         }
         Timber.d("onRequestPermissionsResult: end")
+    }
+    fun checkAllPermissionsGranted(): Boolean {
+        Timber.d("checkAllPermissionsGranted: called")
+        val notificationPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                activity,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // No notification permission needed before Android 13
+        }
+        val installPermissionGranted = checkInstallPermission()
+        Timber.d("checkAllPermissionsGranted: notificationPermissionGranted: $notificationPermissionGranted")
+        Timber.d("checkAllPermissionsGranted: installPermissionGranted: $installPermissionGranted")
+        Timber.d("checkAllPermissionsGranted: end")
+        return notificationPermissionGranted && installPermissionGranted
     }
     fun showPermissionExplanationDialog(onPermissionRequested: () -> Unit) {
         Timber.d("showPermissionExplanationDialog: called")
@@ -111,22 +123,6 @@ class PermissionsManager(private val activity: ComponentActivity) {
             Timber.d("Notification permission granted at install time")
         }
         Timber.d("requestNotificationPermission: end")
-    }
-    fun checkAllPermissionsGranted(): Boolean {
-        Timber.d("checkAllPermissionsGranted: called")
-        val notificationPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true // No notification permission needed before Android 13
-        }
-        val installPermissionGranted = checkInstallPermission()
-        Timber.d("checkAllPermissionsGranted: notificationPermissionGranted: $notificationPermissionGranted")
-        Timber.d("checkAllPermissionsGranted: installPermissionGranted: $installPermissionGranted")
-        Timber.d("checkAllPermissionsGranted: end")
-        return notificationPermissionGranted && installPermissionGranted
     }
     fun checkAllPermissionsGrantedAndContinue(onContinueSetup: () -> Unit) {
         Timber.d("checkAllPermissionsGrantedAndContinue: called")

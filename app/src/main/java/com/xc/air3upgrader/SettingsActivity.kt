@@ -127,6 +127,7 @@ class SettingsActivity : AppCompatActivity() {
         dataStoreManager = DataStoreManager(this)
         workManager = WorkManager.getInstance(this)
         permissionsManager = PermissionsManager(this)
+        PermissionsManager.getClassName()
 
         // Initialize UI elements
         modelSpinner = findViewById(R.id.model_spinner)

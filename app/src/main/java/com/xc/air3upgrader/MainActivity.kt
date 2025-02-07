@@ -86,9 +86,6 @@ class MainActivity : AppCompatActivity() {
     private var onCreateCounter = 0
     private var isFirstLaunch = true
 
-
-
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         Timber.d("onCreate: called")
         onCreateCounter++
