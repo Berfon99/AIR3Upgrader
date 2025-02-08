@@ -49,7 +49,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
             }
             Timber.d("installPermissionLauncher: end")
         }
-
     fun checkInstallPermission(): Boolean {
         Timber.d("checkInstallPermission: called")
         val result = context.packageManager.canRequestPackageInstalls()
@@ -63,7 +62,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         Timber.d("isInstallPermissionGranted: end")
         return isGranted
     }
-
     fun requestInstallPermission(onInstallPermissionResult: () -> Unit) {
         Timber.d("requestInstallPermission: called")
         this.onInstallPermissionResult = onInstallPermissionResult
@@ -94,7 +92,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
             .show()
         Timber.d("showInstallPermissionDeniedMessage: end")
     }
-    
     fun showPermissionExplanationDialog(onPermissionRequested: () -> Unit, onInstallPermissionResult: () -> Unit) {
         Timber.d("showPermissionExplanationDialog: called")
         this.onInstallPermissionResult = onInstallPermissionResult
@@ -114,7 +111,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         dialog.show()
         Timber.d("showPermissionExplanationDialog: end")
     }
-
     fun requestNotificationPermission(requestPermissionLauncher: ActivityResultLauncher<String>) {
         Timber.d("requestNotificationPermission: called")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -132,7 +128,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
             Timber.d("Notification permission granted at install time")            
         }
     }
-
     internal fun showNotificationPermissionDeniedMessage() {
         AlertDialog.Builder(context)
             .setTitle("Notification Permission Required")
@@ -140,7 +135,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
             .setPositiveButton("OK") { _, _ -> (context as? Activity)?.finish() }
             .show()
         }
-
     fun checkAllPermissionsGrantedAndContinue(requestPermissionLauncher: ActivityResultLauncher<String>) {
         Timber.d("checkAllPermissionsGrantedAndContinue: called")
         if (checkAllPermissionsGranted()) {
@@ -170,8 +164,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         Timber.d("checkAllPermissionsGranted: end")
         return notificationPermissionGranted && installPermissionGranted
     }
-    
-
     fun setupOverlayPermissionLauncher(
         overlayPermissionLauncher: ActivityResultLauncher<Intent>,
         onPermissionGranted: () -> Unit,
@@ -185,7 +177,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         this.onPermissionDenied = onPermissionDenied
         Timber.d("setupOverlayPermissionLauncher: end")
     }
-
     fun checkOverlayPermission(context: Context, packageName: String, enableBackgroundCheckCheckbox: CheckBox) {
         Timber.d("checkOverlayPermission: called")
         if (!Settings.canDrawOverlays(context)) {

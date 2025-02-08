@@ -69,52 +69,53 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
 
-    // Checkbox listener
 // Checkbox listener
-    private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
-        Timber.d("SettingsActivity: checkboxListener - onCheckedChanged called")
-        Timber.d("SettingsActivity: checkboxListener - isChecked: $isChecked")
-        if (isChecked) {
-            // Check if the permission is already granted
-            if (!Settings.canDrawOverlays(this@SettingsActivity)) {
-                // Show an alert dialog to explain the permission
-                val builder = AlertDialog.Builder(this@SettingsActivity)
-                builder.setTitle("Permission Required") // You can change the title
-                builder.setMessage("The 'Display over other apps' permission is necessary to show the upgrade reminder on top of other apps.") // You can change the message
-                builder.setPositiveButton("OK") { dialog, _ ->
-                    // User clicked OK, proceed to check and request permission
-                    permissionsManager.checkOverlayPermission(this@SettingsActivity, packageName, enableBackgroundCheckCheckbox)
-                    dialog.dismiss()
-                }
-                builder.setNegativeButton("Cancel") { dialog, _ ->
-                    // User clicked Cancel, do nothing
-                    enableBackgroundCheckCheckbox.isChecked = false
-                    lifecycleScope.launch {
-                        dataStoreManager.saveAutomaticUpgradeReminder(false)
-                        updateFlagsValues()
-                        updateUiState(false)
-                    }
-                    dialog.dismiss()
-                }
-                builder.show()
-            } else {
-                // Permission is already granted, save the state
-                lifecycleScope.launch {
-                    dataStoreManager.saveAutomaticUpgradeReminder(true)
-                    updateFlagsValues()
-                    updateUiState(true)
-                }
+private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
+    Timber.d("checkboxListener: Starting - isChecked: $isChecked")
+    if (isChecked) {
+        Timber.d("checkboxListener: Inside if (isChecked) - About to show AlertDialog")
+        // Check if the permission is already granted
+        if (!Settings.canDrawOverlays(this@SettingsActivity)) {
+            // Show an alert dialog to explain the permission
+            val builder = AlertDialog.Builder(this@SettingsActivity)
+            builder.setTitle("Permission Required") // You can change the title
+            builder.setMessage("The 'Display over other apps' permission is necessary to show the upgrade reminder on top of other apps.") // You can change the message
+            builder.setPositiveButton("OK") { dialog, _ ->
+                // User clicked OK, proceed to check and request permission
+                permissionsManager.checkOverlayPermission(this@SettingsActivity, packageName, enableBackgroundCheckCheckbox)
+                dialog.dismiss()
             }
+            builder.setNegativeButton("Cancel") { dialog, _ ->
+                // User clicked Cancel, do nothing
+                enableBackgroundCheckCheckbox.isChecked = false
+                lifecycleScope.launch {
+                    dataStoreManager.saveAutomaticUpgradeReminder(false)
+                    updateUiState(false)
+                    updateFlagsValues()
+                }
+                dialog.dismiss()
+            }
+            builder.show()
         } else {
-            lifecycleScope.launch { // Add this line
-                dataStoreManager.saveAutomaticUpgradeReminder(false)
+            Timber.d("checkboxListener: Inside if (Settings.canDrawOverlays(this@SettingsActivity)) - About to saveAutomaticUpgradeReminder(true)")
+            // Permission is already granted, save the state
+            lifecycleScope.launch {
+                dataStoreManager.saveAutomaticUpgradeReminder(true)
+                updateUiState(true)
                 updateFlagsValues()
-                updateUiState(false)
-                val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-                unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
-            } // Add this line
+            }
         }
+    } else {
+        Timber.d("checkboxListener: Inside else (isChecked is false) - About to saveAutomaticUpgradeReminder(false)")
+        lifecycleScope.launch { // Add this line
+            dataStoreManager.saveAutomaticUpgradeReminder(false)
+            updateUiState(false)
+            updateFlagsValues()
+            val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+            unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
+        } // Add this line
     }
+}
     private val allowedModels = listOf(
         "AIR3-7.2",
         "AIR3-7.3",
@@ -274,6 +275,15 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        lifecycleScope.launch {
+            val shouldLaunch = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull()
+
+            if (shouldLaunch == null) {
+                dataStoreManager.saveUnhiddenLaunchOnReboot(false)
+            }
+        }
+        // Attach the listener here, before updateFlagsValues()
+        enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
         // Load the initial state from DataStore and update the UI
         lifecycleScope.launch {
             val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
@@ -287,17 +297,10 @@ class SettingsActivity : AppCompatActivity() {
             updateFlagsValues()
         }
 
-        lifecycleScope.launch {
-            val shouldLaunch = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull()
-
-            if (shouldLaunch == null) {
-                dataStoreManager.saveUnhiddenLaunchOnReboot(false)
-            }
-        }
         Timber.d("SettingsActivity: onCreate - END")
     }
     private fun updateFlagsValues() {
-        Timber.d("SettingsActivity: updateFlagsValues called")
+        Timber.d("updateFlagsValues: Starting")
         lifecycleScope.launch {
             val isAutomaticUpgradeReminderEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
@@ -312,7 +315,6 @@ class SettingsActivity : AppCompatActivity() {
                 dataStoreManager.removeLastCheckTime()
                 handler.removeCallbacks(updateTimeRemainingRunnable)
             }
-            updateStartingTime()
         }
     }
     private val updateTimeRemainingRunnable = object : Runnable {
@@ -327,8 +329,7 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
     private fun updateUiState(isEnabled: Boolean) {
-        Timber.d("SettingsActivity: updateUiState called")
-        Timber.d("SettingsActivity: updateUiState - isEnabled: $isEnabled")
+        Timber.d("updateUiState: Starting - isEnabled: $isEnabled")
         upgradeCheckIntervalDaysEditText.isEnabled = isEnabled
         upgradeCheckIntervalHoursEditText.isEnabled = isEnabled
         upgradeCheckIntervalMinutesEditText.isEnabled = isEnabled
@@ -416,12 +417,18 @@ class SettingsActivity : AppCompatActivity() {
         super.onResume()
         Timber.d("SettingsActivity: onResume called")
         updateFlagsValues()
+        updateStartingTime()
         handler.post(updateTimeRemainingRunnable)
+
         lifecycleScope.launch {
             val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             updateUiState(isEnabled)
-            // Update the checkbox state based on the actual permission state
-            enableBackgroundCheckCheckbox.isChecked = Settings.canDrawOverlays(this@SettingsActivity)
+
+            val isAutomaticUpgradeReminderEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
+
+            enableBackgroundCheckCheckbox.setOnCheckedChangeListener(null) // Désactiver temporairement le listener
+            enableBackgroundCheckCheckbox.isChecked = isAutomaticUpgradeReminderEnabled // Assigner la valeur correcte
+            enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener) // Réactiver le listener
         }
     }
     override fun onPause() {
