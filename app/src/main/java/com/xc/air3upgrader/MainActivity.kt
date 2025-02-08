@@ -108,6 +108,7 @@ class MainActivity : AppCompatActivity() {
             Timber.d("Notification permission granted")
         }
 
+
         // Check if the app was launched manually
         val isManualLaunchFromIntent =
             intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true

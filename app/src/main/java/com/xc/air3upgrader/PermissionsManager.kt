@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import android.widget.CheckBox
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -185,9 +186,12 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         Timber.d("setupOverlayPermissionLauncher: end")
     }
 
-    fun checkOverlayPermission(context: Context, packageName: String) {
+    fun checkOverlayPermission(context: Context, packageName: String, enableBackgroundCheckCheckbox: CheckBox) {
         Timber.d("checkOverlayPermission: called")
         if (!Settings.canDrawOverlays(context)) {
+            enableBackgroundCheckCheckbox.isChecked = false
+            onPermissionDenied()
+
             Timber.d("checkOverlayPermission: SYSTEM_ALERT_WINDOW permission not granted, requesting permission")
             requestOverlayPermission(packageName)
         } else {
@@ -195,7 +199,6 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         }
         Timber.d("checkOverlayPermission: end")
     }
-
     private fun requestOverlayPermission(packageName: String) {
         Timber.d("requestOverlayPermission: called")
         val intent = Intent(
@@ -204,27 +207,5 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         )
         overlayPermissionLauncher.launch(intent)
         Timber.d("requestOverlayPermission: end")
-    }
-
-    fun handleOverlayPermissionResult(
-        requestCode: Int,
-        resultCode: Int,
-        dataStoreManager: DataStoreManager,
-        enableBackgroundCheckCheckbox: android.widget.CheckBox,
-        updateFlagsValues: () -> Unit,
-        updateUiState: (Boolean) -> Unit
-    ) {
-        Timber.d("handleOverlayPermissionResult: called")
-        if (requestCode == REQUEST_CODE_OVERLAY_PERMISSION) {
-            if (Settings.canDrawOverlays(context)) {
-                Timber.d("handleOverlayPermissionResult: Display over other apps permission granted")
-                onPermissionGranted()
-            } else {
-                Timber.d("handleOverlayPermissionResult: Display over other apps permission not granted")
-                enableBackgroundCheckCheckbox.isChecked = false
-                onPermissionDenied()
-            }
-        }
-        Timber.d("handleOverlayPermissionResult: end")
     }
 }
