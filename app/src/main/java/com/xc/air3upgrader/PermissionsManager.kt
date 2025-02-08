@@ -50,12 +50,11 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
 
     fun checkInstallPermission(): Boolean {
         Timber.d("checkInstallPermission: called")
-        val packageManager = context.packageManager
-        val canRequestPackageInstalls = packageManager.canRequestPackageInstalls()
+        val result = context.packageManager.canRequestPackageInstalls()
+        Timber.d("checkInstallPermission: result: $result")
         Timber.d("checkInstallPermission: end")
-        return canRequestPackageInstalls
+        return result
     }
-
     private fun isInstallPermissionGranted(): Boolean {
         Timber.d("isInstallPermissionGranted: called")
         val isGranted = checkInstallPermission()
@@ -80,13 +79,8 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
             Timber.d("requestInstallPermission: Install permission granted at install time")
             onInstallPermissionResult()
         }
-        if (!isInstallPermissionGranted()) {
-            Timber.d("requestInstallPermission: Install permission denied")
-            showInstallPermissionDeniedMessage()
-        }
         Timber.d("requestInstallPermission: end")
     }
-
     private fun showInstallPermissionDeniedMessage() {
         Timber.d("showInstallPermissionDeniedMessage: called")
         AlertDialog.Builder(context)
