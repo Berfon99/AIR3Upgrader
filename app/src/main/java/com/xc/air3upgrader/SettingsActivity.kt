@@ -151,7 +151,6 @@ class SettingsActivity : AppCompatActivity() {
         automaticUpgradeReminderValue = findViewById(R.id.automatic_upgrade_reminder_value)
         unhiddenLaunchOnRebootValue = findViewById(R.id.unhidden_launch_on_reboot_value)
         enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
-        enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
         startingTimeValue = findViewById(R.id.starting_time_value)
 
         // Initialize the model list
@@ -182,7 +181,7 @@ class SettingsActivity : AppCompatActivity() {
             val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
             val defaultSelection = selectedModel ?: Build.MODEL
 
-        // Remove the listener temporarily
+            // Remove the listener temporarily
             spinnerListener = modelSpinner.onItemSelectedListener
             modelSpinner.onItemSelectedListener = null
 
@@ -210,11 +209,10 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         permissionsManager.setupOverlayPermissionLauncher(
-            overlayPermissionLauncher,  // Ajout du launcher
+            overlayPermissionLauncher,
             {
                 lifecycleScope.launch {
                     dataStoreManager.saveAutomaticUpgradeReminder(true)
-                    updateFlagsValues()
                     updateUiState(true)
                 }
             },
@@ -222,11 +220,10 @@ class SettingsActivity : AppCompatActivity() {
                 enableBackgroundCheckCheckbox.isChecked = false
                 lifecycleScope.launch {
                     dataStoreManager.saveAutomaticUpgradeReminder(false)
-                    updateFlagsValues()
                     updateUiState(false)
                 }
             },
-            lifecycleScope // Ajout de lifecycleScope
+            lifecycleScope
         )
 
         // Set a listener to respond to user selections
@@ -277,8 +274,18 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // Checkbox listener
-        enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
+        // Load the initial state from DataStore and update the UI
+        lifecycleScope.launch {
+            val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
+            // Temporarily remove the listener
+            enableBackgroundCheckCheckbox.setOnCheckedChangeListener(null)
+            // Set the checkbox state based on the DataStore value
+            enableBackgroundCheckCheckbox.isChecked = isEnabled
+            // Re-attach the listener
+            enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
+            // Update UI values
+            updateFlagsValues()
+        }
 
         lifecycleScope.launch {
             val shouldLaunch = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull()
@@ -287,16 +294,8 @@ class SettingsActivity : AppCompatActivity() {
                 dataStoreManager.saveUnhiddenLaunchOnReboot(false)
             }
         }
-
-        // Initialize UI values
-        updateFlagsValues()
-        lifecycleScope.launch {
-            val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
-            updateUiState(isEnabled)
-        }
         Timber.d("SettingsActivity: onCreate - END")
     }
-
     private fun updateFlagsValues() {
         Timber.d("SettingsActivity: updateFlagsValues called")
         lifecycleScope.launch {
@@ -327,7 +326,6 @@ class SettingsActivity : AppCompatActivity() {
             handler.postDelayed(this, 1000) // Update every 1 second
         }
     }
-
     private fun updateUiState(isEnabled: Boolean) {
         Timber.d("SettingsActivity: updateUiState called")
         Timber.d("SettingsActivity: updateUiState - isEnabled: $isEnabled")
@@ -414,7 +412,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
     }
-
     override fun onResume() {
         super.onResume()
         Timber.d("SettingsActivity: onResume called")
@@ -432,7 +429,6 @@ class SettingsActivity : AppCompatActivity() {
         Timber.d("SettingsActivity: onPause called")
         handler.removeCallbacks(updateTimeRemainingRunnable)
     }
-
     private fun loadUpgradeCheckInterval() {
         Timber.d("SettingsActivity: loadUpgradeCheckInterval called")
         lifecycleScope.launch {
@@ -454,7 +450,6 @@ class SettingsActivity : AppCompatActivity() {
         // Start updating the time remaining after the interval is loaded
         handler.post(updateTimeRemainingRunnable)
     }
-
     private fun setUpgradeCheckInterval() {
         Timber.d("SettingsActivity: setUpgradeCheckInterval called")
         Timber.d("SettingsActivity: setUpgradeCheckInterval - isSettingInterval (before check): $isSettingInterval")
@@ -538,7 +533,6 @@ class SettingsActivity : AppCompatActivity() {
             else -> getString(R.string.less_than_a_second)
         }
     }
-
     private fun showDeviceNameConfirmationDialog() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle(getString(R.string.device_name_confirmation_title))
@@ -556,17 +550,14 @@ class SettingsActivity : AppCompatActivity() {
         }
         builder.show()
     }
-
     private fun saveSelectedModel(selectedModel: String?) {
         lifecycleScope.launch {
             dataStoreManager.saveSelectedModel(selectedModel ?: deviceName)
         }
     }
-
     private fun getDeviceName(): String {
         return Build.MODEL
     }
-
     internal fun getAllowedModels(): List<String> {
         return allowedModels
     }
