@@ -200,6 +200,14 @@ private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChe
                 if (Settings.canDrawOverlays(this@SettingsActivity)) {
                     Timber.d("overlayPermissionLauncher: Display over other apps permission granted")
                     dataStoreManager.saveAutomaticUpgradeReminder(true)
+                    // Après avoir mis à jour le flag AUTOMATIC_UPGRADE_REMINDER dans la logique de permission
+                    lifecycleScope.launch {
+                        // Observer la valeur du flag AUTOMATIC_UPGRADE_REMINDER
+                        dataStoreManager.getAutomaticUpgradeReminder().collect { isEnabled ->
+                            // Mettre à jour la CheckBox en fonction de la valeur du flag
+                            enableBackgroundCheckCheckbox.isChecked = isEnabled
+                        }
+                    }
                 } else {
                     Timber.d("overlayPermissionLauncher: Display over other apps permission not granted")
                     enableBackgroundCheckCheckbox.isChecked = false
@@ -424,10 +432,17 @@ private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChe
             val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             updateUiState(isEnabled)
 
-            val isAutomaticUpgradeReminderEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
+            val hasOverlayPermission = Settings.canDrawOverlays(this@SettingsActivity)
 
             enableBackgroundCheckCheckbox.setOnCheckedChangeListener(null) // Désactiver temporairement le listener
-            enableBackgroundCheckCheckbox.isChecked = isAutomaticUpgradeReminderEnabled // Assigner la valeur correcte
+
+            if (hasOverlayPermission) {
+                enableBackgroundCheckCheckbox.isChecked = isEnabled
+            } else {
+                enableBackgroundCheckCheckbox.isChecked = false
+                permissionsManager.checkOverlayPermission(this@SettingsActivity, packageName, enableBackgroundCheckCheckbox)
+            }
+
             enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener) // Réactiver le listener
         }
     }

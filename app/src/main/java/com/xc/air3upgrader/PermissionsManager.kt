@@ -18,6 +18,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleCoroutineScope
 import timber.log.Timber
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 @SuppressLint("unused")
 class PermissionsManager(private val context: Context, private val dataStoreManager: DataStoreManager) {
@@ -179,15 +181,31 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
     }
     fun checkOverlayPermission(context: Context, packageName: String, enableBackgroundCheckCheckbox: CheckBox) {
         Timber.d("checkOverlayPermission: called")
+
         if (!Settings.canDrawOverlays(context)) {
             enableBackgroundCheckCheckbox.isChecked = false
             onPermissionDenied()
 
             Timber.d("checkOverlayPermission: SYSTEM_ALERT_WINDOW permission not granted, requesting permission")
             requestOverlayPermission(packageName)
+
+            // Attendre un court instant et revérifier après le retour de la permission
+            lifecycleScope.launch {
+                delay(500) // Attendre 500ms pour s'assurer que le système a bien mis à jour l'autorisation
+                if (Settings.canDrawOverlays(context)) {
+                    withContext(Dispatchers.Main) {
+                        enableBackgroundCheckCheckbox.isChecked = true
+                    }
+                    onPermissionGranted()
+                }
+            }
+
         } else {
             Timber.d("checkOverlayPermission: SYSTEM_ALERT_WINDOW permission already granted")
+            enableBackgroundCheckCheckbox.isChecked = true
+            onPermissionGranted()
         }
+
         Timber.d("checkOverlayPermission: end")
     }
     private fun requestOverlayPermission(packageName: String) {
@@ -197,6 +215,15 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
             Uri.parse("package:$packageName")
         )
         overlayPermissionLauncher.launch(intent)
+
+        lifecycleScope.launch {
+            delay(500) // Petite attente pour s'assurer que la permission est prise en compte
+            if (Settings.canDrawOverlays(context)) {
+                Timber.d("requestOverlayPermission: Permission granted, updating UI")
+                onPermissionGranted() // Mettre à jour immédiatement l'UI
+            }
+        }
+
         Timber.d("requestOverlayPermission: end")
     }
 }
