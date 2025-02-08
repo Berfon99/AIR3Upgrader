@@ -40,11 +40,12 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
             Timber.d("installPermissionLauncher: called")
             if (checkInstallPermission()) {
                 Timber.d("installPermissionLauncher: Install permission granted")
+                onInstallPermissionResult?.invoke()
             } else {
                 Timber.d("installPermissionLauncher: Install permission denied")
                 Toast.makeText(context, "Install permission is required.", Toast.LENGTH_LONG).show()
+                showInstallPermissionDeniedMessage()
             }
-            onInstallPermissionResult?.invoke()
             Timber.d("installPermissionLauncher: end")
         }
 
