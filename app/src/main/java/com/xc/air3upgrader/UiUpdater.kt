@@ -7,6 +7,14 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import timber.log.Timber
+import android.widget.CheckBox
+import androidx.appcompat.app.AppCompatActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import android.os.Build
+import android.util.Log
 
 object UiUpdater {
     private fun updateApkNameDisplay(appInfo: AppInfo, apkNameTextView: TextView?) {
@@ -62,7 +70,6 @@ object UiUpdater {
             null
         }
     }
-
     internal fun setAppBackgroundColor(
         context: Context,
         appInfo: AppInfo,
@@ -86,5 +93,132 @@ object UiUpdater {
             ContextCompat.getColor(context, R.color.update_available_color)
         }
         nameTextView.setBackgroundColor(color)
+    }
+    fun updateUIAfterNoInternet(
+        xctrackVersion: TextView,
+        xcguideVersion: TextView,
+        air3managerVersion: TextView,
+        xctrackServerVersion: TextView,
+        xcguideServerVersion: TextView,
+        air3managerServerVersion: TextView,
+        context: Context
+    ) {
+        xctrackVersion.text = context.getString(R.string.version_not_found)
+        xcguideVersion.text = context.getString(R.string.version_not_found)
+        air3managerVersion.text = context.getString(R.string.version_not_found)
+        xctrackServerVersion.text = context.getString(R.string.version_not_found)
+        xcguideServerVersion.text = context.getString(R.string.version_not_found)
+        air3managerServerVersion.text = context.getString(R.string.version_not_found)
+    }
+    fun checkAppInstallationForApp(
+        context: Context,
+        packageName: String,
+        appNameTextView: TextView,
+        appVersionTextView: TextView,
+        appInfos: List<AppInfo>,
+        xctrackPackageName: String,
+        xctrackServerVersion: TextView,
+        xctrackCheckbox: CheckBox,
+        xcguidePackageName: String,
+        xcguideServerVersion: TextView,
+        xcguideCheckbox: CheckBox,
+        air3managerPackageName: String,
+        air3managerServerVersion: TextView,
+        air3managerCheckbox: CheckBox,
+        coroutineScope: CoroutineScope
+    ) {
+        Timber.d("checkAppInstallationForApp() called for package: $packageName")
+        val installedVersion = AppUtils.getAppVersion(context, packageName)
+        Timber.d("  Installed version for $packageName: $installedVersion")
+        appVersionTextView.text = if (installedVersion != context.getString(R.string.na)) context.getString(R.string.installed) + " " + installedVersion else context.getString(R.string.not_installed)
+
+        coroutineScope.launch {
+            val appInfo = appInfos.find { it.`package` == packageName }
+            Timber.d("  appInfo for $packageName: $appInfo")
+            val serverVersion = appInfo?.highestServerVersion
+            Timber.d("  Server version for $packageName: $serverVersion")
+            if (serverVersion != null) {
+                val serverVersionToDisplay = if (packageName == xctrackPackageName) {
+                    serverVersion.replace("-", ".")
+                } else {
+                    serverVersion
+                }
+                when (packageName) {
+                    xctrackPackageName -> xctrackServerVersion.text = context.getString(R.string.server) + " " + serverVersionToDisplay
+                    xcguidePackageName -> xcguideServerVersion.text = context.getString(R.string.server) + " " + serverVersionToDisplay
+                    air3managerPackageName -> air3managerServerVersion.text = context.getString(R.string.server) + " " + serverVersionToDisplay
+                }
+
+                Timber.d("  Calling VersionComparator.isServerVersionHigher() with: installedVersion=$installedVersion, serverVersion=$serverVersion, packageName=$packageName")
+                if (VersionComparator.isServerVersionHigher(installedVersion, serverVersion, packageName)) {
+                    Timber.d("  Server version is higher for $packageName")
+                    // Une nouvelle version est disponible, cocher la case "Upgrade"
+                    when (packageName) {
+                        xctrackPackageName -> xctrackCheckbox.isChecked = true
+                        xcguidePackageName -> xcguideCheckbox.isChecked = true
+                        air3managerPackageName -> air3managerCheckbox.isChecked = true
+                    }
+                } else {
+                    Timber.d("  Server version is not higher for $packageName")
+                    // La version du serveur est la même que celle installée, laisser la case décochée
+                    when (packageName) {
+                        xctrackPackageName -> xctrackCheckbox.isChecked = false
+                        xcguidePackageName -> xcguideCheckbox.isChecked = false
+                        air3managerPackageName -> air3managerCheckbox.isChecked = false
+                    }
+// Activer la case pour permettre à l'utilisateur de la sélectionner manuellement
+                    when (packageName) {
+                        xctrackPackageName -> xctrackCheckbox.isEnabled = true
+                        xcguidePackageName -> xcguideCheckbox.isEnabled = true
+                        air3managerPackageName -> air3managerCheckbox.isEnabled = true
+                    }
+                }
+            } else {
+                Timber.d("  Server version is null for $packageName")
+                // Gérer le cas où la version du serveur n'est pas disponible
+                when (packageName) {
+                    xctrackPackageName -> xctrackServerVersion.text = context.getString(R.string.version_not_found)
+                    xcguidePackageName -> xcguideServerVersion.text = context.getString(R.string.version_not_found)
+                    air3managerPackageName -> air3managerServerVersion.text = context.getString(R.string.version_not_found)
+                }
+            }
+            coroutineScope.launch {
+                Timber.d("Before calling setAppBackgroundColor")
+                val appInfo = appInfos.find { it.`package` == packageName }
+                if (appInfo != null) {
+                    setAppBackgroundColor(context, appInfo, appNameTextView, appVersionTextView)
+                } else {
+                    Timber.e("AppInfo is null for package: $packageName")
+                }
+                Timber.d("After calling setAppBackgroundColor")
+            }
+        }
+    }
+    fun setActionBarTitleWithSelectedModel(
+        context: Context,
+        dataStoreManager: DataStoreManager,
+        getSettingsAllowedModels: () -> List<String>,
+        getDeviceName: () -> String,
+        coroutineScope: CoroutineScope,
+        supportActionBar: androidx.appcompat.app.ActionBar?
+    ) {
+        coroutineScope.launch {
+            // Delay the initial read to allow SettingsActivity to initialize
+            val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
+            val deviceModel = Build.MODEL
+            val finalSelectedModel = when {
+                selectedModel == null -> deviceModel
+                selectedModel.isEmpty() -> deviceModel
+                dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
+                else -> {
+                    Log.e("MainActivity", "Unsupported model selected: $selectedModel")
+                    getDeviceName()
+                }
+            }
+            dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
+                val androidVersion = Build.VERSION.RELEASE // Get the Android version
+                supportActionBar?.title = "AIR³ Upgrader - $finalSelectedModel - Android $androidVersion" // Set the title correctly
+            }
+        }
     }
 }
