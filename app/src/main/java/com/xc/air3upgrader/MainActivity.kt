@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
-    private lateinit var downloadCompleteReceiver: DownloadReceiver
+    private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
 
@@ -204,13 +204,15 @@ class MainActivity : AppCompatActivity() {
         acquireWakeLock()
 
         // Register the DownloadCompleteReceiver
-        downloadCompleteReceiver = DownloadReceiver()
+        downloadCompleteReceiver = DownloadCompleteReceiver()
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(downloadCompleteReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13+
             registerReceiver(downloadCompleteReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(downloadCompleteReceiver, filter)
         }
+
 
         // Set up checkbox listeners
         setupCheckboxListener(xctrackCheckbox, xctrackPackageName, xctrackName, xctrackServerVersion, xctrackVersion)
@@ -661,3 +663,4 @@ class MainActivity : AppCompatActivity() {
         Timber.d("onStop: called")
     }
 }
+

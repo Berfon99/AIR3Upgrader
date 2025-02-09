@@ -9,9 +9,19 @@ import androidx.core.content.FileProvider
 import timber.log.Timber
 import java.io.File
 
-class DownloadReceiver : BroadcastReceiver() {
+class DownloadCompleteReceiver : BroadcastReceiver() {
+
+    private fun downloadAndInstallApk(context: Context, apkUri: Uri) {
+        Timber.d("DownloadCompleteReceiver: downloadAndInstallApk called")
+        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(installIntent)
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
-        Timber.d("Before if statement")
+        Timber.d("DownloadCompleteReceiver: onReceive called")
         if (intent.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
             Timber.d("Download complete")
             val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
@@ -34,11 +44,7 @@ class DownloadReceiver : BroadcastReceiver() {
                                     if (apkFile.exists()) {
                                         val authority = "${context.packageName}.provider"
                                         val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
-                                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(apkUri, "application/vnd.android.package-archive")
-                                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-                                        }
-                                        context.startActivity(installIntent)
+                                        downloadAndInstallApk(context, apkUri)
                                     } else {
                                         Timber.e("File does not exist: ${apkFile.absolutePath}")
                                     }
