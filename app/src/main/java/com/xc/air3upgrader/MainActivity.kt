@@ -26,7 +26,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.firstOrNull
-import java.util.LinkedList
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -67,14 +66,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var xctrackApkName: TextView
     private lateinit var xcguideApkName: TextView
     private lateinit var air3managerApkName: TextView
-    private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
     private var appInfos: List<AppInfo> = emptyList() // Corrected type
-    private val downloadQueue = LinkedList<AppInfo>()
     private var downloadIdToAppInfo: MutableMap<Long, AppInfo> = mutableMapOf()
     private var fileName: String = ""
     internal var isInstalling = false
@@ -141,7 +138,6 @@ class MainActivity : AppCompatActivity() {
             continueSetup()
         }
     }
-
     private fun showUI() {
         Timber.d("showUI: called")
         setContentView(R.layout.activity_main)
@@ -203,18 +199,7 @@ class MainActivity : AppCompatActivity() {
         // Keep the screen on
         acquireWakeLock()
 
-        // Register the DownloadCompleteReceiver
-        downloadCompleteReceiver = DownloadCompleteReceiver()
-        val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13+
-            registerReceiver(downloadCompleteReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(downloadCompleteReceiver, filter)
-        }
-
-
-        // Set up checkbox listeners
+// Set up checkbox listeners
         setupCheckboxListener(xctrackCheckbox, xctrackPackageName, xctrackName, xctrackServerVersion, xctrackVersion)
         setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
         setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
@@ -255,12 +240,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
         return true
     }
-
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_settings -> {
@@ -278,7 +261,6 @@ class MainActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
     }
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         Timber.d("onActivityResult: called")
         super.onActivityResult(requestCode, resultCode, data)
@@ -294,7 +276,6 @@ class MainActivity : AppCompatActivity() {
         getLatestVersionFromServer()
         setActionBarTitleWithSelectedModel()
     }
-
     private fun acquireWakeLock() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
@@ -303,7 +284,6 @@ class MainActivity : AppCompatActivity() {
         )
         wakeLock?.acquire()
     }
-
     private fun setActionBarTitleWithSelectedModel() {
         lifecycleScope.launch {
             // Delay the initial read to allow SettingsActivity to initialize
@@ -324,7 +304,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun getDefaultModel(): String {
         val deviceModel = Build.MODEL
         return if (dataStoreManager.isDeviceModelSupported(deviceModel, getSettingsAllowedModels())) {
@@ -333,16 +312,13 @@ class MainActivity : AppCompatActivity() {
             getDeviceName()
         }
     }
-
     private fun getDeviceName(): String {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
     }
-
     private fun getSettingsAllowedModels(): List<String> {
         val settingsActivity = SettingsActivity()
         return settingsActivity.getAllowedModels()
     }
-
     private fun checkAppInstallation() {
         Log.d("MainActivity", "checkAppInstallation() called")
         lifecycleScope.launch {
@@ -358,7 +334,6 @@ class MainActivity : AppCompatActivity() {
             checkAppInstallationForApp(air3managerPackageName, air3managerName, air3managerVersion, finalSelectedModel, air3managerPackageName)
         }
     }
-
     private fun checkAppInstallationForApp(packageName: String, appNameTextView: TextView, appVersionTextView: TextView, selectedModel: String, appPackageName: String) {
         Log.d("MainActivity", "checkAppInstallationForApp() called for package: $packageName")
         val installedVersion = AppUtils.getAppVersion(this, packageName)
@@ -427,60 +402,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-    private fun enqueueDownload(appInfo: AppInfo) {
-        Log.d("MainActivity", "enqueueDownload() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
-        downloadQueue.add(appInfo)
-        if (downloadQueue.size == 1) {
-            downloadNextApp()
-        }
-    }
-
-    internal fun downloadNextApp() {
-        Log.d("MainActivity", "downloadNextApp() called")
-        if (downloadQueue.isNotEmpty()) {
-            val nextApp = downloadQueue.first()
-            downloadQueue.removeFirst()
-            downloadAndInstallApk(nextApp)
-        }
-    }
-    private fun downloadAndInstallApk(appInfo: AppInfo) {
-        Log.d("MainActivity", "downloadAndInstallApk() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
-        val url = if (appInfo.apkPath.startsWith("http")) {
-            appInfo.apkPath
-        } else {
-            "https://ftp.fly-air3.com${appInfo.apkPath}" // Construct the full URL here
-        }
-        val fileName = when {
-            appInfo.name == "AIR³ Manager" -> {
-                "AIR3Manager.apk" // Use a shorter name for AIR³ Manager
-            }
-            appInfo.`package` == "indysoft.xc_guide" && !appInfo.apkPath.startsWith("/") -> {
-                "${appInfo.name}.apk" // Use the app name (e.g., "XCGuide-608.apk") for XC Guide from pg-race.aero
-            }
-            else -> {
-                appInfo.apkPath.substringAfterLast('/') // Use the original name for other APKs and XC Guide from ftp.fly-air3.com
-            }
-        }
-        Log.d("MainActivity", "Downloading from URL: $url, saving as: $fileName")
-
-        val request = DownloadManager.Request(Uri.parse(url))
-            .setDescription(appInfo.`package`) // Set the description to the package name
-            .setTitle(appInfo.name) // Set the title to the app name
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setAllowedOverMetered(true)
-            .setAllowedOverRoaming(true)
-            .setDestinationInExternalFilesDir(this, null, fileName) // Save to app's private directory
-        Log.d("MainActivity", "Request: $request")
-        val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        try {
-            downloadManager.enqueue(request)
-            Log.d("MainActivity", "Download enqueued")
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error enqueuing download", e)
-        }
-    }
-
     internal fun getLatestVersionFromServer() {
         Log.d("MainActivity", "getLatestVersionFromServer() called")
         lifecycleScope.launch {
@@ -530,7 +451,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
             selectedModel = when {
@@ -569,14 +489,13 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this@MainActivity, getString(R.string.no_apps_selected_for_upgrade), Toast.LENGTH_SHORT).show()
                 return@launch
             }
-
+            val downloadCompleteReceiver = DownloadCompleteReceiver()
             // Enqueue downloads instead of adding them directly to downloadQueue
             appsToUpgrade.forEach { appInfo ->
-                enqueueDownload(appInfo)
+                downloadCompleteReceiver.enqueueDownload(this@MainActivity, appInfo) // Corrected line
             }
         }
     }
-
     private fun handleRefreshButtonClick() {
         lifecycleScope.launch {
             if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
@@ -635,13 +554,9 @@ class MainActivity : AppCompatActivity() {
             )
         }
     }
-
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("onDestroy: called")
-        if (::downloadCompleteReceiver.isInitialized) {
-            unregisterReceiver(downloadCompleteReceiver)
-        }
         finishAffinity() // Ensure the app is fully closed
         wakeLock?.let {
             if (it.isHeld) {
@@ -653,7 +568,6 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         Timber.d("onStart: called")
     }
-
     override fun onPause() {
         super.onPause()
         Timber.d("onPause: called")
@@ -663,4 +577,3 @@ class MainActivity : AppCompatActivity() {
         Timber.d("onStop: called")
     }
 }
-

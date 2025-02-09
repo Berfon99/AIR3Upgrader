@@ -5,21 +5,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.core.content.FileProvider
 import timber.log.Timber
 import java.io.File
-
+import java.util.LinkedList
 class DownloadCompleteReceiver : BroadcastReceiver() {
-
-    private fun downloadAndInstallApk(context: Context, apkUri: Uri) {
-        Timber.d("DownloadCompleteReceiver: downloadAndInstallApk called")
-        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUri, "application/vnd.android.package-archive")
-            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(installIntent)
-    }
-
+    private val downloadQueue = LinkedList<AppInfo>()
+    private var fileName: String = ""
     override fun onReceive(context: Context, intent: Intent) {
         Timber.d("DownloadCompleteReceiver: onReceive called")
         if (intent.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
@@ -44,7 +37,12 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                                     if (apkFile.exists()) {
                                         val authority = "${context.packageName}.provider"
                                         val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
-                                        downloadAndInstallApk(context, apkUri)
+                                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(apkUri, "application/vnd.android.package-archive")
+                                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(installIntent)
+                                        downloadNextApp(context)// Pass the context here
                                     } else {
                                         Timber.e("File does not exist: ${apkFile.absolutePath}")
                                     }
@@ -65,6 +63,58 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                 }
                 cursor.close()
             }
+        }
+    }
+    private fun enqueueDownloadAndInstallApk(context: Context, appInfo: AppInfo) {
+        Timber.d("downloadAndInstallApk() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
+        val url = if (appInfo.apkPath.startsWith("http")) {
+            appInfo.apkPath
+        } else {
+            "https://ftp.fly-air3.com${appInfo.apkPath}" // Construct the full URL here
+        }
+        fileName = when {
+            appInfo.name == "AIR³ Manager" -> {
+                "AIR3Manager.apk" // Use a shorter name for AIR³ Manager
+            }
+            appInfo.`package` == "indysoft.xc_guide" && !appInfo.apkPath.startsWith("/") -> {
+                "${appInfo.name}.apk" // Use the app name (e.g., "XCGuide-608.apk") for XC Guide from pg-race.aero
+            }
+            else -> {
+                appInfo.apkPath.substringAfterLast('/') // Use the original name for other APKs and XC Guide from ftp.fly-air3.com
+            }
+        }
+        Timber.d("Downloading from URL: $url, saving as: $fileName")
+
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setDescription(appInfo.`package`) // Set the description to the package name
+            .setTitle(appInfo.name) // Set the title to the app name
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setAllowedOverMetered(true)// Allow download over metered connections
+            .setAllowedOverRoaming(true)// Allow download over roaming connections
+            .setDestinationInExternalFilesDir(context, null, fileName) // Save to app's private directory
+        Timber.d("Request: $request")
+        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        try {
+            downloadManager.enqueue(request)
+            Timber.d("Download enqueued")
+        } catch (e: Exception) {
+            Log.e("DownloadCompleteReceiver", "Error enqueuing download", e)
+        }
+    }
+    internal fun downloadNextApp(context: Context) {
+        Log.d("DownloadCompleteReceiver", "downloadNextApp() called")
+        if (downloadQueue.isNotEmpty()) {
+            val nextApp = downloadQueue.first()
+            downloadQueue.removeFirst()
+            enqueueDownloadAndInstallApk(context, nextApp)
+        }
+    }
+    fun enqueueDownload(context: Context, appInfo: AppInfo) {
+        Timber.d("enqueueDownload() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
+        downloadQueue.add(appInfo)
+        if (downloadQueue.size == 1) {
+            // Start the download process if it's the first item
+            enqueueDownloadAndInstallApk(context, appInfo)
         }
     }
 }
