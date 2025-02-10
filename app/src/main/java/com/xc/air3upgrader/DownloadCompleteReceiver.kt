@@ -12,6 +12,15 @@ import java.io.File
 import java.util.LinkedList
 class DownloadCompleteReceiver : BroadcastReceiver() {
     internal val downloadQueue = LinkedList<AppInfo>()
+    companion object {
+        private lateinit var instance: DownloadCompleteReceiver
+        fun getInstance(context: Context): DownloadCompleteReceiver {
+            if (!::instance.isInitialized) {
+                instance = DownloadCompleteReceiver()
+            }
+            return instance
+        }
+    }
     private val downloadIdToAppInfo = mutableMapOf<Long, AppInfo>()
     private var fileName: String = ""
     override fun onReceive(context: Context, intent: Intent) {
@@ -55,8 +64,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                                 } else {
                                     Timber.e("Local URI is null or empty!")
                                 }
-                            }
-                            else {
+                            } else {
                                 Timber.e("COLUMN_LOCAL_URI not found")
                             }
                         } else {
@@ -69,7 +77,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                     Timber.e("Cursor is empty")
                 }
                 cursor.close()
-                downloadNextApp(context)
+                getInstance(context).downloadNextApp(context) // Modify this line
             }
         }
     }
@@ -113,12 +121,14 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
     internal fun downloadNextApp(context: Context) {
         Log.d("DownloadCompleteReceiver", "downloadNextApp() called")
         if (downloadQueue.isNotEmpty()) {
-            val nextApp = downloadQueue.first()
+            val nextApp = downloadQueue.first
             downloadQueue.removeFirst()
             enqueueDownloadAndInstallApk(context, nextApp)
+        } else {
+            Log.d("DownloadCompleteReceiver", "downloadQueue is empty")
         }
     }
-    fun enqueueDownload(context: Context, downloadQueue: LinkedList<AppInfo>, appInfo: AppInfo) {
+    fun enqueueDownload(appInfo: AppInfo) { // MODIFY THIS METHOD
         Timber.d("enqueueDownload() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
         downloadQueue.add(appInfo)
     }

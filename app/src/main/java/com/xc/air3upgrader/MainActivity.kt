@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var air3managerApkName: TextView
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
-    private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver
+    //private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
@@ -386,7 +386,6 @@ class MainActivity : AppCompatActivity() {
                 showNoInternetDialog()
                 return@launch
             }
-            downloadCompleteReceiver = DownloadCompleteReceiver()
             // Request storage permission before proceeding
             permissionsManager.requestStoragePermission {
                 // Fetch the latest app information FIRST
@@ -412,11 +411,14 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 // Enqueue downloads instead of adding them directly to downloadQueue
+                val downloadCompleteReceiver = DownloadCompleteReceiver.getInstance(this@MainActivity)
                 appsToUpgrade.forEach { appInfo ->
-                    downloadCompleteReceiver.enqueueDownload(this@MainActivity, downloadCompleteReceiver.downloadQueue, appInfo)
+                    downloadCompleteReceiver.enqueueDownload(appInfo)
                 }
                 // Start all downloads
-                downloadCompleteReceiver.downloadNextApp(this@MainActivity)
+                if (appsToUpgrade.isNotEmpty()) {
+                    downloadCompleteReceiver.downloadNextApp(this@MainActivity)
+                }
             }
         }
     }
