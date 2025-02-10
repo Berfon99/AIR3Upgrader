@@ -60,6 +60,7 @@ class SettingsActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var isButtonClickEnabled = true
     private lateinit var enableBackgroundCheckCheckbox: CheckBox
+    private lateinit var wifiOnlyCheckbox: CheckBox // New Checkbox
     private lateinit var workManager: WorkManager
     private lateinit var startingTimeValue: TextView
     private var isUpdatingTimeRemaining = false
@@ -69,53 +70,60 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
 
-// Checkbox listener
-private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
-    Timber.d("checkboxListener: Starting - isChecked: $isChecked")
-    if (isChecked) {
-        Timber.d("checkboxListener: Inside if (isChecked) - About to show AlertDialog")
-        // Check if the permission is already granted
-        if (!Settings.canDrawOverlays(this@SettingsActivity)) {
-            // Show an alert dialog to explain the permission
-            val builder = AlertDialog.Builder(this@SettingsActivity)
-            builder.setTitle("Permission Required") // You can change the title
-            builder.setMessage("The 'Display over other apps' permission is necessary to show the upgrade reminder on top of other apps.") // You can change the message
-            builder.setPositiveButton("OK") { dialog, _ ->
-                // User clicked OK, proceed to check and request permission
-                permissionsManager.checkOverlayPermission(this@SettingsActivity, packageName, enableBackgroundCheckCheckbox)
-                dialog.dismiss()
-            }
-            builder.setNegativeButton("Cancel") { dialog, _ ->
-                // User clicked Cancel, do nothing
-                enableBackgroundCheckCheckbox.isChecked = false
+    // Checkbox listener
+    private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
+        Timber.d("checkboxListener: Starting - isChecked: $isChecked")
+        if (isChecked) {
+            Timber.d("checkboxListener: Inside if (isChecked) - About to show AlertDialog")
+            // Check if the permission is already granted
+            if (!Settings.canDrawOverlays(this@SettingsActivity)) {
+                // Show an alert dialog to explain the permission
+                val builder = AlertDialog.Builder(this@SettingsActivity)
+                builder.setTitle("Permission Required") // You can change the title
+                builder.setMessage("The 'Display over other apps' permission is necessary to show the upgrade reminder on top of other apps.") // You can change the message
+                builder.setPositiveButton("OK") { dialog, _ ->
+                    // User clicked OK, proceed to check and request permission
+                    permissionsManager.checkOverlayPermission(this@SettingsActivity, packageName, enableBackgroundCheckCheckbox)
+                    dialog.dismiss()
+                }
+                builder.setNegativeButton("Cancel") { dialog, _ ->
+                    // User clicked Cancel, do nothing
+                    enableBackgroundCheckCheckbox.isChecked = false
+                    lifecycleScope.launch {
+                        dataStoreManager.saveAutomaticUpgradeReminder(false)
+                        updateUiState(false)
+                        updateFlagsValues()
+                    }
+                    dialog.dismiss()
+                }
+                builder.show()
+            } else {
+                Timber.d("checkboxListener: Inside if (Settings.canDrawOverlays(this@SettingsActivity)) - About to saveAutomaticUpgradeReminder(true)")
+                // Permission is already granted, save the state
                 lifecycleScope.launch {
-                    dataStoreManager.saveAutomaticUpgradeReminder(false)
-                    updateUiState(false)
+                    dataStoreManager.saveAutomaticUpgradeReminder(true)
+                    updateUiState(true)
                     updateFlagsValues()
                 }
-                dialog.dismiss()
             }
-            builder.show()
         } else {
-            Timber.d("checkboxListener: Inside if (Settings.canDrawOverlays(this@SettingsActivity)) - About to saveAutomaticUpgradeReminder(true)")
-            // Permission is already granted, save the state
-            lifecycleScope.launch {
-                dataStoreManager.saveAutomaticUpgradeReminder(true)
-                updateUiState(true)
+            Timber.d("checkboxListener: Inside else (isChecked is false) - About to saveAutomaticUpgradeReminder(false)")
+            lifecycleScope.launch { // Add this line
+                dataStoreManager.saveAutomaticUpgradeReminder(false)
+                updateUiState(false)
                 updateFlagsValues()
-            }
+                val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+                unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
+            } // Add this line
         }
-    } else {
-        Timber.d("checkboxListener: Inside else (isChecked is false) - About to saveAutomaticUpgradeReminder(false)")
-        lifecycleScope.launch { // Add this line
-            dataStoreManager.saveAutomaticUpgradeReminder(false)
-            updateUiState(false)
-            updateFlagsValues()
-            val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-            unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
-        } // Add this line
     }
-}
+    // New Checkbox listener
+    private val wifiOnlyCheckboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
+        lifecycleScope.launch {
+            dataStoreManager.saveWifiOnly(isChecked)
+        }
+    }
+
     private val allowedModels = listOf(
         "AIR3-7.2",
         "AIR3-7.3",
@@ -152,6 +160,7 @@ private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChe
         automaticUpgradeReminderValue = findViewById(R.id.automatic_upgrade_reminder_value)
         unhiddenLaunchOnRebootValue = findViewById(R.id.unhidden_launch_on_reboot_value)
         enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
+        wifiOnlyCheckbox = findViewById(R.id.wifi_only_checkbox) // Initialize the new Checkbox
         startingTimeValue = findViewById(R.id.starting_time_value)
 
         // Initialize the model list
@@ -177,7 +186,7 @@ private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChe
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modelSpinner.adapter = adapter
 
-        // Set the default selection based on the device model
+// Set the default selection based on the device model
         lifecycleScope.launch {
             val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
             val defaultSelection = selectedModel ?: Build.MODEL
@@ -304,6 +313,14 @@ private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChe
             // Update UI values
             updateFlagsValues()
         }
+        // Load the initial state of the Wi-Fi Only checkbox
+        lifecycleScope.launch {
+            val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+            wifiOnlyCheckbox.isChecked = isWifiOnly
+        }
+
+        // Attach the listener to the Wi-Fi Only checkbox
+        wifiOnlyCheckbox.setOnCheckedChangeListener(wifiOnlyCheckboxListener)
 
         Timber.d("SettingsActivity: onCreate - END")
     }
@@ -584,4 +601,6 @@ private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChe
         return allowedModels
     }
 }
+
+
 

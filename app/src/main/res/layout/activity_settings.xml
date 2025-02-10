@@ -113,6 +113,16 @@
 
     </LinearLayout>
 
+    <!-- Wi-Fi Only Checkbox -->
+    <CheckBox
+        android:id="@+id/wifi_only_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/wifi_only"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/checkbox_and_starting_time_layout" />
+
     <!-- Horizontal LinearLayout for Upgrade Check Interval, Set Button, and Time Remaining -->
     <LinearLayout
         android:id="@+id/main_horizontal_layout"
@@ -120,7 +130,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@+id/checkbox_and_starting_time_layout">
+        app:layout_constraintTop_toBottomOf="@+id/wifi_only_checkbox">
 
         <!-- Upgrade Check Interval (1/2 width) -->
         <LinearLayout
@@ -253,3 +263,4 @@
         </LinearLayout>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
+

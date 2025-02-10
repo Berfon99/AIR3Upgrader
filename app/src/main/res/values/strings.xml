@@ -92,4 +92,5 @@
             - Allow to install unknown apps
         ]]>
     </string>
+    <string name="wifi_only">Wi-Fi Only</string>
 </resources>

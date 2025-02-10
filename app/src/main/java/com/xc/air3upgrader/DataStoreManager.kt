@@ -29,6 +29,7 @@ class DataStoreManager(private val context: Context) {
             val UNHIDDEN_LAUNCH_ON_REBOOT = booleanPreferencesKey("unhidden_launch_on_reboot")
             val AUTOMATIC_UPGRADE_REMINDER = booleanPreferencesKey("automatic_upgrade_reminder")
             val IS_MANUAL_LAUNCH = booleanPreferencesKey("is_manual_launch")
+            val WIFI_ONLY = booleanPreferencesKey("wifi_only") // New key for Wi-Fi only setting
         }
     }
 
@@ -132,6 +133,20 @@ class DataStoreManager(private val context: Context) {
         Timber.d("DataStoreManager: removeLastCheckTime called")
         context.dataStore.edit { preferences ->
             preferences.remove(PreferencesKeys.LAST_CHECK_TIME)
+        }
+    }
+
+    suspend fun saveWifiOnly(isWifiOnly: Boolean) {
+        Timber.d("DataStoreManager: saveWifiOnly called - isWifiOnly: $isWifiOnly")
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.WIFI_ONLY] = isWifiOnly
+        }
+    }
+
+    fun getWifiOnly(): Flow<Boolean> {
+        Timber.d("DataStoreManager: getWifiOnly called")
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.WIFI_ONLY] ?: false // Default to false
         }
     }
 }
