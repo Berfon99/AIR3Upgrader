@@ -12,6 +12,7 @@ import java.io.File
 import java.util.LinkedList
 class DownloadCompleteReceiver : BroadcastReceiver() {
     private val downloadQueue = LinkedList<AppInfo>()
+    private val downloadIdToAppInfo = mutableMapOf<Long, AppInfo>()
     private var fileName: String = ""
     override fun onReceive(context: Context, intent: Intent) {
         Timber.d("DownloadCompleteReceiver: onReceive called")
@@ -95,7 +96,8 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         Timber.d("Request: $request")
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         try {
-            downloadManager.enqueue(request)
+            val downloadId = downloadManager.enqueue(request)
+            downloadIdToAppInfo[downloadId] = appInfo
             Timber.d("Download enqueued")
         } catch (e: Exception) {
             Log.e("DownloadCompleteReceiver", "Error enqueuing download", e)
@@ -109,7 +111,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
             enqueueDownloadAndInstallApk(context, nextApp)
         }
     }
-    fun enqueueDownload(context: Context, appInfo: AppInfo) {
+    fun enqueueDownload(context: Context, downloadQueue: LinkedList<AppInfo>, appInfo: AppInfo) {
         Timber.d("enqueueDownload() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
         downloadQueue.add(appInfo)
         if (downloadQueue.size == 1) {

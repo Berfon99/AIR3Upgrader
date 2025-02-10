@@ -15,6 +15,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleCoroutineScope
 import timber.log.Timber
@@ -30,6 +31,7 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         }
         const val REQUEST_CODE_INSTALL_PACKAGES = 1001
         const val REQUEST_CODE_OVERLAY_PERMISSION = 1002
+        const val REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 1003
     }
 
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
@@ -37,6 +39,7 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
     private lateinit var onPermissionGranted: () -> Unit
     private lateinit var onPermissionDenied: () -> Unit
     private var onInstallPermissionResult: (() -> Unit)? = null
+    private var onStoragePermissionResult: (() -> Unit)? = null
 
     private val installPermissionLauncher =
         (context as ComponentActivity).registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -50,6 +53,19 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
                 showInstallPermissionDeniedMessage()
             }
             Timber.d("installPermissionLauncher: end")
+        }
+    private val storagePermissionLauncher =
+        (context as ComponentActivity).registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            Timber.d("storagePermissionLauncher: called")
+            if (isGranted) {
+                Timber.d("storagePermissionLauncher: Storage permission granted")
+                onStoragePermissionResult?.invoke()
+            } else {
+                Timber.d("storagePermissionLauncher: Storage permission denied")
+                Toast.makeText(context, "Storage permission is required.", Toast.LENGTH_LONG).show()
+                showStoragePermissionDeniedMessage()
+            }
+            Timber.d("storagePermissionLauncher: end")
         }
     fun checkInstallPermission(): Boolean {
         Timber.d("checkInstallPermission: called")
@@ -127,7 +143,7 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
                 Timber.d("Notification permission already granted")
             }
         } else {
-            Timber.d("Notification permission granted at install time")            
+            Timber.d("Notification permission granted at install time")
         }
     }
     internal fun showNotificationPermissionDeniedMessage() {
@@ -136,7 +152,7 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
             .setMessage("Notification permission is required to receive notifications. Please grant the permission.")
             .setPositiveButton("OK") { _, _ -> (context as? Activity)?.finish() }
             .show()
-        }
+    }
     fun checkAllPermissionsGrantedAndContinue(requestPermissionLauncher: ActivityResultLauncher<String>) {
         Timber.d("checkAllPermissionsGrantedAndContinue: called")
         if (checkAllPermissionsGranted()) {
@@ -162,7 +178,7 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         }
         val installPermissionGranted = checkInstallPermission()
         Timber.d("checkAllPermissionsGranted: notificationPermissionGranted: $notificationPermissionGranted")
-        Timber.d("checkAllPermissionsGranted: installPermissionGranted: $installPermissionGranted")        
+        Timber.d("checkAllPermissionsGranted: installPermissionGranted: $installPermissionGranted")
         Timber.d("checkAllPermissionsGranted: end")
         return notificationPermissionGranted && installPermissionGranted
     }
@@ -225,5 +241,33 @@ class PermissionsManager(private val context: Context, private val dataStoreMana
         }
 
         Timber.d("requestOverlayPermission: end")
+    }
+    fun requestStoragePermission(onStoragePermissionResult: () -> Unit) {
+        Timber.d("requestStoragePermission: called")
+        this.onStoragePermissionResult = onStoragePermissionResult
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                Timber.d("requestStoragePermission: requesting storage permission")
+                storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            } else {
+                Timber.d("requestStoragePermission: Storage permission already granted")
+                onStoragePermissionResult()
+            }
+        } else {
+            Timber.d("requestStoragePermission: Storage permission not needed on this version")
+            onStoragePermissionResult()
+        }
+        Timber.d("requestStoragePermission: end")
+    }
+    private fun showStoragePermissionDeniedMessage() {
+        Timber.d("showStoragePermissionDeniedMessage: called")
+        AlertDialog.Builder(context)
+            .setTitle("Storage Permission Required")
+            .setMessage("Storage permission is required to install apps. Please grant the permission.")
+            .setPositiveButton("OK") { _, _ ->
+                (context as? Activity)?.finish()
+            }
+            .show()
+        Timber.d("showStoragePermissionDeniedMessage: end")
     }
 }

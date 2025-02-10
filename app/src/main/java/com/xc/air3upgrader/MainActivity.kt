@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.ui.geometry.isEmpty
+import java.util.LinkedList
 
 import kotlinx.coroutines.flow.first
 
@@ -373,45 +374,49 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             selectedModel = when {
                 dataStoreManager.getSelectedModel().firstOrNull() == null -> getDefaultModel()
-                dataStoreManager.isDeviceModelSupported(dataStoreManager.getSelectedModel().firstOrNull()!!, getSettingsAllowedModels()) -> dataStoreManager.getSelectedModel().firstOrNull()!!
+                dataStoreManager.isDeviceModelSupported(
+                    dataStoreManager.getSelectedModel().firstOrNull()!!,
+                    getSettingsAllowedModels()
+                ) -> dataStoreManager.getSelectedModel().firstOrNull()!!
+
                 else -> getDefaultModel()
             }
             if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
                 showNoInternetDialog()
                 return@launch
             }
-            // Fetch the latest app information FIRST
-            getLatestVersionFromServer()
-
-            val appsToUpgrade = mutableListOf<AppInfo>()
-            if (xctrackCheckbox.isChecked) {
-                appInfos.find { appInfo -> appInfo.`package` == xctrackPackageName }?.let {
-                    Log.d("MainActivity", "XCTrack apkPath before enqueue: ${it.apkPath}")
-                    appsToUpgrade.add(it)
-                }
-            }
-            if (xcguideCheckbox.isChecked) {
-                appInfos.find { appInfo -> appInfo.`package` == xcguidePackageName }?.let {
-                    Log.d("MainActivity", "XCGuide apkPath before enqueue: ${it.apkPath}")
-                    appsToUpgrade.add(it)
-                }
-            }
-            if (air3managerCheckbox.isChecked) {
-                appInfos.find { appInfo -> appInfo.`package` == air3managerPackageName }?.let {
-                    Log.d("MainActivity", "AIR3Manager apkPath before enqueue: ${it.apkPath}")
-                    appsToUpgrade.add(it)
-                }
-            }
-
-            if (appsToUpgrade.isEmpty()) {
-                Toast.makeText(this@MainActivity, getString(R.string.no_apps_selected_for_upgrade), Toast.LENGTH_SHORT).show()
-                return@launch
-            }
             val downloadCompleteReceiver = DownloadCompleteReceiver()
-            // Enqueue downloads instead of adding them directly to downloadQueue
-            appsToUpgrade.forEach { appInfo ->
-                downloadCompleteReceiver.enqueueDownload(this@MainActivity, appInfo) // Corrected line
+            val downloadQueue = LinkedList<AppInfo>()
+            // Request storage permission before proceeding
+            permissionsManager.requestStoragePermission {
+                // Fetch the latest app information FIRST
+                getLatestVersionFromServer()
+
+                val appsToUpgrade = mutableListOf<AppInfo>()
+                if (xctrackCheckbox.isChecked) {
+                    appInfos.find { appInfo -> appInfo.`package` == xctrackPackageName }?.let {
+                        Log.d("MainActivity", "XCTrack apkPath before enqueue: ${it.apkPath}")
+                        appsToUpgrade.add(it)
+                    }
+                }
+                if (xcguideCheckbox.isChecked) {
+                    appInfos.find { appInfo -> appInfo.`package` == xcguidePackageName }?.let {
+                        Log.d("MainActivity", "XCGuide apkPath before enqueue: ${it.apkPath}")
+                        appsToUpgrade.add(it)
+                    }
+                }
+                if (air3managerCheckbox.isChecked) {
+                    appInfos.find { appInfo -> appInfo.`package` == air3managerPackageName }?.let {
+                        Log.d("MainActivity", "AIR3Manager apkPath before enqueue: ${it.apkPath}")
+                        appsToUpgrade.add(it)
+                    }
+                }
+                // Enqueue downloads instead of adding them directly to downloadQueue
+                appsToUpgrade.forEach { appInfo ->
+                    downloadCompleteReceiver.enqueueDownload(this@MainActivity, downloadQueue, appInfo)
+                }
             }
+
         }
     }
     private fun handleRefreshButtonClick() {
