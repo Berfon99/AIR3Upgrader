@@ -69,7 +69,8 @@
             tools:node="merge" />
         <receiver
             android:name=".DownloadCompleteReceiver"
-            android:exported="false">
+            android:exported="true"
+            android:directBootAware="true">
             <intent-filter>
                 <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
             </intent-filter>

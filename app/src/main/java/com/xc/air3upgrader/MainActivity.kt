@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var air3managerApkName: TextView
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
@@ -95,6 +96,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         dataStoreManager = DataStoreManager(this)
         permissionsManager = PermissionsManager(this, dataStoreManager)
+        downloadCompleteReceiver = DownloadCompleteReceiver()
 
         // Register the ActivityResultLauncher in onCreate()
         requestPermissionLauncher = registerForActivityResult(
@@ -135,6 +137,23 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Timber.d("onResume: called")
+
+        val intentFilter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
+            ContextCompat.registerReceiver(
+                this,
+                downloadCompleteReceiver,
+                intentFilter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // API 33
+            ContextCompat.registerReceiver(this, downloadCompleteReceiver, intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        } else {
+            Timber.d("onResume: Registering downloadCompleteReceiver")
+            registerReceiver(downloadCompleteReceiver, intentFilter)
+        }
+
         if (permissionsManager.checkAllPermissionsGranted()) {
             continueSetup()
         }
@@ -385,8 +404,7 @@ class MainActivity : AppCompatActivity() {
                 showNoInternetDialog()
                 return@launch
             }
-            val downloadCompleteReceiver = DownloadCompleteReceiver()
-            val downloadQueue = LinkedList<AppInfo>()
+            downloadCompleteReceiver = DownloadCompleteReceiver()
             // Request storage permission before proceeding
             permissionsManager.requestStoragePermission {
                 // Fetch the latest app information FIRST
@@ -413,10 +431,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 // Enqueue downloads instead of adding them directly to downloadQueue
                 appsToUpgrade.forEach { appInfo ->
-                    downloadCompleteReceiver.enqueueDownload(this@MainActivity, downloadQueue, appInfo)
+                    downloadCompleteReceiver.enqueueDownload(this@MainActivity, downloadCompleteReceiver.downloadQueue, appInfo)
                 }
+                // Start all downloads
+                downloadCompleteReceiver.downloadNextApp(this@MainActivity)
             }
-
         }
     }
     private fun handleRefreshButtonClick() {
@@ -485,10 +504,21 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onPause() {
         super.onPause()
-        Timber.d("onPause: called")
+        try {
+            unregisterReceiver(downloadCompleteReceiver)
+            Timber.d("Receiver unregistered")
+        } catch (e: IllegalArgumentException) {
+            Timber.w("Receiver was not registered: ${e.message}")
+        }
     }
+
     override fun onStop() {
         super.onStop()
         Timber.d("onStop: called")
+    }
+    fun testSendDownloadCompleteBroadcast() {
+        val intent = Intent(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        sendBroadcast(intent)
+        Timber.d("Manually sent DOWNLOAD_COMPLETE broadcast")
     }
 }

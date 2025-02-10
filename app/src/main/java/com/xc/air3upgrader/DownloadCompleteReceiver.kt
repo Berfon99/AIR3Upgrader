@@ -11,7 +11,7 @@ import timber.log.Timber
 import java.io.File
 import java.util.LinkedList
 class DownloadCompleteReceiver : BroadcastReceiver() {
-    private val downloadQueue = LinkedList<AppInfo>()
+    internal val downloadQueue = LinkedList<AppInfo>()
     private val downloadIdToAppInfo = mutableMapOf<Long, AppInfo>()
     private var fileName: String = ""
     override fun onReceive(context: Context, intent: Intent) {
@@ -32,25 +32,31 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                             if (uriIndex != -1) {
                                 val localUri = cursor.getString(uriIndex)
                                 Timber.d("Local URI: $localUri")
-                                if (localUri != null) {
-                                    val apkFile = File(Uri.parse(localUri).path)
+                                if (!localUri.isNullOrEmpty()) {
+                                    val apkFile = File(Uri.parse(localUri).path ?: "")
                                     Timber.d("File path: ${apkFile.absolutePath}")
                                     if (apkFile.exists()) {
-                                        val authority = "${context.packageName}.provider"
-                                        val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
-                                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(apkUri, "application/vnd.android.package-archive")
-                                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                                        try {
+                                            val authority = "${context.packageName}.provider"
+                                            val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
+
+                                            val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                                                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+
+                                            context.startActivity(installIntent)
+                                        } catch (e: IllegalArgumentException) {
+                                            Timber.e("Failed to get URI for file: ${apkFile.absolutePath}. Error: ${e.message}")
                                         }
-                                        context.startActivity(installIntent)
-                                        downloadNextApp(context)// Pass the context here
                                     } else {
-                                        Timber.e("File does not exist: ${apkFile.absolutePath}")
+                                        Timber.e("APK file does not exist at: ${apkFile.absolutePath}")
                                     }
                                 } else {
-                                    Timber.e("Local URI is null")
+                                    Timber.e("Local URI is null or empty!")
                                 }
-                            } else {
+                            }
+                            else {
                                 Timber.e("COLUMN_LOCAL_URI not found")
                             }
                         } else {
@@ -63,6 +69,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                     Timber.e("Cursor is empty")
                 }
                 cursor.close()
+                downloadNextApp(context)
             }
         }
     }
@@ -114,9 +121,5 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
     fun enqueueDownload(context: Context, downloadQueue: LinkedList<AppInfo>, appInfo: AppInfo) {
         Timber.d("enqueueDownload() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
         downloadQueue.add(appInfo)
-        if (downloadQueue.size == 1) {
-            // Start the download process if it's the first item
-            enqueueDownloadAndInstallApk(context, appInfo)
-        }
     }
 }
