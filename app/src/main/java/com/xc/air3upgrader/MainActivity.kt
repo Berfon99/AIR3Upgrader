@@ -96,7 +96,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         dataStoreManager = DataStoreManager(this)
         permissionsManager = PermissionsManager(this, dataStoreManager)
-        downloadCompleteReceiver = DownloadCompleteReceiver()
 
         // Register the ActivityResultLauncher in onCreate()
         requestPermissionLauncher = registerForActivityResult(
@@ -137,23 +136,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Timber.d("onResume: called")
-
-        val intentFilter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
-            ContextCompat.registerReceiver(
-                this,
-                downloadCompleteReceiver,
-                intentFilter,
-                ContextCompat.RECEIVER_NOT_EXPORTED
-            )
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // API 33
-            ContextCompat.registerReceiver(this, downloadCompleteReceiver, intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        } else {
-            Timber.d("onResume: Registering downloadCompleteReceiver")
-            registerReceiver(downloadCompleteReceiver, intentFilter)
-        }
-
         if (permissionsManager.checkAllPermissionsGranted()) {
             continueSetup()
         }
@@ -504,21 +486,10 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onPause() {
         super.onPause()
-        try {
-            unregisterReceiver(downloadCompleteReceiver)
-            Timber.d("Receiver unregistered")
-        } catch (e: IllegalArgumentException) {
-            Timber.w("Receiver was not registered: ${e.message}")
-        }
+        Timber.d("onPause: called")
     }
-
     override fun onStop() {
         super.onStop()
         Timber.d("onStop: called")
-    }
-    fun testSendDownloadCompleteBroadcast() {
-        val intent = Intent(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-        sendBroadcast(intent)
-        Timber.d("Manually sent DOWNLOAD_COMPLETE broadcast")
     }
 }
