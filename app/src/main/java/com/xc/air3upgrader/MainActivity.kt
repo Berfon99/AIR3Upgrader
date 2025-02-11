@@ -1,11 +1,7 @@
 package com.xc.air3upgrader
 
-import android.annotation.SuppressLint
-import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
@@ -17,29 +13,23 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
-import timber.log.Timber
+import androidx.core.graphics.red
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.util.concurrent.TimeUnit
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.ActivityResultLauncher
-import androidx.compose.ui.geometry.isEmpty
-import java.util.LinkedList
-
-import kotlinx.coroutines.flow.first
-
 
 class MainActivity : AppCompatActivity() {
 
@@ -77,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     private var downloadIdToAppInfo: MutableMap<Long, AppInfo> = mutableMapOf()
     private var fileName: String = ""
     internal var isInstalling = false
+    private var noInternetAgreed = false
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -95,7 +86,7 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         dataStoreManager = DataStoreManager(this)
-        permissionsManager = PermissionsManager(this, dataStoreManager)
+        permissionsManager = PermissionsManager(this)
 
         // Register the ActivityResultLauncher in onCreate()
         requestPermissionLauncher = registerForActivityResult(
@@ -107,13 +98,42 @@ class MainActivity : AppCompatActivity() {
             Timber.d("Notification permission granted")
         }
 
-
         // Check if the app was launched manually
         val isManualLaunchFromIntent =
             intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
         if (isManualLaunchFromIntent) {
-            permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher)
+            val permissionsGranted = permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher)
+            if (permissionsGranted) {
+                if (NetworkUtils.isNetworkAvailable(this)) {
+                    continueSetup()
+                } else {
+                    NetworkUtils.showNoInternetDialog(
+                        this,
+                        retryAction = {
+                            // Do nothing, the dialog will remain open
+                            // Check again for internet
+                            if (NetworkUtils.isNetworkAvailable(this)) {
+                                continueSetup()
+                            } else {
+                                NetworkUtils.showNoInternetDialog(
+                                    this,
+                                    retryAction = {
+                                        // Do nothing, the dialog will remain open
+                                    },
+                                    updateUiAction = {
+                                        noInternetAgreed = true
+                                    }
+                                )
+                            }
+                        },
+                        updateUiAction = {
+                            noInternetAgreed = true
+                        }
+                    )
+                    continueSetup()
+                }
+            }
         } else {
             lifecycleScope.launch {
                 val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
@@ -198,16 +218,24 @@ class MainActivity : AppCompatActivity() {
         refreshButton.setOnClickListener {
             handleRefreshButtonClick()
         }
-
-        // Get the latest version from the server
-        lifecycleScope.launch {
-            getLatestVersionFromServer()
+        if (!noInternetAgreed) {
+            // Get the latest version from the server
+            lifecycleScope.launch {
+                getLatestVersionFromServer()
+            }
+        } else {
+            xctrackServerVersion.text = getString(R.string.not_available)
+            xcguideServerVersion.text = getString(R.string.not_available)
+            air3managerServerVersion.text = getString(R.string.not_available)
+            xctrackServerVersion.setTextColor(ContextCompat.getColor(this, R.color.gray))
+            xcguideServerVersion.setTextColor(ContextCompat.getColor(this, R.color.gray))
+            air3managerServerVersion.setTextColor(ContextCompat.getColor(this, R.color.gray))
         }
 
         // Keep the screen on
         acquireWakeLock()
 
-// Set up checkbox listeners
+        // Set up checkbox listeners
         setupCheckboxListener(xctrackCheckbox, xctrackPackageName, xctrackName, xctrackServerVersion, xctrackVersion)
         setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
         setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
@@ -332,7 +360,6 @@ class MainActivity : AppCompatActivity() {
                 Log.w("MainActivity", "No internet connection")
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@MainActivity, getString(R.string.no_internet_connection), Toast.LENGTH_SHORT).show()
-                    showNoInternetDialog()
                 }
                 return@launch
             }
@@ -385,7 +412,25 @@ class MainActivity : AppCompatActivity() {
                 else -> getDefaultModel()
             }
             if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
-                showNoInternetDialog()
+                NetworkUtils.showNoInternetDialog(this@MainActivity, retryAction = {
+                    // Do nothing, the dialog will remain open
+                    // Check again for internet
+                    if (NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                        handleUpgradeButtonClick()
+                    } else {
+                        NetworkUtils.showNoInternetDialog(
+                            this@MainActivity,
+                            retryAction = {
+                                // Do nothing, the dialog will remain open
+                            },
+                            updateUiAction = {
+                                noInternetAgreed = true
+                            }
+                        )
+                    }
+                }, updateUiAction = {
+                    noInternetAgreed = true
+                })
                 return@launch
             }
             // Request storage permission before proceeding
@@ -427,32 +472,29 @@ class MainActivity : AppCompatActivity() {
     private fun handleRefreshButtonClick() {
         lifecycleScope.launch {
             if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
-                showNoInternetDialog()
+                NetworkUtils.showNoInternetDialog(this@MainActivity, retryAction = {
+                    // Do nothing, the dialog will remain open
+                    // Check again for internet
+                    if (NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                        handleRefreshButtonClick()
+                    } else {
+                        NetworkUtils.showNoInternetDialog(
+                            this@MainActivity,
+                            retryAction = {
+                                // Do nothing, the dialog will remain open
+                            },
+                            updateUiAction = {
+                                noInternetAgreed = true
+                            }
+                        )
+                    }
+                }, updateUiAction = {
+                    noInternetAgreed = true
+                })
                 return@launch
             }
             getLatestVersionFromServer()
         }
-    }
-    private fun showNoInternetDialog() {
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.no_internet_connection))
-            .setMessage(getString(R.string.no_internet_message))
-            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
-                dialog.dismiss()
-                // Update UI to show "version not found"
-                updateUIAfterNoInternet()
-            }
-            .setNegativeButton(getString(R.string.retry)) { dialog, _ ->
-                dialog.dismiss()
-                // Retry the process
-                getLatestVersionFromServer()
-            }
-            .setCancelable(false) // Prevent dismissing by tapping outside
-            .create() // Create the dialog
-        dialog.show() // Show the dialog
-    }
-    private fun updateUIAfterNoInternet() {
-        UiUpdater.updateUIAfterNoInternet(xctrackVersion, xcguideVersion, air3managerVersion, xctrackServerVersion, xcguideServerVersion, air3managerServerVersion, this)
     }
     private fun scheduleUpgradeCheck() {
         val dataStoreManager = DataStoreManager(this)

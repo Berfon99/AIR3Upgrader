@@ -134,7 +134,7 @@ class SettingsActivity : AppCompatActivity() {
 
         dataStoreManager = DataStoreManager(this)
         workManager = WorkManager.getInstance(this)
-        permissionsManager = PermissionsManager(this, dataStoreManager)
+        permissionsManager = PermissionsManager(this)
         PermissionsManager.getClassName()
 
         // Initialize UI elements
