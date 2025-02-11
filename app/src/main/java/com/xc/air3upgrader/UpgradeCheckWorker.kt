@@ -1,40 +1,46 @@
 package com.xc.air3upgrader
 
 import android.content.Context
-import androidx.work.Worker
+import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.firstOrNull
 import timber.log.Timber
 import java.util.Calendar
 
 class UpgradeCheckWorker(appContext: Context, workerParams: WorkerParameters) :
-    Worker(appContext, workerParams) {
+    CoroutineWorker(appContext, workerParams) {
 
-    override fun doWork(): Result {
+    private val dataStoreManager = DataStoreManager(appContext)
+
+    override suspend fun doWork(): Result {
         Timber.d("UpgradeCheckWorker: doWork called")
 
-        val dataStoreManager = DataStoreManager(applicationContext)
-        val lastCheckTime = runBlocking { dataStoreManager.getLastCheckTime().first() ?: 0L }
-        val upgradeCheckInterval = runBlocking { dataStoreManager.getUpgradeCheckInterval().first() }
+        // Check if Wi-Fi only is enabled
+        val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+        Timber.d("UpgradeCheckWorker: isWifiOnly: $isWifiOnly")
+
+        if (isWifiOnly && !NetworkUtils.isWifiConnected(applicationContext)) {
+            Timber.d("UpgradeCheckWorker: Wi-Fi only enabled, but not connected to Wi-Fi. Skipping check.")
+            return Result.success() // Or Result.failure() if you want to retry later
+        }
+
+        val lastCheckTime = dataStoreManager.getLastCheckTime().firstOrNull() ?: 0L
+        val upgradeCheckInterval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0,0,0)
         val currentTime = Calendar.getInstance().timeInMillis
-        val isAutomaticUpgradeReminderEnabled =
-            runBlocking { dataStoreManager.getAutomaticUpgradeReminder().first() }
+        val isAutomaticUpgradeReminderEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
 
         // Set IS_MANUAL_LAUNCH to false for automatic launch
-        runBlocking {
-            dataStoreManager.saveIsManualLaunch(false)
-        }
+        dataStoreManager.saveIsManualLaunch(false)
+
         // Convert Interval to milliseconds
         val intervalMillis = (upgradeCheckInterval.days * 24 * 60 * 60 * 1000L) +
                 (upgradeCheckInterval.hours * 60 * 60 * 1000L) +
                 (upgradeCheckInterval.minutes * 60 * 1000L)
+
         if (isAutomaticUpgradeReminderEnabled) {
             if (currentTime - lastCheckTime >= intervalMillis) {
                 Timber.d("UpgradeCheckWorker: Countdown is zero, setting UNHIDDEN_LAUNCH_ON_REBOOT to true")
-                runBlocking {
-                    dataStoreManager.saveUnhiddenLaunchOnReboot(true)
-                }
+                dataStoreManager.saveUnhiddenLaunchOnReboot(true)
             } else {
                 Timber.d("UpgradeCheckWorker: Countdown is not zero")
             }
