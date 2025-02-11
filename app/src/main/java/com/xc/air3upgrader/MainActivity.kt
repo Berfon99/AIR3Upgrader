@@ -133,12 +133,18 @@ class MainActivity : AppCompatActivity() {
         }
         Timber.d("onCreate: end")
     }
-    override fun onResume() {
-        super.onResume()
-        Timber.d("onResume: called")
-        if (permissionsManager.checkAllPermissionsGranted()) {
-            continueSetup()
+    private fun continueSetup() {
+        Timber.d("continueSetup: called")
+        val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+        if (isManualLaunchFromIntent) {
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    dataStoreManager.saveIsManualLaunch(false)
+                }
+            }
         }
+        showUI()
+        Timber.d("continueSetup: end")
     }
     private fun showUI() {
         Timber.d("showUI: called")
@@ -211,19 +217,15 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         Timber.d("onSaveInstanceState: called")
     }
-    private fun continueSetup() {
-        Timber.d("continueSetup: called")
-        val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-        if (isManualLaunchFromIntent) {
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    dataStoreManager.saveIsManualLaunch(false)
-                }
-            }
+
+    override fun onResume() {
+        super.onResume()
+        Timber.d("onResume: called")
+        if (permissionsManager.checkAllPermissionsGranted()) {
+            continueSetup()
         }
-        showUI()
-        Timber.d("continueSetup: end")
     }
+
     private fun setupCheckboxListener(
         checkBox: CheckBox,
         packageName: String,

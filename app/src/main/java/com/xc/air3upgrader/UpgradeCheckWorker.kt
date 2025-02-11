@@ -15,15 +15,6 @@ class UpgradeCheckWorker(appContext: Context, workerParams: WorkerParameters) :
     override suspend fun doWork(): Result {
         Timber.d("UpgradeCheckWorker: doWork called")
 
-        // Check if Wi-Fi only is enabled
-        val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
-        Timber.d("UpgradeCheckWorker: isWifiOnly: $isWifiOnly")
-
-        if (isWifiOnly && !NetworkUtils.isWifiConnected(applicationContext)) {
-            Timber.d("UpgradeCheckWorker: Wi-Fi only enabled, but not connected to Wi-Fi. Skipping check.")
-            return Result.success() // Or Result.failure() if you want to retry later
-        }
-
         val lastCheckTime = dataStoreManager.getLastCheckTime().firstOrNull() ?: 0L
         val upgradeCheckInterval = dataStoreManager.getUpgradeCheckInterval().firstOrNull() ?: Interval(0,0,0)
         val currentTime = Calendar.getInstance().timeInMillis
