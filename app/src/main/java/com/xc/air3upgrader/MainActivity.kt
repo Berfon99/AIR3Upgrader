@@ -196,7 +196,9 @@ class MainActivity : AppCompatActivity() {
         refreshButton.setOnClickListener {
             handleRefreshButtonClick()
         }
-
+        lifecycleScope.launch {
+            checkAppInstallation()
+        }
         lifecycleScope.launch {
             val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
             if (!noInternetAgreed) {
@@ -207,9 +209,9 @@ class MainActivity : AppCompatActivity() {
                     try {
                         getLatestVersionFromServer()
                     } finally {
-                        withContext(Dispatchers.Main) {
-                            checkAppInstallation()
-                        }
+                        //withContext(Dispatchers.Main) {
+                        //    checkAppInstallation()
+                        //}
                     }
                 } else {
                     xctrackServerVersion.text = getString(R.string.not_available)
