@@ -30,6 +30,7 @@ class DataStoreManager(private val context: Context) {
             val AUTOMATIC_UPGRADE_REMINDER = booleanPreferencesKey("automatic_upgrade_reminder")
             val IS_MANUAL_LAUNCH = booleanPreferencesKey("is_manual_launch")
             val WIFI_ONLY = booleanPreferencesKey("wifi_only") // New key for Wi-Fi only setting
+            val IS_FIRST_LAUNCH = booleanPreferencesKey("is_first_launch") // New key for isFirstLaunch
         }
     }
 
@@ -148,5 +149,31 @@ class DataStoreManager(private val context: Context) {
         return context.dataStore.data.map { preferences ->
             preferences[PreferencesKeys.WIFI_ONLY] ?: false // Default to false
         }
+    }
+    suspend fun saveIsFirstLaunch(isFirstLaunch: Boolean) {
+        Timber.d("DataStoreManager: saveIsFirstLaunch called - isFirstLaunch: $isFirstLaunch")
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.IS_FIRST_LAUNCH] = isFirstLaunch
+        }
+    }
+
+    fun getIsFirstLaunch(): Flow<Boolean> {
+        Timber.d("DataStoreManager: getIsFirstLaunch called")
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.IS_FIRST_LAUNCH] ?: true // Default to true
+        }
+    }
+    // Define PreferencesKeys as an object
+    object PreferencesKeys {
+        val SELECTED_MODEL = stringPreferencesKey("selected_model")
+        val UPGRADE_CHECK_INTERVAL_DAYS = intPreferencesKey("upgrade_check_interval_days")
+        val UPGRADE_CHECK_INTERVAL_HOURS = intPreferencesKey("upgrade_check_interval_hours")
+        val UPGRADE_CHECK_INTERVAL_MINUTES = intPreferencesKey("upgrade_check_interval_minutes")
+        val LAST_CHECK_TIME = longPreferencesKey("last_check_time")
+        val UNHIDDEN_LAUNCH_ON_REBOOT = booleanPreferencesKey("unhidden_launch_on_reboot")
+        val AUTOMATIC_UPGRADE_REMINDER = booleanPreferencesKey("automatic_upgrade_reminder")
+        val IS_MANUAL_LAUNCH = booleanPreferencesKey("is_manual_launch")
+        val WIFI_ONLY = booleanPreferencesKey("wifi_only") // New key for Wi-Fi only setting
+        val IS_FIRST_LAUNCH = booleanPreferencesKey("is_first_launch") // New key for isFirstLaunch
     }
 }

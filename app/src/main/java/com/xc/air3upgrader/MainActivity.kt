@@ -129,6 +129,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        lifecycleScope.launch {
+            val isFirstLaunchDataStore = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
+            if (!isFirstLaunchDataStore) {
+                isFirstLaunch = false
+            }
+        }
         Timber.d("onCreate: end")
     }
     private fun continueSetup() {
@@ -205,21 +211,38 @@ class MainActivity : AppCompatActivity() {
                 // Get the latest version from the server
                 val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
                 val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
-                if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
-                    try {
-                        getLatestVersionFromServer()
-                    } finally {
-                        //withContext(Dispatchers.Main) {
-                        //    checkAppInstallation()
-                        //}
+                if (isFirstLaunch) {
+                    if (isNetworkAvailable) {
+                        try {
+                            getLatestVersionFromServer()
+                        } finally {
+                            isFirstLaunch = false
+                        }
+                    } else {
+                        xctrackServerVersion.text = getString(R.string.not_available)
+                        xcguideServerVersion.text = getString(R.string.not_available)
+                        air3managerServerVersion.text = getString(R.string.not_available)
+                        xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                        xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                        air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
                     }
                 } else {
-                    xctrackServerVersion.text = getString(R.string.not_available)
-                    xcguideServerVersion.text = getString(R.string.not_available)
-                    air3managerServerVersion.text = getString(R.string.not_available)
-                    xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                    xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                    air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                    if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
+                        try {
+                            getLatestVersionFromServer()
+                        } finally {
+                            //withContext(Dispatchers.Main) {
+                            //    checkAppInstallation()
+                            //}
+                        }
+                    } else {
+                        xctrackServerVersion.text = getString(R.string.not_available)
+                        xcguideServerVersion.text = getString(R.string.not_available)
+                        air3managerServerVersion.text = getString(R.string.not_available)
+                        xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                        xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                        air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                    }
                 }
             } else {
                 xctrackServerVersion.text = getString(R.string.not_available)
@@ -251,8 +274,38 @@ class MainActivity : AppCompatActivity() {
         if (permissionsManager.checkAllPermissionsGranted()) {
             continueSetup()
         }
+        lifecycleScope.launch {
+            val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+            if (!noInternetAgreed) {
+                // Get the latest version from the server
+                val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
+                val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
+                if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
+                    try {
+                        getLatestVersionFromServer()
+                    } finally {
+                        //withContext(Dispatchers.Main) {
+                        //    checkAppInstallation()
+                        //}
+                    }
+                } else {
+                    xctrackServerVersion.text = getString(R.string.not_available)
+                    xcguideServerVersion.text = getString(R.string.not_available)
+                    air3managerServerVersion.text = getString(R.string.not_available)
+                    xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                    xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                    air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                }
+            } else {
+                xctrackServerVersion.text = getString(R.string.not_available)
+                xcguideServerVersion.text = getString(R.string.not_available)
+                air3managerServerVersion.text = getString(R.string.not_available)
+                xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+            }
+        }
     }
-
     private fun setupCheckboxListener(
         checkBox: CheckBox,
         packageName: String,
@@ -399,6 +452,10 @@ class MainActivity : AppCompatActivity() {
         if (!success) {
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@MainActivity, "Error getting latest version after multiple retries", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            lifecycleScope.launch {
+                dataStoreManager.saveIsFirstLaunch(false)
             }
         }
     }
