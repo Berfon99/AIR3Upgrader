@@ -25,6 +25,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -85,6 +86,7 @@ class MainActivity : AppCompatActivity() {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        noInternetAgreed = false
         dataStoreManager = DataStoreManager(this)
         permissionsManager = PermissionsManager(this)
 
@@ -105,34 +107,7 @@ class MainActivity : AppCompatActivity() {
         if (isManualLaunchFromIntent) {
             val permissionsGranted = permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher)
             if (permissionsGranted) {
-                if (NetworkUtils.isNetworkAvailable(this)) {
-                    continueSetup()
-                } else {
-                    NetworkUtils.showNoInternetDialog(
-                        this,
-                        retryAction = {
-                            // Do nothing, the dialog will remain open
-                            // Check again for internet
-                            if (NetworkUtils.isNetworkAvailable(this)) {
-                                continueSetup()
-                            } else {
-                                NetworkUtils.showNoInternetDialog(
-                                    this,
-                                    retryAction = {
-                                        // Do nothing, the dialog will remain open
-                                    },
-                                    updateUiAction = {
-                                        noInternetAgreed = true
-                                    }
-                                )
-                            }
-                        },
-                        updateUiAction = {
-                            noInternetAgreed = true
-                        }
-                    )
-                    continueSetup()
-                }
+                NetworkUtils.checkNetworkAndContinue(this, ::continueSetup, { noInternetAgreed = true })
             }
         } else {
             lifecycleScope.launch {
@@ -147,7 +122,10 @@ class MainActivity : AppCompatActivity() {
                     finish()
                     return@launch
                 } else {
-                    permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher)
+                    val permissionsGranted = permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher)
+                    if (permissionsGranted) {
+                        NetworkUtils.checkNetworkAndContinue(this@MainActivity, ::continueSetup, { noInternetAgreed = true })
+                    }
                 }
             }
         }
@@ -218,18 +196,37 @@ class MainActivity : AppCompatActivity() {
         refreshButton.setOnClickListener {
             handleRefreshButtonClick()
         }
-        if (!noInternetAgreed) {
-            // Get the latest version from the server
-            lifecycleScope.launch {
-                getLatestVersionFromServer()
+
+        lifecycleScope.launch {
+            val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+            if (!noInternetAgreed) {
+                // Get the latest version from the server
+                val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
+                val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
+                if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
+                    try {
+                        getLatestVersionFromServer()
+                    } finally {
+                        withContext(Dispatchers.Main) {
+                            checkAppInstallation()
+                        }
+                    }
+                } else {
+                    xctrackServerVersion.text = getString(R.string.not_available)
+                    xcguideServerVersion.text = getString(R.string.not_available)
+                    air3managerServerVersion.text = getString(R.string.not_available)
+                    xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                    xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                    air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                }
+            } else {
+                xctrackServerVersion.text = getString(R.string.not_available)
+                xcguideServerVersion.text = getString(R.string.not_available)
+                air3managerServerVersion.text = getString(R.string.not_available)
+                xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
             }
-        } else {
-            xctrackServerVersion.text = getString(R.string.not_available)
-            xcguideServerVersion.text = getString(R.string.not_available)
-            air3managerServerVersion.text = getString(R.string.not_available)
-            xctrackServerVersion.setTextColor(ContextCompat.getColor(this, R.color.gray))
-            xcguideServerVersion.setTextColor(ContextCompat.getColor(this, R.color.gray))
-            air3managerServerVersion.setTextColor(ContextCompat.getColor(this, R.color.gray))
         }
 
         // Keep the screen on
@@ -305,7 +302,9 @@ class MainActivity : AppCompatActivity() {
     }
     private fun refreshData() {
         // Example: Re-fetch server versions (replace with your actual code)
-        getLatestVersionFromServer()
+        lifecycleScope.launch {
+            getLatestVersionFromServer()
+        }
         setActionBarTitleWithSelectedModel()
     }
     private fun acquireWakeLock() {
@@ -352,44 +351,39 @@ class MainActivity : AppCompatActivity() {
     private fun checkAppInstallationForApp(packageName: String, appNameTextView: TextView, appVersionTextView: TextView, selectedModel: String, appPackageName: String) {
         UiUpdater.checkAppInstallationForApp(this, packageName, appNameTextView, appVersionTextView, appInfos, xctrackPackageName, xctrackServerVersion, xctrackCheckbox, xcguidePackageName, xcguideServerVersion, xcguideCheckbox, air3managerPackageName, air3managerServerVersion, air3managerCheckbox, lifecycleScope)
     }
-    internal fun getLatestVersionFromServer() {
+    internal suspend fun getLatestVersionFromServer() {
         Log.d("MainActivity", "getLatestVersionFromServer() called")
-        lifecycleScope.launch {
-            // Check if internet is available
-            if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
-                Log.w("MainActivity", "No internet connection")
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, getString(R.string.no_internet_connection), Toast.LENGTH_SHORT).show()
-                }
-                return@launch
-            }
-            val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-            val finalSelectedModel = when {
-                selectedModel == null -> getDefaultModel()
-                dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
-                else -> getDefaultModel()
-            }
-            Log.d("MainActivity", "Selected model: $finalSelectedModel")
+        val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
+        val finalSelectedModel = when {
+            selectedModel == null -> getDefaultModel()
+            dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
+            else -> getDefaultModel()
+        }
+        Log.d("MainActivity", "Selected model: $finalSelectedModel")
 
+        var retryCount = 0
+        val maxRetries = 3
+        var success = false
+
+        while (retryCount < maxRetries && !success) {
             try {
-                Log.d("MainActivity", "Fetching latest version from server...")
+                Log.d("MainActivity", "Fetching latest version from server... (Attempt ${retryCount + 1})")
                 val newAppInfos = withContext(Dispatchers.IO) {
                     versionChecker.getLatestVersionFromServer(finalSelectedModel)
                 }
                 if (newAppInfos.isEmpty()) {
-                    Log.e("MainActivity", "getLatestVersionFromServer: Server returned an empty list")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
+                    Log.e("MainActivity", "getLatestVersionFromServer: Server returned an empty list (Attempt ${retryCount + 1})")
+                    retryCount++
+                    if (retryCount < maxRetries) {
+                        delay(2000) // Wait for 2 seconds before retrying
                     }
-                    return@launch
-                }
-                appInfos = newAppInfos
-                Log.d("MainActivity", "Successfully fetched ${appInfos.size} app infos from server")
-                for (appInfo in appInfos) {
-                    Log.d("MainActivity", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}, Highest Server Version: ${appInfo.highestServerVersion}")
-                }
-                withContext(Dispatchers.Main) {
-                    checkAppInstallation()
+                } else {
+                    appInfos = newAppInfos
+                    Log.d("MainActivity", "Successfully fetched ${appInfos.size} app infos from server")
+                    for (appInfo in appInfos) {
+                        Log.d("MainActivity", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}, Highest Server Version: ${appInfo.highestServerVersion}")
+                    }
+                    success = true
                 }
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error getting latest version from server: ${e.message}")
@@ -397,6 +391,12 @@ class MainActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
                 }
+                return
+            }
+        }
+        if (!success) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@MainActivity, "Error getting latest version after multiple retries", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -436,35 +436,37 @@ class MainActivity : AppCompatActivity() {
             // Request storage permission before proceeding
             permissionsManager.requestStoragePermission {
                 // Fetch the latest app information FIRST
-                getLatestVersionFromServer()
-
-                val appsToUpgrade = mutableListOf<AppInfo>()
-                if (xctrackCheckbox.isChecked) {
-                    appInfos.find { appInfo -> appInfo.`package` == xctrackPackageName }?.let {
-                        Log.d("MainActivity", "XCTrack apkPath before enqueue: ${it.apkPath}")
-                        appsToUpgrade.add(it)
+                lifecycleScope.launch {
+                    getLatestVersionFromServer()
+                }.invokeOnCompletion {
+                    val appsToUpgrade = mutableListOf<AppInfo>()
+                    if (xctrackCheckbox.isChecked) {
+                        appInfos.find { appInfo -> appInfo.`package` == xctrackPackageName }?.let {
+                            Log.d("MainActivity", "XCTrack apkPath before enqueue: ${it.apkPath}")
+                            appsToUpgrade.add(it)
+                        }
                     }
-                }
-                if (xcguideCheckbox.isChecked) {
-                    appInfos.find { appInfo -> appInfo.`package` == xcguidePackageName }?.let {
-                        Log.d("MainActivity", "XCGuide apkPath before enqueue: ${it.apkPath}")
-                        appsToUpgrade.add(it)
+                    if (xcguideCheckbox.isChecked) {
+                        appInfos.find { appInfo -> appInfo.`package` == xcguidePackageName }?.let {
+                            Log.d("MainActivity", "XCGuide apkPath before enqueue: ${it.apkPath}")
+                            appsToUpgrade.add(it)
+                        }
                     }
-                }
-                if (air3managerCheckbox.isChecked) {
-                    appInfos.find { appInfo -> appInfo.`package` == air3managerPackageName }?.let {
-                        Log.d("MainActivity", "AIR3Manager apkPath before enqueue: ${it.apkPath}")
-                        appsToUpgrade.add(it)
+                    if (air3managerCheckbox.isChecked) {
+                        appInfos.find { appInfo -> appInfo.`package` == air3managerPackageName }?.let {
+                            Log.d("MainActivity", "AIR3Manager apkPath before enqueue: ${it.apkPath}")
+                            appsToUpgrade.add(it)
+                        }
                     }
-                }
-                // Enqueue downloads instead of adding them directly to downloadQueue
-                val downloadCompleteReceiver = DownloadCompleteReceiver.getInstance(this@MainActivity)
-                appsToUpgrade.forEach { appInfo ->
-                    downloadCompleteReceiver.enqueueDownload(appInfo)
-                }
-                // Start all downloads
-                if (appsToUpgrade.isNotEmpty()) {
-                    downloadCompleteReceiver.downloadNextApp(this@MainActivity)
+                    // Enqueue downloads instead of adding them directly to downloadQueue
+                    val downloadCompleteReceiver = DownloadCompleteReceiver.getInstance(this@MainActivity)
+                    appsToUpgrade.forEach { appInfo ->
+                        downloadCompleteReceiver.enqueueDownload(appInfo)
+                    }
+                    // Start all downloads
+                    if (appsToUpgrade.isNotEmpty()) {
+                        downloadCompleteReceiver.downloadNextApp(this@MainActivity)
+                    }
                 }
             }
         }

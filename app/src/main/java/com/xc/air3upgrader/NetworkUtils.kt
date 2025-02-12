@@ -33,17 +33,40 @@ object NetworkUtils {
             .setMessage(context.getString(R.string.no_internet_message))
             .setPositiveButton(context.getString(R.string.ok)) { dialog, _ ->
                 dialog.dismiss()
-                // Update UI to show "version not found"
                 updateUiAction()
             }
             .setNegativeButton(context.getString(R.string.retry)) { dialog, _ ->
                 // Retry the process
                 if (!isNetworkAvailable(context)) {
                     retryAction()
+                } else {
+                    // If network is available, disable the retry button
+                    val retryButton = (dialog as AlertDialog).getButton(AlertDialog.BUTTON_NEGATIVE)
+                    retryButton.isEnabled = false
                 }
             }
             .setCancelable(false) // Prevent dismissing by tapping outside
             .create() // Create the dialog
         dialog.show() // Show the dialog
+        // Check network availability and disable retry button if needed
+        if (isNetworkAvailable(context)) {
+            val retryButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+            retryButton.isEnabled = false
+        }
+    }
+    fun checkNetworkAndContinue(context: Context, continueAction: () -> Unit, updateUiAction: () -> Unit) {
+        if (isNetworkAvailable(context)) {
+            continueAction()
+        } else {
+            showNoInternetDialog(
+                context,
+                retryAction = {
+                    checkNetworkAndContinue(context, continueAction, updateUiAction)
+                },
+                updateUiAction = {
+                    updateUiAction()
+                }
+            )
+        }
     }
 }
