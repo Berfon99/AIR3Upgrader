@@ -166,7 +166,7 @@ object UiUpdater {
                         xcguidePackageName -> xcguideCheckbox.isChecked = false
                         air3managerPackageName -> air3managerCheckbox.isChecked = false
                     }
-// Activer la case pour permettre à l'utilisateur de la sélectionner manuellement
+                    //  Activer la case pour permettre à l'utilisateur de la sélectionner manuellement
                     when (packageName) {
                         xctrackPackageName -> xctrackCheckbox.isEnabled = true
                         xcguidePackageName -> xcguideCheckbox.isEnabled = true

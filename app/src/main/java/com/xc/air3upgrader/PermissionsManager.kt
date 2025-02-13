@@ -68,7 +68,6 @@ class PermissionsManager(private val context: Context) {
             }
             Timber.d("storagePermissionLauncher: end")
         }
-
     fun checkInstallPermission(): Boolean {
         Timber.d("checkInstallPermission: called")
         val result = context.packageManager.canRequestPackageInstalls()
@@ -76,14 +75,12 @@ class PermissionsManager(private val context: Context) {
         Timber.d("checkInstallPermission: end")
         return result
     }
-
     private fun isInstallPermissionGranted(): Boolean {
         Timber.d("isInstallPermissionGranted: called")
         val isGranted = checkInstallPermission()
         Timber.d("isInstallPermissionGranted: end")
         return isGranted
     }
-
     fun requestInstallPermission(onInstallPermissionResult: () -> Unit) {
         Timber.d("requestInstallPermission: called")
         this.onInstallPermissionResult = onInstallPermissionResult
@@ -103,7 +100,6 @@ class PermissionsManager(private val context: Context) {
         }
         Timber.d("requestInstallPermission: end")
     }
-
     private fun showInstallPermissionDeniedMessage() {
         Timber.d("showInstallPermissionDeniedMessage: called")
         AlertDialog.Builder(context)
@@ -115,7 +111,6 @@ class PermissionsManager(private val context: Context) {
             .show()
         Timber.d("showInstallPermissionDeniedMessage: end")
     }
-
     fun showPermissionExplanationDialog(onPermissionRequested: () -> Unit, onInstallPermissionResult: () -> Unit) {
         Timber.d("showPermissionExplanationDialog: called")
         this.onInstallPermissionResult = onInstallPermissionResult
@@ -135,7 +130,6 @@ class PermissionsManager(private val context: Context) {
         dialog.show()
         Timber.d("showPermissionExplanationDialog: end")
     }
-
     fun requestNotificationPermission() {
         Timber.d("requestNotificationPermission: called")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -153,7 +147,6 @@ class PermissionsManager(private val context: Context) {
             Timber.d("Notification permission granted at install time")
         }
     }
-
     internal fun showNotificationPermissionDeniedMessage() {
         AlertDialog.Builder(context)
             .setTitle("Notification Permission Required")
@@ -161,7 +154,6 @@ class PermissionsManager(private val context: Context) {
             .setPositiveButton("OK") { _, _ -> (context as? Activity)?.finish() }
             .show()
     }
-
     fun checkAllPermissionsGrantedAndContinue(requestPermissionLauncher: ActivityResultLauncher<String>): Boolean {
         Timber.d("checkAllPermissionsGrantedAndContinue: called")
         this.requestPermissionLauncher = requestPermissionLauncher
@@ -181,7 +173,6 @@ class PermissionsManager(private val context: Context) {
             return false
         }
     }
-
     fun checkAllPermissionsGranted(): Boolean {
         Timber.d("checkAllPermissionsGranted: called")
         val notificationPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -198,21 +189,6 @@ class PermissionsManager(private val context: Context) {
         Timber.d("checkAllPermissionsGranted: end")
         return notificationPermissionGranted && installPermissionGranted
     }
-
-    fun setupOverlayPermissionLauncher(
-        overlayPermissionLauncher: ActivityResultLauncher<Intent>,
-        onPermissionGranted: () -> Unit,
-        onPermissionDenied: () -> Unit,
-        lifecycleScope: LifecycleCoroutineScope
-    ) {
-        Timber.d("setupOverlayPermissionLauncher: called")
-        this.overlayPermissionLauncher = overlayPermissionLauncher
-        this.lifecycleScope = lifecycleScope
-        this.onPermissionGranted = onPermissionGranted
-        this.onPermissionDenied = onPermissionDenied
-        Timber.d("setupOverlayPermissionLauncher: end")
-    }
-
     fun checkOverlayPermission(context: Context, packageName: String, enableBackgroundCheckCheckbox: CheckBox) {
         Timber.d("checkOverlayPermission: called")
 
@@ -287,5 +263,18 @@ class PermissionsManager(private val context: Context) {
             }
             .show()
         Timber.d("showStoragePermissionDeniedMessage: end")
+    }
+    fun setupOverlayPermissionLauncher(
+        overlayPermissionLauncher: ActivityResultLauncher<Intent>,
+        onPermissionGranted: () -> Unit,
+        onPermissionDenied: () -> Unit,
+        lifecycleScope: LifecycleCoroutineScope
+    ) {
+        Timber.d("setupOverlayPermissionLauncher: called")
+        this.overlayPermissionLauncher = overlayPermissionLauncher
+        this.lifecycleScope = lifecycleScope
+        this.onPermissionGranted = onPermissionGranted
+        this.onPermissionDenied = onPermissionDenied
+        Timber.d("setupOverlayPermissionLauncher: end")
     }
 }

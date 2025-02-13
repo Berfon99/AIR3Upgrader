@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
@@ -107,7 +108,11 @@ class MainActivity : AppCompatActivity() {
         if (isManualLaunchFromIntent) {
             val permissionsGranted = permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher)
             if (permissionsGranted) {
-                NetworkUtils.checkNetworkAndContinue(this, ::continueSetup, { noInternetAgreed = true })
+                if (permissionsManager.checkAllPermissionsGranted()) {
+                    continueSetup()
+                } else {
+                    NetworkUtils.checkNetworkAndContinue(this, ::continueSetup, { noInternetAgreed = true })
+                }
             }
         } else {
             lifecycleScope.launch {
@@ -139,15 +144,29 @@ class MainActivity : AppCompatActivity() {
     }
     private fun continueSetup() {
         Timber.d("continueSetup: called")
+        var serverVersionFetched = false
         val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         if (isManualLaunchFromIntent) {
             lifecycleScope.launch {
                 withContext(Dispatchers.IO) {
                     dataStoreManager.saveIsManualLaunch(false)
                 }
+                val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+                val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
+                val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
+                if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
+                    serverVersionFetched = getLatestVersionFromServer()
+                }
+                if (!serverVersionFetched) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Unable to fetch server versions.", Toast.LENGTH_LONG).show()
+                    }
+                }
+                showUI()
             }
+        } else {
+            showUI()
         }
-        showUI()
         Timber.d("continueSetup: end")
     }
     private fun showUI() {
@@ -406,7 +425,7 @@ class MainActivity : AppCompatActivity() {
     private fun checkAppInstallationForApp(packageName: String, appNameTextView: TextView, appVersionTextView: TextView, selectedModel: String, appPackageName: String) {
         UiUpdater.checkAppInstallationForApp(this, packageName, appNameTextView, appVersionTextView, appInfos, xctrackPackageName, xctrackServerVersion, xctrackCheckbox, xcguidePackageName, xcguideServerVersion, xcguideCheckbox, air3managerPackageName, air3managerServerVersion, air3managerCheckbox, lifecycleScope)
     }
-    internal suspend fun getLatestVersionFromServer() {
+    internal suspend fun getLatestVersionFromServer(): Boolean {
         Log.d("MainActivity", "getLatestVersionFromServer() called")
         val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
         val finalSelectedModel = when {
@@ -446,18 +465,16 @@ class MainActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@MainActivity, "Error getting latest version", Toast.LENGTH_SHORT).show()
                 }
-                return
+                return false
             }
         }
         if (!success) {
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@MainActivity, "Error getting latest version after multiple retries", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            lifecycleScope.launch {
-                dataStoreManager.saveIsFirstLaunch(false)
-            }
+            return false
         }
+        return true
     }
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
