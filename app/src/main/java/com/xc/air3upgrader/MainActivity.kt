@@ -89,48 +89,50 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         noInternetAgreed = false
         dataStoreManager = DataStoreManager(this)
+        // Initialize the DataStore
+        dataStoreManager.initializeDataStore()
         permissionsManager = PermissionsManager(this)
 
         // Register the ActivityResultLauncher in onCreate()
         requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { isGranted: Boolean ->
-            if (!isGranted) {
+            if (isGranted) {
+                Timber.d("Notification permission granted")
+                continueSetup()
+            } else {
                 permissionsManager.showNotificationPermissionDeniedMessage()
+                finish()
             }
-            Timber.d("Notification permission granted")
         }
 
         // Check if the app was launched manually
         val isManualLaunchFromIntent =
             intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
-        if (isManualLaunchFromIntent) {
-            val permissionsGranted = permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher)
-            if (permissionsGranted) {
-                if (permissionsManager.checkAllPermissionsGranted()) {
-                    continueSetup()
-                } else {
-                    NetworkUtils.checkNetworkAndContinue(this, ::continueSetup, { noInternetAgreed = true })
-                }
+        lifecycleScope.launch {
+            if (isManualLaunchFromIntent) {
+                dataStoreManager.saveIsManualLaunch(true)
             }
-        } else {
-            lifecycleScope.launch {
-                val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
-                val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+            val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
+            val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
 
-                Timber.d("onCreate: isManualLaunch from DataStore: $isManualLaunch")
-                Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
+            Timber.d("onCreate: isManualLaunch from DataStore: $isManualLaunch")
+            Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
 
-                if (!isManualLaunch && !unhiddenLaunchOnReboot) {
-                    Timber.d("App launched hidden, finishing activity")
-                    finish()
-                    return@launch
-                } else {
-                    val permissionsGranted = permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher)
-                    if (permissionsGranted) {
-                        NetworkUtils.checkNetworkAndContinue(this@MainActivity, ::continueSetup, { noInternetAgreed = true })
-                    }
+            if (!isManualLaunch && !unhiddenLaunchOnReboot) {
+                Timber.d("App launched hidden, finishing activity")
+                finish()
+                return@launch
+            } else {
+                permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher) {
+                    continueSetup()
+                }
+                NetworkUtils.checkNetworkAndContinue(this@MainActivity) {
+                    noInternetAgreed = true
+                }
+                if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                    noInternetAgreed = true
                 }
             }
         }
@@ -144,27 +146,24 @@ class MainActivity : AppCompatActivity() {
     }
     private fun continueSetup() {
         Timber.d("continueSetup: called")
-        var serverVersionFetched = false
-        val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-        if (isManualLaunchFromIntent) {
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    dataStoreManager.saveIsManualLaunch(false)
-                }
-                val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
-                val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
-                val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
-                if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
-                    serverVersionFetched = getLatestVersionFromServer()
-                }
-                if (!serverVersionFetched) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                dataStoreManager.saveIsManualLaunch(false)
+            }
+            val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+            val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
+            val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+            val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+            val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
+            val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
+            if ((isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot)) && ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable))) {
+                val success = getLatestVersionFromServer()
+                if (!success) {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@MainActivity, "Unable to fetch server versions.", Toast.LENGTH_LONG).show()
                     }
                 }
-                showUI()
             }
-        } else {
             showUI()
         }
         Timber.d("continueSetup: end")
@@ -290,7 +289,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Timber.d("onResume: called")
-        continueSetup()
     }
     private fun setupCheckboxListener(
         checkBox: CheckBox,
@@ -465,14 +463,9 @@ class MainActivity : AppCompatActivity() {
                             this@MainActivity,
                             retryAction = {
                                 // Do nothing, the dialog will remain open
-                            },
-                            updateUiAction = {
-                                noInternetAgreed = true
                             }
                         )
                     }
-                }, updateUiAction = {
-                    noInternetAgreed = true
                 })
                 return@launch
             }
@@ -527,21 +520,15 @@ class MainActivity : AppCompatActivity() {
                             this@MainActivity,
                             retryAction = {
                                 // Do nothing, the dialog will remain open
-                            },
-                            updateUiAction = {
-                                noInternetAgreed = true
                             }
                         )
                     }
-                }, updateUiAction = {
-                    noInternetAgreed = true
                 })
                 return@launch
             }
             getLatestVersionFromServer()
         }
-    }
-    private fun scheduleUpgradeCheck() {
+    }    private fun scheduleUpgradeCheck() {
         val dataStoreManager = DataStoreManager(this)
         val context = this // Get the context here
         lifecycleScope.launch {

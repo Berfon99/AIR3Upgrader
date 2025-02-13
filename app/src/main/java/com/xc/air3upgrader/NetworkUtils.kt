@@ -27,46 +27,31 @@ object NetworkUtils {
         return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
     }
 
-    fun showNoInternetDialog(context: Context, retryAction: () -> Unit, updateUiAction: () -> Unit) {
+    fun showNoInternetDialog(context: Context, retryAction: () -> Unit) {
         val dialog = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.no_internet_connection))
             .setMessage(context.getString(R.string.no_internet_message))
             .setPositiveButton(context.getString(R.string.ok)) { dialog, _ ->
                 dialog.dismiss()
-                updateUiAction()
             }
             .setNegativeButton(context.getString(R.string.retry)) { dialog, _ ->
-                // Retry the process
-                if (!isNetworkAvailable(context)) {
-                    retryAction()
-                } else {
-                    // If network is available, disable the retry button
-                    val retryButton = (dialog as AlertDialog).getButton(AlertDialog.BUTTON_NEGATIVE)
-                    retryButton.isEnabled = false
-                }
+                retryAction()
             }
             .setCancelable(false) // Prevent dismissing by tapping outside
             .create() // Create the dialog
         dialog.show() // Show the dialog
-        // Check network availability and disable retry button if needed
-        if (isNetworkAvailable(context)) {
-            val retryButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-            retryButton.isEnabled = false
-        }
     }
-    fun checkNetworkAndContinue(context: Context, continueAction: () -> Unit, updateUiAction: () -> Unit) {
-        if (isNetworkAvailable(context)) {
-            continueAction()
-        } else {
+    fun checkNetworkAndContinue(context: Context, retryAction: () -> Unit) {
+        if (!isNetworkAvailable(context)) {
             showNoInternetDialog(
                 context,
                 retryAction = {
-                    checkNetworkAndContinue(context, continueAction, updateUiAction)
-                },
-                updateUiAction = {
-                    updateUiAction()
+                    retryAction()
                 }
             )
+        } else {
+            // Call continueSetup() if the network is available
+            //continueSetup() //This is not possible here
         }
     }
 }

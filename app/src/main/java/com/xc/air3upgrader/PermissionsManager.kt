@@ -111,7 +111,7 @@ class PermissionsManager(private val context: Context) {
             .show()
         Timber.d("showInstallPermissionDeniedMessage: end")
     }
-    fun showPermissionExplanationDialog(onPermissionRequested: () -> Unit, onInstallPermissionResult: () -> Unit) {
+    private fun showPermissionExplanationDialog(onPermissionRequested: () -> Unit, onInstallPermissionResult: () -> Unit) {
         Timber.d("showPermissionExplanationDialog: called")
         this.onInstallPermissionResult = onInstallPermissionResult
         val builder = AlertDialog.Builder(context)
@@ -154,12 +154,12 @@ class PermissionsManager(private val context: Context) {
             .setPositiveButton("OK") { _, _ -> (context as? Activity)?.finish() }
             .show()
     }
-    fun checkAllPermissionsGrantedAndContinue(requestPermissionLauncher: ActivityResultLauncher<String>): Boolean {
+    fun checkAllPermissionsGrantedAndContinue(requestPermissionLauncher: ActivityResultLauncher<String>, onAllPermissionsGranted: () -> Unit) {
         Timber.d("checkAllPermissionsGrantedAndContinue: called")
         this.requestPermissionLauncher = requestPermissionLauncher
         if (checkAllPermissionsGranted()) {
             Timber.d("checkAllPermissionsGrantedAndContinue: All permissions granted")
-            return true
+            onAllPermissionsGranted()
         } else {
             Timber.d("checkAllPermissionsGrantedAndContinue: Permissions not granted")
             showPermissionExplanationDialog(
@@ -170,7 +170,6 @@ class PermissionsManager(private val context: Context) {
                 },
                 onInstallPermissionResult = { }
             )
-            return false
         }
     }
     fun checkAllPermissionsGranted(): Boolean {
