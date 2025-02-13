@@ -290,40 +290,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Timber.d("onResume: called")
-        if (permissionsManager.checkAllPermissionsGranted()) {
-            continueSetup()
-        }
-        lifecycleScope.launch {
-            val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
-            if (!noInternetAgreed) {
-                // Get the latest version from the server
-                val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
-                val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
-                if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
-                    try {
-                        getLatestVersionFromServer()
-                    } finally {
-                        //withContext(Dispatchers.Main) {
-                        //    checkAppInstallation()
-                        //}
-                    }
-                } else {
-                    xctrackServerVersion.text = getString(R.string.not_available)
-                    xcguideServerVersion.text = getString(R.string.not_available)
-                    air3managerServerVersion.text = getString(R.string.not_available)
-                    xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                    xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                    air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                }
-            } else {
-                xctrackServerVersion.text = getString(R.string.not_available)
-                xcguideServerVersion.text = getString(R.string.not_available)
-                air3managerServerVersion.text = getString(R.string.not_available)
-                xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-            }
-        }
+        continueSetup()
     }
     private fun setupCheckboxListener(
         checkBox: CheckBox,
