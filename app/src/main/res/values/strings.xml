@@ -41,7 +41,7 @@
     <string name="air3manager_apk_signature">fe36eab09d29b23132883494326ba732f0edfb31c0c85f4c78c4ccc84c50e1e0</string>
     <string name="version_not_found">Version not found</string>
     <string name="no_internet_connection">No internet connection</string>
-    <string name="no_internet_message">No internet message</string>
+    <string name="no_internet_message">This app requires an internet connection to work properly.</string>
     <string name="ok">OK</string>
     <string name="retry">Retry</string>
     <string name="xctrack">XCTrack</string>
@@ -88,9 +88,16 @@
     <string name="permissions_required_message">
         <![CDATA[
             Please:\n
+            - Allow to install unknown apps\n
             - Allow Sending Notifications\n
-            - Allow to install unknown apps
         ]]>
     </string>
     <string name="wifi_only">Wi-Fi Only</string>
+    <string name="wifi_only_no_wifi">WIFI only is selected and there is no WIFI connection</string>
+    <string name="no_internet_title">No internet connection</string>
+    <string name="storage_permission_required">Storage Permission Required</string>
+    <string name="storage_permission_required_message">Storage permission is required to install apps. Please grant the permission.</string>
+    <string name="notification_permission_required">Notification Permission Required</string>
+    <string name="notification_permission_required_message">Notification permission is required to receive notifications. Please grant the permission.</string>
+    <string name="storage_permission_denied">Storage Storage Permission Denied</string>
 </resources>

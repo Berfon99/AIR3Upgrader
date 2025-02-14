@@ -10,7 +10,6 @@ object NetworkUtils {
     interface NetworkDialogListener {
         fun onNoInternetAgreed()
     }
-
     fun isNetworkAvailable(context: Context): Boolean {
         val connectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -22,7 +21,6 @@ object NetworkUtils {
             else -> false
         }
     }
-
     fun isWifiConnected(context: Context): Boolean {
         val connectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -30,11 +28,10 @@ object NetworkUtils {
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
     }
-
-    fun showNoInternetDialog(context: Context, retryAction: () -> Unit, listener: NetworkDialogListener) {
+    fun showNoInternetDialog(context: Context, message: String, retryAction: () -> Unit, listener: NetworkDialogListener) {
         val dialog = AlertDialog.Builder(context)
-            .setTitle(context.getString(R.string.no_internet_connection))
-            .setMessage(context.getString(R.string.no_internet_message))
+            .setTitle(context.getString(R.string.no_internet_title))
+            .setMessage(message)
             .setPositiveButton(context.getString(R.string.ok)) { dialog, _ ->
                 listener.onNoInternetAgreed()
                 dialog.dismiss()
@@ -48,14 +45,22 @@ object NetworkUtils {
         dialog.show() // Show the dialog
     }
     fun checkNetworkAndContinue(context: Context, isWifiOnly: Boolean, retryAction: () -> Unit, listener: NetworkDialogListener): Boolean {
+        val isWifiConnected = isWifiConnected(context)
+        val isNetworkAvailable = isNetworkAvailable(context)
         val isNetworkOk = if (isWifiOnly) {
-            isWifiConnected(context)
+            isWifiConnected
         } else {
-            isNetworkAvailable(context)
+            isNetworkAvailable
         }
         return if (!isNetworkOk) {
+            val message = if (isWifiOnly && !isWifiConnected) {
+                context.getString(R.string.wifi_only_no_wifi)
+            } else {
+                context.getString(R.string.no_internet_message)
+            }
             showNoInternetDialog(
                 context,
+                message,
                 retryAction = {
                     retryAction()
                 },
