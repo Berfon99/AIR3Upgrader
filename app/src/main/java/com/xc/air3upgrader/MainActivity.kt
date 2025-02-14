@@ -91,7 +91,16 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         dataStoreManager = DataStoreManager(this)
         // Initialize the DataStore
         dataStoreManager.initializeDataStore()
+        val isManualLaunchFromIntent =
+            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         permissionsManager = PermissionsManager(this)
+        lifecycleScope.launch {
+            val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
+            val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+            if (isManualLaunchFromIntent || isManualLaunch || unhiddenLaunchOnReboot) {
+                acquireWakeLock()
+            }
+        }
 
         // Register the ActivityResultLauncher in onCreate()
         requestPermissionLauncher = registerForActivityResult(
@@ -106,8 +115,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             }
         }
         // Check if the app was launched manually
-        val isManualLaunchFromIntent =
-            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
         // Check permissions and continue
         if (permissionsManager.checkAllPermissionsGranted()) {
@@ -294,10 +301,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
             }
         }
-
-        // Keep the screen on
-        acquireWakeLock()
-
         // Set up checkbox listeners
         setupCheckboxListener(xctrackCheckbox, xctrackPackageName, xctrackName, xctrackServerVersion, xctrackVersion)
         setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
