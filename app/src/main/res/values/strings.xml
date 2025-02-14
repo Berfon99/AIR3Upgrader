@@ -88,8 +88,10 @@
     <string name="permissions_required_message">
         <![CDATA[
             Please:\n
+            \n
             - Allow to install unknown apps\n
-            - Allow Sending Notifications\n
+            \n
+            - Allow Sending Notifications
         ]]>
     </string>
     <string name="wifi_only">Wi-Fi Only</string>

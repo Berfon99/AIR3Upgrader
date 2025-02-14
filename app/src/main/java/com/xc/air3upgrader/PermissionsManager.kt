@@ -77,13 +77,6 @@ class PermissionsManager(private val context: Context) {
         return result
     }
 
-    private fun isInstallPermissionGranted(): Boolean {
-        Timber.d("isInstallPermissionGranted: called")
-        val isGranted = checkInstallPermission()
-        Timber.d("isInstallPermissionGranted: end")
-        return isGranted
-    }
-
     fun requestInstallPermission(onInstallPermissionResult: () -> Unit) {
         Timber.d("requestInstallPermission: called")
         this.onInstallPermissionResult = onInstallPermissionResult
@@ -125,10 +118,6 @@ class PermissionsManager(private val context: Context) {
         builder.setPositiveButton(context.getString(R.string.ok)) { dialog, _ ->
             Timber.d("showPermissionExplanationDialog: OK button clicked")
             onPermissionRequested()
-            dialog.dismiss()
-        }
-        builder.setNegativeButton(context.getString(R.string.cancel)) { dialog, _ ->
-            Timber.d("showPermissionExplanationDialog: Cancel button clicked")
             dialog.dismiss()
         }
         val dialog = builder.create()
