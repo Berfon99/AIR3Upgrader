@@ -7,6 +7,10 @@ import androidx.appcompat.app.AlertDialog
 
 object NetworkUtils {
 
+    interface NetworkDialogListener {
+        fun onNoInternetAgreed()
+    }
+
     fun isNetworkAvailable(context: Context): Boolean {
         val connectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -27,31 +31,39 @@ object NetworkUtils {
         return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
     }
 
-    fun showNoInternetDialog(context: Context, retryAction: () -> Unit) {
+    fun showNoInternetDialog(context: Context, retryAction: () -> Unit, listener: NetworkDialogListener) {
         val dialog = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.no_internet_connection))
             .setMessage(context.getString(R.string.no_internet_message))
             .setPositiveButton(context.getString(R.string.ok)) { dialog, _ ->
+                listener.onNoInternetAgreed()
                 dialog.dismiss()
             }
             .setNegativeButton(context.getString(R.string.retry)) { dialog, _ ->
+                dialog.dismiss()
                 retryAction()
             }
             .setCancelable(false) // Prevent dismissing by tapping outside
             .create() // Create the dialog
         dialog.show() // Show the dialog
     }
-    fun checkNetworkAndContinue(context: Context, retryAction: () -> Unit) {
-        if (!isNetworkAvailable(context)) {
+    fun checkNetworkAndContinue(context: Context, isWifiOnly: Boolean, retryAction: () -> Unit, listener: NetworkDialogListener): Boolean {
+        val isNetworkOk = if (isWifiOnly) {
+            isWifiConnected(context)
+        } else {
+            isNetworkAvailable(context)
+        }
+        return if (!isNetworkOk) {
             showNoInternetDialog(
                 context,
                 retryAction = {
                     retryAction()
-                }
+                },
+                listener = listener
             )
+            false
         } else {
-            // Call continueSetup() if the network is available
-            //continueSetup() //This is not possible here
+            true
         }
     }
 }

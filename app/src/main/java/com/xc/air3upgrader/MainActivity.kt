@@ -33,7 +33,7 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
 
     companion object {
         private const val SETTINGS_REQUEST_CODE = 1
@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
     private var downloadIdToAppInfo: MutableMap<Long, AppInfo> = mutableMapOf()
     private var fileName: String = ""
     internal var isInstalling = false
-    private var noInternetAgreed = false
+    var noInternetAgreed: Boolean = false
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -105,11 +105,18 @@ class MainActivity : AppCompatActivity() {
                 finish()
             }
         }
-
         // Check if the app was launched manually
         val isManualLaunchFromIntent =
             intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
+        // Check permissions and continue
+        if (permissionsManager.checkAllPermissionsGranted()) {
+            continueSetup()
+        } else {
+            permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher) {
+                continueSetup()
+            }
+        }
         lifecycleScope.launch {
             if (isManualLaunchFromIntent) {
                 dataStoreManager.saveIsManualLaunch(true)
@@ -124,16 +131,6 @@ class MainActivity : AppCompatActivity() {
                 Timber.d("App launched hidden, finishing activity")
                 finish()
                 return@launch
-            } else {
-                permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher) {
-                    continueSetup()
-                }
-                NetworkUtils.checkNetworkAndContinue(this@MainActivity) {
-                    noInternetAgreed = true
-                }
-                if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
-                    noInternetAgreed = true
-                }
             }
         }
         lifecycleScope.launch {
@@ -144,33 +141,45 @@ class MainActivity : AppCompatActivity() {
         }
         Timber.d("onCreate: end")
     }
+    override fun onNoInternetAgreed() {
+        Timber.d("onNoInternetAgreed: called")
+        noInternetAgreed = true
+        showUI()
+    }
     private fun continueSetup() {
         Timber.d("continueSetup: called")
+        setContentView(R.layout.activity_main)
         lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                dataStoreManager.saveIsManualLaunch(false)
-            }
-            val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-            val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
-            val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-            val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
-            val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
-            val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
-            if ((isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot)) && ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable))) {
-                val success = getLatestVersionFromServer()
-                if (!success) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, "Unable to fetch server versions.", Toast.LENGTH_LONG).show()
+            val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+            val isNetworkOk = NetworkUtils.checkNetworkAndContinue(this@MainActivity, isWifiOnly, retryAction = {
+                continueSetup()
+            }, listener = this@MainActivity)
+            if (!isNetworkOk) {
+                Timber.d("continueSetup: No network available")
+            } else {
+                Timber.d("continueSetup: Network available")
+                withContext(Dispatchers.IO) {
+                    dataStoreManager.saveIsManualLaunch(false)
+                }
+                val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+                val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
+                val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+                if (isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot)) {
+                    val success = getLatestVersionFromServer()
+                    if (!success) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Unable to fetch server versions.", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
+                showUI()
             }
-            showUI()
         }
         Timber.d("continueSetup: end")
     }
     private fun showUI() {
         Timber.d("showUI: called")
-        setContentView(R.layout.activity_main)
+        //setContentView(R.layout.activity_main) // Removed this line
         // Set the status and navigation bar color
         window.statusBarColor = ContextCompat.getColor(this@MainActivity, R.color.black)
         window.navigationBarColor = ContextCompat.getColor(this@MainActivity, R.color.black)
@@ -452,21 +461,12 @@ class MainActivity : AppCompatActivity() {
 
                 else -> getDefaultModel()
             }
-            if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
-                NetworkUtils.showNoInternetDialog(this@MainActivity, retryAction = {
-                    // Do nothing, the dialog will remain open
-                    // Check again for internet
-                    if (NetworkUtils.isNetworkAvailable(this@MainActivity)) {
-                        handleUpgradeButtonClick()
-                    } else {
-                        NetworkUtils.showNoInternetDialog(
-                            this@MainActivity,
-                            retryAction = {
-                                // Do nothing, the dialog will remain open
-                            }
-                        )
-                    }
-                })
+            val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+            val isNetworkOk = NetworkUtils.checkNetworkAndContinue(this@MainActivity, isWifiOnly, retryAction = {
+                handleUpgradeButtonClick()
+            }, listener = this@MainActivity)
+            if (!isNetworkOk) {
+                Timber.d("handleUpgradeButtonClick: No network available")
                 return@launch
             }
             // Request storage permission before proceeding
@@ -509,26 +509,18 @@ class MainActivity : AppCompatActivity() {
     }
     private fun handleRefreshButtonClick() {
         lifecycleScope.launch {
-            if (!NetworkUtils.isNetworkAvailable(this@MainActivity)) {
-                NetworkUtils.showNoInternetDialog(this@MainActivity, retryAction = {
-                    // Do nothing, the dialog will remain open
-                    // Check again for internet
-                    if (NetworkUtils.isNetworkAvailable(this@MainActivity)) {
-                        handleRefreshButtonClick()
-                    } else {
-                        NetworkUtils.showNoInternetDialog(
-                            this@MainActivity,
-                            retryAction = {
-                                // Do nothing, the dialog will remain open
-                            }
-                        )
-                    }
-                })
+            val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+            val isNetworkOk = NetworkUtils.checkNetworkAndContinue(this@MainActivity, isWifiOnly, retryAction = {
+                handleRefreshButtonClick()
+            }, listener = this@MainActivity)
+            if (!isNetworkOk) {
+                Timber.d("handleRefreshButtonClick: No network available")
                 return@launch
             }
-            getLatestVersionFromServer()
+            continueSetup()
         }
-    }    private fun scheduleUpgradeCheck() {
+    }
+    private fun scheduleUpgradeCheck() {
         val dataStoreManager = DataStoreManager(this)
         val context = this // Get the context here
         lifecycleScope.launch {
