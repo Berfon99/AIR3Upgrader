@@ -13,7 +13,8 @@ import android.util.Log
 class BootService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
-    private val delayMillis = 5000L // 5 seconds delay
+    private val delayMillis = 2000L // 2 seconds delay
+    private var unhiddenLaunchOnReboot: Boolean = false
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -21,9 +22,13 @@ class BootService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("BootService", "BootService: onStartCommand called")
+        unhiddenLaunchOnReboot = intent?.getBooleanExtra("unhiddenLaunchOnReboot", false) ?: false
+        Log.d("BootService", "BootService: unhiddenLaunchOnReboot: $unhiddenLaunchOnReboot")
         handler.postDelayed({
-            launchMainActivity(this)
-            stopSelf() // Stop the service after launching MainActivity
+            if (unhiddenLaunchOnReboot) {
+                launchMainActivity(this)
+            }
+            stopSelf() // Stop the service after launching MainActivity or not
         }, delayMillis)
         return START_NOT_STICKY
     }
