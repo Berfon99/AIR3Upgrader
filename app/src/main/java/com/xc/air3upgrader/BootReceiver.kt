@@ -15,11 +15,8 @@ class BootReceiver : BroadcastReceiver() {
         val isAutomaticUpgradeReminderEnabled: Boolean = runBlocking {
             dataStoreManager.getAutomaticUpgradeReminder().first()
         }
-        val unhiddenLaunchOnReboot: Boolean = runBlocking {
-            dataStoreManager.getUnhiddenLaunchOnReboot().first()
-        }
         Log.d("BootReceiver", "BootReceiver: isAutomaticUpgradeReminderEnabled: $isAutomaticUpgradeReminderEnabled")
-        if (isAutomaticUpgradeReminderEnabled && unhiddenLaunchOnReboot) {
+        if (isAutomaticUpgradeReminderEnabled) {
             when (intent.action) {
                 Intent.ACTION_BOOT_COMPLETED -> {
                     Log.d("BootReceiver", "BootReceiver: ACTION_BOOT_COMPLETED received")

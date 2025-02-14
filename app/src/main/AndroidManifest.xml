@@ -51,6 +51,10 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+        <provider
+            android:name=".WorkManagerInitializer"
+            android:authorities="${applicationId}.workmanager-init"
+            android:exported="false" />
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
@@ -67,6 +71,9 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:exported="false"
             tools:node="merge" />
+        <service
+            android:name=".BootService"
+            android:exported="false" />
         <receiver
             android:name=".DownloadCompleteReceiver"
             android:exported="true"
