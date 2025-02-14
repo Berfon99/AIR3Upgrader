@@ -151,9 +151,14 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         setContentView(R.layout.activity_main)
         lifecycleScope.launch {
             val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
-            val isNetworkOk = NetworkUtils.checkNetworkAndContinue(this@MainActivity, isWifiOnly, retryAction = {
-                continueSetup()
-            }, listener = this@MainActivity)
+            val isNetworkOk = NetworkUtils.checkNetworkAndContinue(
+                this@MainActivity,
+                isWifiOnly,
+                retryAction = {
+                    continueSetup()
+                },
+                listener = this@MainActivity
+            )
             if (!isNetworkOk) {
                 Timber.d("continueSetup: No network available")
             } else {
@@ -161,14 +166,20 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 withContext(Dispatchers.IO) {
                     dataStoreManager.saveIsManualLaunch(false)
                 }
-                val isManualLaunchFromIntent = intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+                val isManualLaunchFromIntent =
+                    intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
                 val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
-                val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
+                val unhiddenLaunchOnReboot: Boolean =
+                    dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
                 if (isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot)) {
                     val success = getLatestVersionFromServer()
                     if (!success) {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, "Unable to fetch server versions.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Unable to fetch server versions.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
                 }
@@ -272,6 +283,9 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                     }
                 }
             } else {
+                xctrackCheckbox.isChecked = false
+                xcguideCheckbox.isChecked = false
+                air3managerCheckbox.isChecked = false
                 xctrackServerVersion.text = getString(R.string.not_available)
                 xcguideServerVersion.text = getString(R.string.not_available)
                 air3managerServerVersion.text = getString(R.string.not_available)
@@ -290,11 +304,29 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
         Timber.d("showUI: end")
     }
+    private fun handleRefreshButtonClick() {
+        lifecycleScope.launch {
+            noInternetAgreed = false // Reset noInternetAgreed
+            val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+            val isNetworkOk = NetworkUtils.checkNetworkAndContinue(
+                this@MainActivity,
+                isWifiOnly,
+                retryAction = {
+                    handleRefreshButtonClick()
+                },
+                listener = this@MainActivity
+            )
+            if (!isNetworkOk) {
+                Timber.d("handleRefreshButtonClick: No network available")
+                return@launch
+            }
+            continueSetup()
+        }
+    }
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         Timber.d("onSaveInstanceState: called")
     }
-
     override fun onResume() {
         super.onResume()
         Timber.d("onResume: called")
@@ -505,19 +537,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                     }
                 }
             }
-        }
-    }
-    private fun handleRefreshButtonClick() {
-        lifecycleScope.launch {
-            val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
-            val isNetworkOk = NetworkUtils.checkNetworkAndContinue(this@MainActivity, isWifiOnly, retryAction = {
-                handleRefreshButtonClick()
-            }, listener = this@MainActivity)
-            if (!isNetworkOk) {
-                Timber.d("handleRefreshButtonClick: No network available")
-                return@launch
-            }
-            continueSetup()
         }
     }
     private fun scheduleUpgradeCheck() {
