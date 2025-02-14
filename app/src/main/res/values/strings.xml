@@ -102,4 +102,9 @@
     <string name="notification_permission_required">Notification Permission Required</string>
     <string name="notification_permission_required_message">Notification permission is required to receive notifications. Please grant the permission.</string>
     <string name="storage_permission_denied">Storage Storage Permission Denied</string>
+    <string name="check_now_or_postpone">Check now or postpone?</string>
+    <string name="skip_reminder_at_next_start_up">Skip, reminder at next start-up</string>
+    <string name="skip_no_reminder_at_next_start_up">Skip, no reminder at next start-up</string>
+    <string name="continue_button">Continue</string>
+
 </resources>

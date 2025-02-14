@@ -38,6 +38,9 @@
         <activity
             android:name=".AboutActivity"
             android:exported="false" />
+        <activity
+            android:name=".CheckPromptActivity"
+            android:exported="false" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.xc.air3upgrader.provider"

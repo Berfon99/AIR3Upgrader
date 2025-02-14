@@ -85,7 +85,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         Timber.d("onCreate: onCreate() called - Count: $onCreateCounter")
         Timber.d("onCreate: savedInstanceState is null: ${savedInstanceState == null}")
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        val splashScreen = installSplashScreen()
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         noInternetAgreed = false
         dataStoreManager = DataStoreManager(this)
@@ -97,8 +97,22 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         lifecycleScope.launch {
             val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
             val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-            if (isManualLaunchFromIntent || isManualLaunch || unhiddenLaunchOnReboot) {
+            val isAutomaticUpgradeReminderEnabled: Boolean = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
+            if (isManualLaunchFromIntent || isManualLaunch) {
+                dataStoreManager.saveIsManualLaunch(true)
                 acquireWakeLock()
+            }
+            if (!isManualLaunch && unhiddenLaunchOnReboot && isAutomaticUpgradeReminderEnabled) {
+                Timber.d("App launched unhidden, launching CheckPromptActivity")
+                val intent = Intent(this@MainActivity, CheckPromptActivity::class.java)
+                startActivity(intent)
+                finish()
+                return@launch
+            }
+            if (!isManualLaunch && !unhiddenLaunchOnReboot) {
+                Timber.d("App launched hidden, finishing activity")
+                finish()
+                return@launch
             }
         }
 
@@ -122,22 +136,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         } else {
             permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher) {
                 continueSetup()
-            }
-        }
-        lifecycleScope.launch {
-            if (isManualLaunchFromIntent) {
-                dataStoreManager.saveIsManualLaunch(true)
-            }
-            val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
-            val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-
-            Timber.d("onCreate: isManualLaunch from DataStore: $isManualLaunch")
-            Timber.d("onCreate: unhiddenLaunchOnReboot from DataStore: $unhiddenLaunchOnReboot")
-
-            if (!isManualLaunch && !unhiddenLaunchOnReboot) {
-                Timber.d("App launched hidden, finishing activity")
-                finish()
-                return@launch
             }
         }
         lifecycleScope.launch {
