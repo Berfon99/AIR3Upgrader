@@ -162,7 +162,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         noInternetAgreed = true
         showUI()
     }
-    private fun continueSetup() {
+    internal fun continueSetup() {
         Timber.d("continueSetup: called")
         setContentView(R.layout.activity_main)
         lifecycleScope.launch {

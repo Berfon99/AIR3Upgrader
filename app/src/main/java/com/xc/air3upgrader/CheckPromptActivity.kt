@@ -36,8 +36,11 @@ class CheckPromptActivity : AppCompatActivity() {
         }
 
         binding.buttonContinue.setOnClickListener {
-            Log.d("CheckPromptActivity", "Continue")
-            finish() // Close CheckPromptActivity
+            lifecycleScope.launch {
+                dataStoreManager.saveUnhiddenLaunchOnReboot(false)
+                Log.d("CheckPromptActivity", "Continue, no reminder at next start-up")
+                finish() // Close CheckPromptActivity
+            }
         }
     }
 }
