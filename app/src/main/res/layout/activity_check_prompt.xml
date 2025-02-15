@@ -9,25 +9,30 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/check_now_or_postpone"
-        android:textSize="18sp"
-        android:layout_marginBottom="16dp"/>
+        android:textSize="24sp"
+        android:layout_marginBottom="32dp"/>
 
     <Button
         android:id="@+id/buttonSkipReminder"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/skip_reminder_at_next_start_up" />
+        android:layout_height="70dp"
+        android:text="@string/skip_reminder_at_next_start_up"
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp"/>
 
     <Button
         android:id="@+id/buttonSkipNoReminder"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/skip_no_reminder_at_next_start_up" />
+        android:layout_height="70dp"
+        android:text="@string/skip_no_reminder_at_next_start_up"
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp"/>
 
     <Button
         android:id="@+id/buttonContinue"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/continue_button" />
+        android:layout_height="70dp"
+        android:text="@string/continue_button"
+        android:textSize="18sp"/>
 
 </LinearLayout>
