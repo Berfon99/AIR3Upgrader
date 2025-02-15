@@ -50,14 +50,16 @@ class DataStoreManager(private val context: Context) {
         }
     }
 
-    suspend fun saveUpgradeCheckInterval(interval: Interval) {
+    suspend fun saveLastCheckTime(time: Long) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.UPGRADE_CHECK_INTERVAL_DAYS] = interval.days
-            preferences[PreferencesKeys.UPGRADE_CHECK_INTERVAL_HOURS] = interval.hours
-            preferences[PreferencesKeys.UPGRADE_CHECK_INTERVAL_MINUTES] = interval.minutes
+            preferences[PreferencesKeys.LAST_CHECK_TIME] = time
         }
     }
-
+    fun getLastCheckTime(): Flow<Long?> {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.LAST_CHECK_TIME]
+        }
+    }
     fun getUpgradeCheckInterval(): Flow<Interval> {
         return context.dataStore.data.map { preferences ->
             val days = preferences[PreferencesKeys.UPGRADE_CHECK_INTERVAL_DAYS] ?: 0
@@ -66,79 +68,63 @@ class DataStoreManager(private val context: Context) {
             Interval(days, hours, minutes)
         }
     }
-
-    suspend fun saveLastCheckTime(time: Long) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.LAST_CHECK_TIME] = time
-        }
-    }
-
-    fun getLastCheckTime(): Flow<Long?> {
-        return context.dataStore.data.map { preferences ->
-            preferences[PreferencesKeys.LAST_CHECK_TIME]
-        }
-    }
-
     suspend fun saveUnhiddenLaunchOnReboot(unhiddenLaunch: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.UNHIDDEN_LAUNCH_ON_REBOOT] = unhiddenLaunch
         }
     }
-
     fun getUnhiddenLaunchOnReboot(): Flow<Boolean> {
         return context.dataStore.data.map { preferences ->
             preferences[PreferencesKeys.UNHIDDEN_LAUNCH_ON_REBOOT] ?: false
         }
     }
-
     suspend fun saveAutomaticUpgradeReminder(isEnabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.AUTOMATIC_UPGRADE_REMINDER] = isEnabled
         }
     }
-
     fun getAutomaticUpgradeReminder(): Flow<Boolean> {
         return context.dataStore.data.map { preferences ->
             preferences[PreferencesKeys.AUTOMATIC_UPGRADE_REMINDER] ?: false
         }
     }
-
     suspend fun saveIsManualLaunch(isManualLaunch: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_MANUAL_LAUNCH] = isManualLaunch
         }
     }
-
     fun getIsManualLaunch(): Flow<Boolean> {
         return context.dataStore.data.map { preferences ->
             preferences[PreferencesKeys.IS_MANUAL_LAUNCH] ?: false
         }
     }
-
     suspend fun removeLastCheckTime() {
         context.dataStore.edit { preferences ->
             preferences.remove(PreferencesKeys.LAST_CHECK_TIME)
         }
     }
-
     suspend fun saveWifiOnly(isWifiOnly: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.WIFI_ONLY] = isWifiOnly
         }
     }
-
     fun getWifiOnly(): Flow<Boolean> {
         return context.dataStore.data.map { preferences ->
             preferences[PreferencesKeys.WIFI_ONLY] ?: false
         }
     }
-
     suspend fun saveIsFirstLaunch(isFirstLaunch: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_FIRST_LAUNCH] = isFirstLaunch
         }
     }
-
+    suspend fun saveUpgradeCheckInterval(interval: Interval) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.UPGRADE_CHECK_INTERVAL_DAYS] = interval.days
+            preferences[PreferencesKeys.UPGRADE_CHECK_INTERVAL_HOURS] = interval.hours
+            preferences[PreferencesKeys.UPGRADE_CHECK_INTERVAL_MINUTES] = interval.minutes
+        }
+    }
     fun getIsFirstLaunch(): Flow<Boolean> {
         return context.dataStore.data.map { preferences ->
             preferences[PreferencesKeys.IS_FIRST_LAUNCH] ?: true
