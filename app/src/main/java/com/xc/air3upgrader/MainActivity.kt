@@ -95,21 +95,32 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
         permissionsManager = PermissionsManager(this)
         lifecycleScope.launch {
-            val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
+            val isFirstLaunch = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
+            var currentIsManualLaunch = false
+            if (isFirstLaunch && isManualLaunchFromIntent) {
+                dataStoreManager.saveIsManualLaunch(true)
+                currentIsManualLaunch = true
+            }
+            if (isManualLaunchFromIntent) {
+                dataStoreManager.saveIsManualLaunch(true)
+                currentIsManualLaunch = true
+            }
+            if (!isManualLaunchFromIntent) {
+                dataStoreManager.saveIsManualLaunch(false)
+                currentIsManualLaunch = false
+            }
             val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
             val isAutomaticUpgradeReminderEnabled: Boolean = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
-            if (isManualLaunchFromIntent || isManualLaunch) {
-                dataStoreManager.saveIsManualLaunch(true)
+            if (isManualLaunchFromIntent || currentIsManualLaunch) {
                 acquireWakeLock()
             }
-            if (!isManualLaunch && unhiddenLaunchOnReboot && isAutomaticUpgradeReminderEnabled) {
+            if (!currentIsManualLaunch && unhiddenLaunchOnReboot && isAutomaticUpgradeReminderEnabled) {
                 Timber.d("App launched unhidden, launching CheckPromptActivity")
                 val intent = Intent(this@MainActivity, CheckPromptActivity::class.java)
                 startActivity(intent)
-                finish()
                 return@launch
             }
-            if (!isManualLaunch && !unhiddenLaunchOnReboot) {
+            if (!currentIsManualLaunch && !unhiddenLaunchOnReboot) {
                 Timber.d("App launched hidden, finishing activity")
                 finish()
                 return@launch
