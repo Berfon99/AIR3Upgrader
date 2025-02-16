@@ -45,18 +45,39 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                                     val apkFile = File(Uri.parse(localUri).path ?: "")
                                     Timber.d("File path: ${apkFile.absolutePath}")
                                     if (apkFile.exists()) {
-                                        try {
-                                            val authority = "${context.packageName}.provider"
-                                            val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
-
-                                            val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(apkUri, "application/vnd.android.package-archive")
-                                                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                                        // Check if it's AIR³ Manager and rename the file if needed
+                                        val appInfo = downloadIdToAppInfo.entries.firstOrNull { it.key == downloadId }?.value
+                                        if (appInfo != null && appInfo.`package` == "com.xc.r3") {
+                                            val originalFileName = appInfo.air3ManagerOriginalFileName
+                                            if (originalFileName != null) {
+                                                val newFile = File(apkFile.parent, originalFileName)
+                                                if (apkFile.renameTo(newFile)) {
+                                                    Timber.d("File renamed to: $originalFileName")
+                                                    // Use the newFile for the install intent
+                                                    val authority = "${context.packageName}.provider"
+                                                    val apkUri: Uri = FileProvider.getUriForFile(context, authority, newFile)
+                                                    val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(apkUri, "application/vnd.android.package-archive")
+                                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                                                    }
+                                                    context.startActivity(installIntent)
+                                                } else {
+                                                    Timber.e("Failed to rename file to: $originalFileName")
+                                                }
                                             }
-
-                                            context.startActivity(installIntent)
-                                        } catch (e: IllegalArgumentException) {
-                                            Timber.e("Failed to get URI for file: ${apkFile.absolutePath}. Error: ${e.message}")
+                                        } else {
+                                            // It's not AIR³ Manager, proceed with the original file
+                                            try {
+                                                val authority = "${context.packageName}.provider"
+                                                val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
+                                                val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                                                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                context.startActivity(installIntent)
+                                            } catch (e: IllegalArgumentException) {
+                                                Timber.e("Failed to get URI for file: ${apkFile.absolutePath}. Error: ${e.message}")
+                                            }
                                         }
                                     } else {
                                         Timber.e("APK file does not exist at: ${apkFile.absolutePath}")
@@ -82,21 +103,31 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         }
     }
     private fun enqueueDownloadAndInstallApk(context: Context, appInfo: AppInfo) {
-        Timber.d("downloadAndInstallApk() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
+        Timber.d("enqueueDownloadAndInstallApk() called for ${appInfo.name} with apkPath: ${appInfo.apkPath}")
+        // Store the original filename for AIR³ Manager
+        if (appInfo.`package` == "com.xc.r3") { // Check if it's AIR³ Manager
+            appInfo.air3ManagerOriginalFileName = appInfo.apkPath.substringAfterLast("/")
+            Timber.d("Storing original filename for AIR³ Manager: ${appInfo.air3ManagerOriginalFileName}")
+        }
         val url = if (appInfo.apkPath.startsWith("http")) {
             appInfo.apkPath
         } else {
             "https://ftp.fly-air3.com${appInfo.apkPath}" // Construct the full URL here
         }
-        fileName = when {
-            appInfo.name == "AIR³ Manager" -> {
-                "AIR3Manager.apk" // Use a shorter name for AIR³ Manager
-            }
-            appInfo.`package` == "indysoft.xc_guide" && !appInfo.apkPath.startsWith("/") -> {
-                "${appInfo.name}.apk" // Use the app name (e.g., "XCGuide-608.apk") for XC Guide from pg-race.aero
-            }
-            else -> {
-                appInfo.apkPath.substringAfterLast('/') // Use the original name for other APKs and XC Guide from ftp.fly-air3.com
+        // Use the original filename if it's AIR³ Manager, otherwise use the logic we had before
+        fileName = if (appInfo.`package` == "com.xc.r3") {
+            appInfo.air3ManagerOriginalFileName ?: "" // Use the original filename for AIR³ Manager
+        } else {
+            when {
+                appInfo.name == "AIR³ Manager" -> {
+                    "AIR3Manager.apk" // Use a shorter name for AIR³ Manager
+                }
+                appInfo.`package` == "indysoft.xc_guide" && !appInfo.apkPath.startsWith("/") -> {
+                    "${appInfo.name}.apk" // Use the app name (e.g., "XCGuide-608.apk") for XC Guide from pg-race.aero
+                }
+                else -> {
+                    appInfo.apkPath.substringAfterLast('/') // Use the original name for other APKs and XC Guide from ftp.fly-air3.com
+                }
             }
         }
         Timber.d("Downloading from URL: $url, saving as: $fileName")

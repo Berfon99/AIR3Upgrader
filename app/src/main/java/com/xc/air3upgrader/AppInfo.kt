@@ -12,7 +12,8 @@ data class AppInfo(
     val compatibleModels: List<String>,
     val minAndroidVersion: String,
     var isSelectedForUpgrade: Boolean = false,
-    var highestServerVersion: String = ""
+    var highestServerVersion: String = "",
+    var air3ManagerOriginalFileName: String? = null // Added this line
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString() ?: "",
@@ -23,7 +24,8 @@ data class AppInfo(
         parcel.createStringArrayList() ?: emptyList(),
         parcel.readString() ?: "",
         parcel.readByte() != 0.toByte(),
-        parcel.readString() ?: ""
+        parcel.readString() ?: "",
+        parcel.readString() // Added this line
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -36,6 +38,7 @@ data class AppInfo(
         parcel.writeString(minAndroidVersion)
         parcel.writeByte(if (isSelectedForUpgrade) 1 else 0)
         parcel.writeString(highestServerVersion)
+        parcel.writeString(air3ManagerOriginalFileName) // Added this line
     }
 
     override fun describeContents(): Int {
@@ -52,7 +55,7 @@ data class AppInfo(
         }
     }
     override fun toString(): String {
-        return "AppInfo(name='$name', package='$`package`', latestVersion='$latestVersion', apkPath='$apkPath', installedVersion='$installedVersion', compatibleModels=$compatibleModels, minAndroidVersion='$minAndroidVersion', isSelectedForUpgrade=$isSelectedForUpgrade, highestServerVersion='$highestServerVersion')"
+        return "AppInfo(name='$name', package='$`package`', latestVersion='$latestVersion', apkPath='$apkPath', installedVersion='$installedVersion', compatibleModels=$compatibleModels, minAndroidVersion='$minAndroidVersion', isSelectedForUpgrade=$isSelectedForUpgrade, highestServerVersion='$highestServerVersion', air3ManagerOriginalFileName=$air3ManagerOriginalFileName)" // Added this line
     }
 }
 
