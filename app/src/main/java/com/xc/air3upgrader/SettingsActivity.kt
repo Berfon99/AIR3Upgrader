@@ -63,7 +63,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var startingTimeValue: TextView
     private var isUpdatingTimeRemaining = false
     private var isSchedulingWorker = false
-    private lateinit var automaticUpgradeReminderValue: TextView
+    //private lateinit var automaticUpgradeReminderValue: TextView
     private lateinit var unhiddenLaunchOnRebootValue: TextView
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
@@ -144,7 +144,6 @@ class SettingsActivity : AppCompatActivity() {
         upgradeCheckIntervalMinutesEditText = findViewById(R.id.upgrade_check_interval_minutes)
         timeRemainingValue = findViewById(R.id.time_remaining_value)
         setUpgradeCheckIntervalButton = findViewById(R.id.set_upgrade_check_interval_button)
-        automaticUpgradeReminderValue = findViewById(R.id.automatic_upgrade_reminder_value)
         unhiddenLaunchOnRebootValue = findViewById(R.id.unhidden_launch_on_reboot_value)
         enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
         wifiOnlyCheckbox = findViewById(R.id.wifi_only_checkbox)
@@ -304,7 +303,6 @@ class SettingsActivity : AppCompatActivity() {
             val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
             Timber.d("SettingsActivity: updateFlagsValues - isAutomaticUpgradeReminderEnabled: $isAutomaticUpgradeReminderEnabled")
             Timber.d("SettingsActivity: updateFlagsValues - isUnhiddenLaunchOnRebootEnabled: $isUnhiddenLaunchOnRebootEnabled")
-            automaticUpgradeReminderValue.text = "Automatic Upgrade Reminder: $isAutomaticUpgradeReminderEnabled"
             unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
             enableBackgroundCheckCheckbox.isChecked = isAutomaticUpgradeReminderEnabled
             if (!isAutomaticUpgradeReminderEnabled) {
