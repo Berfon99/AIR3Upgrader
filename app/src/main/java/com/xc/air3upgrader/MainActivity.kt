@@ -97,6 +97,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         lifecycleScope.launch {
             val isFirstLaunch = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
             var currentIsManualLaunch = false
+            var isLaunchFromCheckPromptActivity = false
             if (isFirstLaunch && isManualLaunchFromIntent) {
                 dataStoreManager.saveIsManualLaunch(true)
                 currentIsManualLaunch = true
@@ -109,6 +110,8 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 dataStoreManager.saveIsManualLaunch(false)
                 currentIsManualLaunch = false
             }
+            // Check if the app is launched from CheckPromptActivity
+            isLaunchFromCheckPromptActivity = intent.getBooleanExtra("isLaunchFromCheckPromptActivity", false)
             val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
             val isAutomaticUpgradeReminderEnabled: Boolean = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             if (isManualLaunchFromIntent || currentIsManualLaunch) {
@@ -120,7 +123,8 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 startActivity(intent)
                 return@launch
             }
-            if (!currentIsManualLaunch && !unhiddenLaunchOnReboot) {
+            // Modify the condition to check for isLaunchFromCheckPromptActivity
+            if (!currentIsManualLaunch && !unhiddenLaunchOnReboot && !isLaunchFromCheckPromptActivity) {
                 Timber.d("App launched hidden, finishing activity")
                 finish()
                 return@launch
@@ -187,7 +191,9 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
                 val unhiddenLaunchOnReboot: Boolean =
                     dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-                if (isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot)) {
+                val isLaunchFromCheckPromptActivity = intent.getBooleanExtra("isLaunchFromCheckPromptActivity", false)
+                // Modify the condition to include isLaunchFromCheckPromptActivity
+                if (isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot) || isLaunchFromCheckPromptActivity) {
                     val success = getLatestVersionFromServer()
                     if (!success) {
                         withContext(Dispatchers.Main) {

@@ -35,5 +35,4 @@
         android:text="@string/skip_no_reminder_at_next_start_up"
         android:textSize="18sp" />
 
-
 </LinearLayout>
