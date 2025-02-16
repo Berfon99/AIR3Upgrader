@@ -587,7 +587,12 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                     }
                     // Start all downloads
                     if (appsToUpgrade.isNotEmpty()) {
+                        // Show the "Downloading" Toast message here
+                        Toast.makeText(this@MainActivity, getString(R.string.downloading), Toast.LENGTH_SHORT).show()
                         downloadCompleteReceiver.downloadNextApp(this@MainActivity)
+                    } else {
+                        // Show a message if no apps are selected
+                        Toast.makeText(this@MainActivity, getString(R.string.no_apps_selected_for_upgrade), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
