@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AIR³ Upgrader</string>
+    <string name="action_settings">Paramètres</string>
+    <string name="action_about">À propos</string>
+    <string name="select_device">Sélectionner l\'appareil</string>
+    <string name="no_file_selected">Aucun fichier sélectionné</string>
+    <string name="error_invalid_file">Erreur : Fichier invalide</string>
+    <string name="error_updating_device">Erreur lors de la mise à jour de l\'appareil</string>
+    <string name="update_complete">Mise à jour terminée !</string>
+    <string name="no_devices_found">Aucun appareil trouvé</string>
+    <string name="bluetooth_permission_denied">Permission Bluetooth refusée</string>
+    <string name="bluetooth_not_supported">Bluetooth non pris en charge</string>
+    <string name="bluetooth_not_enabled">Bluetooth non activé</string>
+    <string name="unknown_app">Application inconnue</string>
+    <string name="not_installed">Non installé</string>
+    <string name="installed">Installé :</string>
+    <string name="server">Serveur :</string>
+    <string name="apk_download_started">Téléchargement de l\'APK démarré…</string>
+    <string name="no_apps_selected_for_upgrade">Aucune application sélectionnée pour la mise à niveau</string>
+    <string name="wait_for_next_download">Attendre le prochain téléchargement…</string>
+    <string name="downloading">Téléchargement</string>
+    <string name="downloading_latest_version_of">Téléchargement de la dernière version de</string>
+    <string name="install_unknown_apps_permission">Autorisation d\'installer des applications inconnues</string>
+    <string name="to_install_apps_from_unknown_sources_you_need_to_allow_this_permission_in_your_device_settings">Pour installer des applications provenant de sources inconnues, vous devez autoriser cette permission dans les paramètres de votre appareil.</string>
+    <string name="settings">Paramètres</string>
+    <string name="cancel">Annuler</string>
+    <string name="permission_denied">Permission refusée</string>
+    <string name="device_name">Nom de l\'appareil :</string>
+    <string name="device">Appareil :</string>
+    <string name="product">Produit :</string>
+    <string name="model">Modèle :</string>
+    <string name="brand">Marque :</string>
+    <string name="manufacturer">Fabricant :</string>
+    <string name="android_version">Version Android :</string>
+    <string name="sdk_version">Version SDK :</string>
+    <string name="unknown_device">Appareil inconnu</string>
+    <string name="na">N/A</string>
+    <string name="download_failed">Échec du téléchargement. Veuillez réessayer plus tard.</string>
+    <string name="xctrack_apk_signature">513134f67c4efc51f7650bb2657e1f45fc4244e224cd3f9d61051c252700f593</string>
+    <string name="xcguide_apk_signature">b97696fd760795f32b73459c01b836f4f211856e702b957b833cc887336ddfb3</string>
+    <string name="air3manager_apk_signature">fe36eab09d29b23132883494326ba732f0edfb31c0c85f4c78c4ccc84c50e1e0</string>
+    <string name="version_not_found">Version non trouvée</string>
+    <string name="no_internet_connection">Pas de connexion Internet</string>
+    <string name="no_internet_message">Cette application nécessite une connexion Internet pour fonctionner correctement.</string>
+    <string name="ok">OK</string>
+    <string name="retry">Réessayer</string>
+    <string name="xctrack">XCTrack</string>
+    <string name="upgrade">Mettre à niveau</string>
+    <string name="xc_guide">XC Guide</string>
+    <string name="air3_manager">AIR³ Manager</string>
+    <string name="refresh">Actualiser</string>
+    <string name="close">Fermer</string>
+    <string name="server_version">Serveur : %1$s</string>
+    <string name="refresh_data_title">Actualisation requise</string>
+    <string name="refresh_data_message">Veuillez actualiser les données pour les prendre en compte</string>
+    <string name="app_version">Version</string>
+    <string name="copyright">Copyright : Bertrand Fontaine - 2025</string>
+    <string name="device_name_confirmation_message">Êtes-vous sûr de vouloir utiliser le nom de votre appareil au lieu du modèle d\'appareil détecté ? Le nom de l\'appareil doit strictement respecter la structure suivante pour fonctionner « AIR3-?.? ». Veuillez « Actualiser » les données pour les prendre en compte</string>
+    <string name="device_name_confirmation_title">Confirmation du nom de l\'appareil</string>
+    <string name="upgrade_check_interval_label">Intervalle de vérification de mise à niveau :</string>
+    <string name="days">Jours</string>
+    <string name="hours">Heures</string>
+    <string name="minutes">Minutes</string>
+    <string name="model_selection">Sélection du modèle :</string>
+    <string name="time_remaining">Temps restant</string>
+    <string name="time_remaining_hours_minutes">%1$d heures %2$d minutes</string>
+    <string name="time_remaining_minutes">%1$d minutes</string>
+    <string name="time_remaining_seconds">%1$d secondes</string>
+    <string name="time_remaining_less_than_a_second">Moins d\'une seconde</string>
+    <string name="set">Définir</string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
+    <string name="less_than_a_second">Moins d\'une seconde</string>
+    <string name="day">jour</string>
+    <string name="hour">heure</string>
+    <string name="minute">minute</string>
+    <string name="second">seconde</string>
+    <string name="seconds">secondes</string>
+    <string name="error_interval_too_short">L\'intervalle doit être d\'au moins 15 minutes</string>
+    <string name="enable_background_upgrade_check">Activer la vérification de mise à niveau en arrière-plan</string>
+    <string name="disabled">Désactivé</string>
+    <string name="starting_time">Heure de début :</string>
+    <string name="not_available">N/A</string>
+    <string name="automatic_upgrade_reminder">Rappel automatique de mise à niveau</string>
+    <string name="reminder_timeframe">Délai de rappel</string>
+    <string name="not_set">Non défini</string>
+    <string name="permissions_required_title">Autorisations requises</string>
+    <string name="permissions_required_message">
+        <![CDATA[
+            Veuillez :\n
+            \n
+            - Autoriser l\'installation d\'applications inconnues\n
+            \n
+            - Autoriser l\'envoi de notifications
+        ]]>
+    </string>
+    <string name="wifi_only">Wi-Fi uniquement</string>
+    <string name="wifi_only_no_wifi">Le Wi-Fi uniquement est sélectionné et il n\'y a pas de connexion Wi-Fi</string>
+    <string name="no_internet_title">Pas de connexion Internet</string>
+    <string name="storage_permission_required">Autorisation de stockage requise</string>
+    <string name="storage_permission_required_message">L\'autorisation de stockage est requise pour installer des applications. Veuillez accorder l\'autorisation.</string>
+    <string name="notification_permission_required">Autorisation de notification requise</string>
+    <string name="notification_permission_required_message">L\'autorisation de notification est requise pour recevoir des notifications. Veuillez accorder l\'autorisation.</string>
+    <string name="storage_permission_denied">Autorisation de stockage refusée</string>
+    <string name="check_now_or_postpone">Vérifier maintenant ou reporter ?</string>
+    <string name="skip_reminder_at_next_start_up">FERMER, me le rappeler au prochain démarrage</string>
+    <string name="skip_no_reminder_at_next_start_up">FERMER, ne pas me le rappeler au prochain démarrage</string>
+    <string name="continue_button">Continuer</string>
+</resources>
