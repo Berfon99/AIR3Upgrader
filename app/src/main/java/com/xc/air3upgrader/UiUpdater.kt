@@ -203,7 +203,6 @@ object UiUpdater {
         supportActionBar: androidx.appcompat.app.ActionBar?
     ) {
         coroutineScope.launch {
-            // Delay the initial read to allow SettingsActivity to initialize
             val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
             val deviceModel = Build.MODEL
             val finalSelectedModel = when {
@@ -215,10 +214,8 @@ object UiUpdater {
                     getDeviceName()
                 }
             }
-            dataStoreManager.getSelectedModel().collectLatest { selectedModel ->
-                val androidVersion = Build.VERSION.RELEASE // Get the Android version
-                supportActionBar?.title = "AIR³ Upgrader - $finalSelectedModel - Android $androidVersion" // Set the title correctly
-            }
+            val androidVersion = Build.VERSION.RELEASE // Get the Android version
+            supportActionBar?.title = "AIR³ Upgrader - $finalSelectedModel - Android $androidVersion" // Set the title correctly
         }
     }
 }

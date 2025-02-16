@@ -342,6 +342,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     override fun onResume() {
         super.onResume()
         Timber.d("onResume: called")
+        setActionBarTitleWithSelectedModel()
     }
     private fun setupCheckboxListener(
         checkBox: CheckBox,
