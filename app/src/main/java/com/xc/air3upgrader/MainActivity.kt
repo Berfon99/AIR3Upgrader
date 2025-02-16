@@ -16,6 +16,7 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.red
@@ -27,11 +28,13 @@ import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
 
@@ -70,6 +73,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     private var fileName: String = ""
     internal var isInstalling = false
     var noInternetAgreed: Boolean = false
+    private var supportActionBar: ActionBar? = null
 
     // Package names of the apps we want to check
     private val xctrackPackageName = "org.xcontest.XCTrack"
@@ -87,6 +91,22 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        supportActionBar = getSupportActionBar()
+        // Restore the state of your variables
+        if (savedInstanceState != null) {
+            noInternetAgreed = savedInstanceState.getBoolean("noInternetAgreed")
+            onCreateCounter = savedInstanceState.getInt("onCreateCounter")
+            isFirstLaunch = savedInstanceState.getBoolean("isFirstLaunch")
+            selectedModel = savedInstanceState.getString("selectedModel") ?: ""
+            val restoredAppInfos = savedInstanceState.getParcelableArrayList<AppInfo>("appInfos")
+            if (restoredAppInfos != null) {
+                appInfos = restoredAppInfos.toList()
+            }
+            fileName = savedInstanceState.getString("fileName") ?: ""
+            isInstalling = savedInstanceState.getBoolean("isInstalling")
+            downloadIdToAppInfo = savedInstanceState.getSerializable("downloadIdToAppInfo") as? MutableMap<Long, AppInfo> ?: mutableMapOf()
+        }
+
         noInternetAgreed = false
         dataStoreManager = DataStoreManager(this)
         // Initialize the DataStore
@@ -344,6 +364,17 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         Timber.d("onSaveInstanceState: called")
+        // Save the state of your variables
+        outState.putBoolean("noInternetAgreed", noInternetAgreed)
+        outState.putInt("onCreateCounter", onCreateCounter)
+        outState.putBoolean("isFirstLaunch", isFirstLaunch)
+        outState.putString("selectedModel", selectedModel)
+        outState.putParcelableArrayList("appInfos", ArrayList(appInfos))
+        outState.putString("fileName", fileName)
+        outState.putBoolean("isInstalling", isInstalling)
+        outState.putSerializable("downloadIdToAppInfo", HashMap(downloadIdToAppInfo))
+
+
     }
     override fun onResume() {
         super.onResume()
@@ -484,6 +515,10 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                     }
                     success = true
                 }
+            } catch (e: CancellationException) {
+                Log.d("MainActivity", "getLatestVersionFromServer: Coroutine was cancelled")
+                // Ignore the CancellationException, it's expected
+                return false
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error getting latest version from server: ${e.message}")
                 // Handle error, e.g., show a toast message to the user
@@ -601,3 +636,4 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         Timber.d("onStop: called")
     }
 }
+
