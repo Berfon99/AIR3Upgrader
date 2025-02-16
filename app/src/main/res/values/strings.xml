@@ -106,5 +106,4 @@
     <string name="skip_reminder_at_next_start_up">CLOSE, remind me next start</string>
     <string name="skip_no_reminder_at_next_start_up">CLOSE, don\'t remind me next start</string>
     <string name="continue_button">Continue</string>
-
 </resources>

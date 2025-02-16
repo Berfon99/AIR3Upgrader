@@ -152,7 +152,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // Initialize the model list
         modelList = allowedModels.toMutableList()
-        deviceName = getDeviceModel()
+        deviceName = getDeviceName()
         modelList.add(deviceName)
 
         // Initialize the display list and map
@@ -561,8 +561,9 @@ class SettingsActivity : AppCompatActivity() {
             dataStoreManager.saveSelectedModel(selectedModel ?: deviceName)
         }
     }
-    private fun getDeviceModel(): String {
-        return Build.MODEL
+    private fun getDeviceName(): String {
+        return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
+            ?: getString(R.string.unknown_device) // Use string resource
     }
     internal fun getAllowedModels(): List<String> {
         return allowedModels
