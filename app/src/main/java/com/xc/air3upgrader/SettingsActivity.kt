@@ -173,21 +173,40 @@ class SettingsActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modelSpinner.adapter = adapter
 
-// Set the default selection based on the device model
+// Set a listener to respond to user selections
+        spinnerListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                Timber.d("onItemSelected called")
+                val selectedDisplayString = parent.getItemAtPosition(position).toString()
+                val selectedModel = modelDisplayMap[selectedDisplayString]
+                if (previousSelection != selectedModel) {
+                    if (selectedModel == null) {
+                        showDeviceNameConfirmationDialog()
+                    } else {
+                        if (!dataStoreManager.isDeviceModelSupported(selectedModel, getAllowedModels())) {
+                            Toast.makeText(this@SettingsActivity, getString(string.error_invalid_file), Toast.LENGTH_SHORT).show()
+                            modelSpinner.setSelection(modelList.indexOf(previousSelection))
+                            return
+                        }
+                        saveSelectedModel(selectedModel)
+                        isModelChanged = true
+                        previousSelection = selectedModel
+                    }
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                // Another interface callback
+            }
+        }
+        modelSpinner.onItemSelectedListener = spinnerListener
+
+        // Set the default selection based on the device model
         lifecycleScope.launch {
             val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
             val defaultSelection = selectedModel ?: Build.MODEL
-
-            // Remove the listener temporarily
-            spinnerListener = modelSpinner.onItemSelectedListener
-            modelSpinner.onItemSelectedListener = null
-
             modelSpinner.setSelection(modelList.indexOf(defaultSelection))
             previousSelection = defaultSelection
-            isSpinnerInitialized = true
-
-            // Re-add the listener
-            modelSpinner.onItemSelectedListener = spinnerListener
         }
 
         overlayPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -197,12 +216,9 @@ class SettingsActivity : AppCompatActivity() {
                     Timber.d("overlayPermissionLauncher: Display over other apps permission granted")
                     dataStoreManager.saveAutomaticUpgradeReminder(true)
                     // Après avoir mis à jour le flag AUTOMATIC_UPGRADE_REMINDER dans la logique de permission
-                    lifecycleScope.launch {
-                        // Observer la valeur du flag AUTOMATIC_UPGRADE_REMINDER
-                        dataStoreManager.getAutomaticUpgradeReminder().collect { isEnabled ->
-                            // Mettre à jour la CheckBox en fonction de la valeur du flag
-                            enableBackgroundCheckCheckbox.isChecked = isEnabled
-                        }
+                    dataStoreManager.getAutomaticUpgradeReminder().collect { isEnabled ->
+                        // Mettre à jour la CheckBox en fonction de la valeur du flag
+                        enableBackgroundCheckCheckbox.isChecked = isEnabled
                     }
                 } else {
                     Timber.d("overlayPermissionLauncher: Display over other apps permission not granted")
@@ -230,35 +246,6 @@ class SettingsActivity : AppCompatActivity() {
             },
             lifecycleScope
         )
-
-        // Set a listener to respond to user selections
-        spinnerListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                Timber.d("onItemSelected called")
-                if (!isSpinnerInitialized || !isUserInteracting) {
-                    return
-                }
-                val selectedDisplayString = parent.getItemAtPosition(position).toString()
-                val selectedModel = modelDisplayMap[selectedDisplayString]
-
-                if (selectedModel == null) {
-                    showDeviceNameConfirmationDialog()
-                } else {
-                    if (!dataStoreManager.isDeviceModelSupported(selectedModel, getAllowedModels())) {
-                        Toast.makeText(this@SettingsActivity, getString(string.error_invalid_file), Toast.LENGTH_SHORT).show()
-                        modelSpinner.setSelection(modelList.indexOf(previousSelection))
-                        return
-                    }
-                    saveSelectedModel(selectedModel)
-                    isModelChanged = true
-                }
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>) {
-                // Another interface callback
-            }
-        }
-        modelSpinner.onItemSelectedListener = spinnerListener
 
         // Load and set the saved interval values
         Timber.d("SettingsActivity: onCreate - calling loadUpgradeCheckInterval")
