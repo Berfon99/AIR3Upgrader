@@ -147,7 +147,7 @@ class SettingsActivity : AppCompatActivity() {
         automaticUpgradeReminderValue = findViewById(R.id.automatic_upgrade_reminder_value)
         unhiddenLaunchOnRebootValue = findViewById(R.id.unhidden_launch_on_reboot_value)
         enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
-        wifiOnlyCheckbox = findViewById(R.id.wifi_only_checkbox) // Initialize the new Checkbox
+        wifiOnlyCheckbox = findViewById(R.id.wifi_only_checkbox)
         startingTimeValue = findViewById(R.id.starting_time_value)
 
         // Initialize the model list
@@ -173,7 +173,7 @@ class SettingsActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modelSpinner.adapter = adapter
 
-// Set a listener to respond to user selections
+        // Set a listener to respond to user selections
         spinnerListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 Timber.d("onItemSelected called")
@@ -273,17 +273,18 @@ class SettingsActivity : AppCompatActivity() {
                 dataStoreManager.saveUnhiddenLaunchOnReboot(false)
             }
         }
-        // Attach the listener here, before updateFlagsValues()
 
         // Load the initial state from DataStore and update the UI
         lifecycleScope.launch {
             val isEnabled = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             // Set the checkbox state based on the DataStore value
             enableBackgroundCheckCheckbox.isChecked = isEnabled
-            // Attach the listener here, before updateFlagsValues()
-            enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener)
             // Update UI values
             updateFlagsValues()
+            // Update UI state
+            updateUiState(isEnabled) // Add this line
+            // Attach the listener here, after updateUiState()
+            enableBackgroundCheckCheckbox.setOnCheckedChangeListener(checkboxListener) // Move this line here
         }
         // Load the initial state of the Wi-Fi Only checkbox
         lifecycleScope.launch {
