@@ -118,7 +118,12 @@ class PermissionsManager(private val context: Context) {
         this.onInstallPermissionResult = onInstallPermissionResult
         val builder = AlertDialog.Builder(context)
         builder.setTitle(context.getString(R.string.permissions_required_title))
-        builder.setMessage(context.getString(R.string.permissions_required_message))
+        val messageResId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            R.string.permissions_required_message_tiramisu
+        } else {
+            R.string.permissions_required_message_pre_tiramisu
+        }
+        builder.setMessage(context.getString(messageResId))
         builder.setPositiveButton(context.getString(R.string.ok)) { dialog, _ ->
             Timber.d("showPermissionExplanationDialog: OK button clicked")
             onPermissionRequested()
@@ -128,7 +133,6 @@ class PermissionsManager(private val context: Context) {
         dialog.show()
         Timber.d("showPermissionExplanationDialog: end")
     }
-
     fun requestNotificationPermission() {
         Timber.d("requestNotificationPermission: called")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

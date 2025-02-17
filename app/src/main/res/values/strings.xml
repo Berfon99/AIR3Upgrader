@@ -85,7 +85,7 @@
     <string name="reminder_timeframe">Reminder Timeframe</string>
     <string name="not_set">Not Set</string>
     <string name="permissions_required_title">Permissions Required</string>
-    <string name="permissions_required_message">
+    <string name="permissions_required_message_tiramisu">
         <![CDATA[
             Please:\n
             \n
@@ -94,6 +94,14 @@
             - Allow Sending Notifications
         ]]>
     </string>
+    <string name="permissions_required_message_pre_tiramisu">
+        <![CDATA[
+            Please:\n
+            \n
+            - Allow to install unknown apps\n
+        ]]>
+    </string>
+
     <string name="wifi_only">Wi-Fi Only</string>
     <string name="wifi_only_no_wifi">WIFI only is selected and there is no WIFI connection</string>
     <string name="no_internet_title">No internet connection</string>

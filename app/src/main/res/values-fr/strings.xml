@@ -86,13 +86,20 @@
     <string name="reminder_timeframe">Délai de rappel</string>
     <string name="not_set">Non défini</string>
     <string name="permissions_required_title">Autorisations requises</string>
-    <string name="permissions_required_message">
+    <string name="permissions_required_message_tiramisu">
         <![CDATA[
             Veuillez :\n
             \n
             - Autoriser l\'installation d\'applications inconnues\n
             \n
             - Autoriser l\'envoi de notifications
+        ]]>
+    </string>
+    <string name="permissions_required_message_pre_tiramisu">
+        <![CDATA[
+            Veuillez :\n
+            \n
+            - Autoriser l\'installation d\'applications inconnues\n
         ]]>
     </string>
     <string name="wifi_only">Wi-Fi uniquement</string>
