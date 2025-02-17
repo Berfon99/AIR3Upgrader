@@ -4,8 +4,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Worker
+import androidx.work.WorkerParameters
 
 class BootReceiver : BroadcastReceiver() {
 
@@ -22,24 +27,38 @@ class BootReceiver : BroadcastReceiver() {
         Log.d("BootReceiver", "BootReceiver: unhiddenLaunchOnReboot: $unhiddenLaunchOnReboot")
         if (isAutomaticUpgradeReminderEnabled) {
             when (intent.action) {
-                Intent.ACTION_BOOT_COMPLETED -> {
-                    Log.d("BootReceiver", "BootReceiver: ACTION_BOOT_COMPLETED received")
-                    launchBootService(context, unhiddenLaunchOnReboot)
-                }
-                Intent.ACTION_LOCKED_BOOT_COMPLETED -> {
-                    Log.d("BootReceiver", "BootReceiver: ACTION_LOCKED_BOOT_COMPLETED received")
-                    launchBootService(context, unhiddenLaunchOnReboot)
+                Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED -> {
+                    Log.d("BootReceiver", "BootReceiver: ACTION_BOOT_COMPLETED or ACTION_LOCKED_BOOT_COMPLETED received")
+                    scheduleBootWork(context, unhiddenLaunchOnReboot)
                 }
             }
         }
         Log.d("BootReceiver", "BootReceiver: onReceive - END")
     }
 
-    private fun launchBootService(context: Context, unhiddenLaunchOnReboot: Boolean) {
-        Log.d("BootReceiver", "BootReceiver: Launching BootService")
-        val serviceIntent = Intent(context, BootService::class.java).apply {
+    private fun scheduleBootWork(context: Context, unhiddenLaunchOnReboot: Boolean) {
+        Log.d("BootReceiver", "BootReceiver: Scheduling BootWorker")
+        val workManager = WorkManager.getInstance(context)
+        val bootWorkRequest = OneTimeWorkRequestBuilder<BootWorker>()
+            .addTag("BootWorker")
+            .build()
+        workManager.enqueue(bootWorkRequest)
+    }
+}
+
+class BootWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
+    override fun doWork(): Result {
+        Log.d("BootWorker", "BootWorker: doWork called")
+        val dataStoreManager = DataStoreManager(applicationContext)
+        val unhiddenLaunchOnReboot: Boolean = runBlocking {
+            dataStoreManager.getUnhiddenLaunchOnReboot().first()
+        }
+        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
             putExtra("unhiddenLaunchOnReboot", unhiddenLaunchOnReboot)
         }
-        context.startService(serviceIntent)
+        applicationContext.startActivity(intent)
+        Log.d("BootWorker", "BootWorker: doWork - END")
+        return Result.success()
     }
 }
