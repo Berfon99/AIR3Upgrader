@@ -26,14 +26,16 @@
         tools:targetApi="31"
         android:forceDarkAllowed="false"
         android:requestLegacyExternalStorage="false">
+
         <activity
             android:name=".MainActivity"
-            android:exported="true"> <!-- Removed android:theme here -->
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity android:name=".SettingsActivity" />
         <activity
             android:name=".AboutActivity"
@@ -41,27 +43,34 @@
         <activity
             android:name=".CheckPromptActivity"
             android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.xc.air3upgrader.provider"
             android:exported="false"
             android:grantUriPermissions="true">
-            <intent-filter>
-                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.content.action.OPEN_DOCUMENT_TREE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+
         <provider
             android:name=".WorkManagerInitializer"
             android:authorities="${applicationId}.workmanager-init"
             android:exported="false" />
+
+        <provider
+            android:name=".ApkDocumentsProvider"
+            android:authorities="com.xc.air3upgrader.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </provider>
+
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
@@ -74,6 +83,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
+
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:exported="false"
@@ -81,6 +91,7 @@
         <service
             android:name=".BootService"
             android:exported="false" />
+
         <receiver
             android:name=".DownloadCompleteReceiver"
             android:exported="true"
