@@ -152,20 +152,22 @@ class SettingsActivity : AppCompatActivity() {
         // Initialize the model list
         modelList = allowedModels.toMutableList()
         deviceName = getDeviceName()
-        modelList.add(deviceName)
+        // Check if the device name is already in the allowed models
+        if (!modelList.contains(deviceName)) {
+            modelList.add(deviceName)
+        }
 
         // Initialize the display list and map
         modelDisplayList = mutableListOf()
         modelDisplayMap = mutableMapOf()
-        for (model in modelList) {
-            val displayString = if (model == deviceName) {
-                getString(string.device_name) + " " + deviceName
-            } else {
-                model
-            }
-            modelDisplayList.add(displayString)
-            modelDisplayMap[displayString] = if (model == deviceName) null else model
+        for (model in allowedModels) {
+            modelDisplayList.add(model)
+            modelDisplayMap[model] = model
         }
+        // Add the device name as the last item with the prefix
+        val deviceNameDisplay = getString(string.device_name) + " " + deviceName
+        modelDisplayList.add(deviceNameDisplay)
+        modelDisplayMap[deviceNameDisplay] = null
 
         // Create an ArrayAdapter for the spinner
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelDisplayList)
