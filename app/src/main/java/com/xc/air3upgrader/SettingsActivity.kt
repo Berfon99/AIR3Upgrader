@@ -63,8 +63,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var startingTimeValue: TextView
     private var isUpdatingTimeRemaining = false
     private var isSchedulingWorker = false
-    //private lateinit var automaticUpgradeReminderValue: TextView
-    private lateinit var unhiddenLaunchOnRebootValue: TextView
+    private lateinit var unhiddenLaunchCheckbox: CheckBox
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
 
@@ -144,7 +143,8 @@ class SettingsActivity : AppCompatActivity() {
         upgradeCheckIntervalMinutesEditText = findViewById(R.id.upgrade_check_interval_minutes)
         timeRemainingValue = findViewById(R.id.time_remaining_value)
         setUpgradeCheckIntervalButton = findViewById(R.id.set_upgrade_check_interval_button)
-        unhiddenLaunchOnRebootValue = findViewById(R.id.unhidden_launch_on_reboot_value)
+        //unhiddenLaunchOnRebootValue = findViewById(R.id.unhidden_launch_on_reboot_value) // Remove this line
+        unhiddenLaunchCheckbox = findViewById(R.id.unhidden_launch_checkbox) // Add this line
         enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
         wifiOnlyCheckbox = findViewById(R.id.wifi_only_checkbox)
         startingTimeValue = findViewById(R.id.starting_time_value)
@@ -305,11 +305,11 @@ class SettingsActivity : AppCompatActivity() {
             val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
             Timber.d("SettingsActivity: updateFlagsValues - isAutomaticUpgradeReminderEnabled: $isAutomaticUpgradeReminderEnabled")
             Timber.d("SettingsActivity: updateFlagsValues - isUnhiddenLaunchOnRebootEnabled: $isUnhiddenLaunchOnRebootEnabled")
-            unhiddenLaunchOnRebootValue.text = "Unhidden Launch On Reboot: $isUnhiddenLaunchOnRebootEnabled"
+            unhiddenLaunchCheckbox.isChecked = isUnhiddenLaunchOnRebootEnabled // Add this line
             enableBackgroundCheckCheckbox.isChecked = isAutomaticUpgradeReminderEnabled
             if (!isAutomaticUpgradeReminderEnabled) {
                 startingTimeValue.text = getString(R.string.not_set)
-                dataStoreManager.saveUnhiddenLaunchOnReboot(false) // Add this line
+                dataStoreManager.saveUnhiddenLaunchOnReboot(false)
                 dataStoreManager.removeLastCheckTime()
                 handler.removeCallbacks(updateTimeRemainingRunnable)
             }

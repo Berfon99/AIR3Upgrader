@@ -112,4 +112,5 @@
     <string name="skip_reminder_at_next_start_up">FERMER, me le rappeler au prochain démarrage</string>
     <string name="skip_no_reminder_at_next_start_up">FERMER, ne pas me le rappeler au prochain démarrage</string>
     <string name="continue_button">Continuer</string>
+    <string name="unhidden_launch">Lancement visible</string>
 </resources>

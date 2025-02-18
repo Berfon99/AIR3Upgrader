@@ -112,15 +112,14 @@
             android:layout_marginStart="32dp"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/unhidden_launch_on_reboot_value"
+            <CheckBox
+                android:id="@+id/unhidden_launch_checkbox"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="No unhidden flag"
+                android:clickable="false"
+                android:text="@string/unhidden_launch"
                 android:textSize="16sp" />
-
-
         </LinearLayout>
 
     </LinearLayout>
