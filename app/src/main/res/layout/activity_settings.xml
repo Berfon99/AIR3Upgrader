@@ -1,266 +1,268 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    tools:context=".SettingsActivity">
+    android:fillViewport="true">
 
-    <!-- Guideline for 50% width -->
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.5" />
-
-    <!-- Model Selection -->
-    <TextView
-        android:id="@+id/model_selection_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/model_selection"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Spinner
-        android:id="@+id/model_spinner"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:minHeight="48dp"
-        app:layout_constraintEnd_toStartOf="@+id/guideline"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/model_selection_label"
-        app:layout_constraintWidth_percent="0.45" />
-
-    <!-- Wi-Fi Only Checkbox -->
-    <CheckBox
-        android:id="@+id/wifi_only_checkbox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/wifi_only"
-        app:layout_constraintBottom_toBottomOf="@+id/model_spinner"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/guideline"
-        app:layout_constraintTop_toTopOf="@+id/model_selection_label" />
-
-    <!-- Divider -->
-    <View
-        android:id="@+id/divider"
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:layout_marginTop="16dp"
-        android:background="?android:attr/listDivider"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/model_spinner" />
-
-    <!-- Enable Background Check Checkbox and Starting Time -->
-    <LinearLayout
-        android:id="@+id/checkbox_and_starting_time_layout"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="horizontal"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/divider">
+        android:padding="16dp"
+        tools:context=".SettingsActivity">
 
-        <LinearLayout
-            android:id="@+id/checkbox_and_flag_layout"
+        <!-- Guideline for 50% width -->
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.5" />
 
-            <CheckBox
-                android:id="@+id/enable_background_check_checkbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/automatic_upgrade_reminder" />
-        </LinearLayout>
-
-        <LinearLayout
+        <!-- Model Selection and Wi-Fi Only -->
+        <TextView
+            android:id="@+id/model_selection_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:orientation="horizontal">
+            android:layout_marginTop="16dp"
+            android:text="@string/model_selection"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:id="@+id/starting_time_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/starting_time"
-                android:textSize="16sp" />
-
-            <TextView
-                android:id="@+id/starting_time_value"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="not set"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:orientation="vertical">
-
-            <CheckBox
-                android:id="@+id/unhidden_launch_checkbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:clickable="false"
-                android:text="@string/unhidden_launch"
-                android:textSize="16sp" />
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <!-- Horizontal LinearLayout for Upgrade Check Interval, Set Button, and Time Remaining -->
-    <LinearLayout
-        android:id="@+id/main_horizontal_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@+id/checkbox_and_starting_time_layout">
-
-        <!-- Upgrade Check Interval (1/2 width) -->
-        <LinearLayout
-            android:id="@+id/upgrade_check_interval_layout"
+        <Spinner
+            android:id="@+id/model_spinner"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="32dp"
-            android:layout_weight="2"
-            android:orientation="vertical">
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            app:layout_constraintEnd_toStartOf="@+id/guideline"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/model_selection_label"
+            app:layout_constraintWidth_percent="0.45" />
 
-            <TextView
-                android:id="@+id/upgrade_check_interval_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reminder_timeframe"
-                android:textSize="16sp" />
+        <!-- Wi-Fi Only Checkbox -->
+        <CheckBox
+            android:id="@+id/wifi_only_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wifi_only"
+            app:layout_constraintBottom_toBottomOf="@+id/model_spinner"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/guideline"
+            app:layout_constraintTop_toTopOf="@+id/model_selection_label" />
 
+        <!-- Divider -->
+        <View
+            android:id="@+id/divider"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:background="?android:attr/listDivider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/model_spinner" />
+
+        <!-- Enable Background Check Checkbox and Starting Time -->
+        <LinearLayout
+            android:id="@+id/checkbox_and_starting_time_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/divider">
+
+            <!-- Checkboxes Section (Left Side) -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:id="@+id/checkbox_layout"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-                <LinearLayout
+                <CheckBox
+                    android:id="@+id/enable_background_check_checkbox"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="@string/automatic_upgrade_reminder" />
 
-                    <TextView
-                        android:id="@+id/days_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:labelFor="@+id/upgrade_check_interval_days"
-                        android:text="@string/days"
-                        android:textSize="14sp" />
-
-                    <EditText
-                        android:id="@+id/upgrade_check_interval_days"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:inputType="number"
-                        android:minHeight="48dp" />
-                </LinearLayout>
-
-                <LinearLayout
+                <CheckBox
+                    android:id="@+id/unhidden_launch_checkbox"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:clickable="false"
+                    android:text="@string/unhidden_launch"
+                    android:textSize="16sp" />
+            </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/hours_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:labelFor="@+id/upgrade_check_interval_hours"
-                        android:text="@string/hours"
-                        android:textSize="14sp" />
+            <!-- Starting Time Section (Right Side) -->
+            <LinearLayout
+                android:id="@+id/starting_time_layout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                app:layout_constraintStart_toEndOf="@+id/checkbox_layout"
+                app:layout_constraintTop_toTopOf="parent">
 
-                    <EditText
-                        android:id="@+id/upgrade_check_interval_hours"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:inputType="number"
-                        android:minHeight="48dp" />
-                </LinearLayout>
-
-                <LinearLayout
+                <TextView
+                    android:id="@+id/starting_time_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="@string/starting_time"
+                    android:textSize="16sp" />
 
-                    <TextView
-                        android:id="@+id/minutes_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:labelFor="@+id/upgrade_check_interval_minutes"
-                        android:text="@string/minutes"
-                        android:textSize="14sp" />
-
-                    <EditText
-                        android:id="@+id/upgrade_check_interval_minutes"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:inputType="number"
-                        android:minHeight="48dp" />
-                </LinearLayout>
+                <TextView
+                    android:id="@+id/starting_time_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="not set"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Set Button (1/4 width) -->
+        <!-- Horizontal LinearLayout for Upgrade Check Interval, Set Button, and Time Remaining -->
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1">
-
-            <Button
-                android:id="@+id/set_upgrade_check_interval_button"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:text="@string/set" />
-        </LinearLayout>
-
-        <!-- Time Remaining (1/4 width) -->
-        <LinearLayout
-            android:id="@+id/time_remaining_layout"
-            android:layout_width="0dp"
+            android:id="@+id/main_horizontal_layout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            app:layout_constraintTop_toBottomOf="@+id/checkbox_and_starting_time_layout">
 
-            <TextView
-                android:id="@+id/time_remaining_label"
-                android:layout_width="wrap_content"
+            <!-- Upgrade Check Interval (1/2 width) -->
+            <LinearLayout
+                android:id="@+id/upgrade_check_interval_layout"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/time_remaining"
-                android:textSize="16sp" />
+                android:layout_marginEnd="32dp"
+                android:layout_weight="2"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/time_remaining_value"
-                android:layout_width="wrap_content"
+                <TextView
+                    android:id="@+id/upgrade_check_interval_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/reminder_timeframe"
+                    android:textSize="16sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/days_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:labelFor="@+id/upgrade_check_interval_days"
+                            android:text="@string/days"
+                            android:textSize="14sp" />
+
+                        <EditText
+                            android:id="@+id/upgrade_check_interval_days"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:inputType="number"
+                            android:minHeight="48dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/hours_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:labelFor="@+id/upgrade_check_interval_hours"
+                            android:text="@string/hours"
+                            android:textSize="14sp" />
+
+                        <EditText
+                            android:id="@+id/upgrade_check_interval_hours"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:inputType="number"
+                            android:minHeight="48dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/minutes_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:labelFor="@+id/upgrade_check_interval_minutes"
+                            android:text="@string/minutes"
+                            android:textSize="14sp" />
+
+                        <EditText
+                            android:id="@+id/upgrade_check_interval_minutes"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:inputType="number"
+                            android:minHeight="48dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Set Button (1/4 width) -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+
+                <Button
+                    android:id="@+id/set_upgrade_check_interval_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="@string/set" />
+            </LinearLayout>
+
+            <!-- Time Remaining (1/4 width) -->
+            <LinearLayout
+                android:id="@+id/time_remaining_layout"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="-"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:layout_marginStart="32dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/time_remaining_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/time_remaining"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/time_remaining_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="-"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>
