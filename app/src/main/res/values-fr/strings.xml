@@ -97,9 +97,7 @@
     </string>
     <string name="permissions_required_message_pre_tiramisu">
         <![CDATA[
-            Veuillez :\n
-            \n
-            - Autoriser l\'installation d\'applications inconnues\n
+            Autoriser l\'installation d\'applications inconnues
         ]]>
     </string>
     <string name="wifi_only">Wi-Fi uniquement</string>

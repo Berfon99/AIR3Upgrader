@@ -96,9 +96,7 @@
     </string>
     <string name="permissions_required_message_pre_tiramisu">
         <![CDATA[
-            Please:\n
-            \n
-            - Allow to install unknown apps\n
+            Allow to install unknown apps
         ]]>
     </string>
 
