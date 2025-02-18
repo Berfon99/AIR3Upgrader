@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
@@ -35,6 +36,8 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
+import android.widget.ProgressBar
+import androidx.glance.visibility
 
 class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
 
@@ -42,6 +45,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         private const val SETTINGS_REQUEST_CODE = 1
     }
     private var isFirstDownload = false
+    lateinit var downloadProgressBar: ProgressBar
     private lateinit var xctrackName: TextView
     private lateinit var xcguideName: TextView
     private lateinit var air3managerName: TextView
@@ -64,7 +68,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     private lateinit var air3managerApkName: TextView
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
-    //private lateinit var downloadCompleteReceiver: DownloadCompleteReceiver
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
@@ -267,6 +270,8 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         xctrackApkName = findViewById(R.id.xctrack_apk_name)
         xcguideApkName = findViewById(R.id.xcguide_apk_name)
         air3managerApkName = findViewById(R.id.air3manager_apk_name)
+        // Initialize the ProgressBar
+        downloadProgressBar = findViewById(R.id.downloadProgressBar)
 
         // Set onClick listener for the close button
         closeButton.setOnClickListener {
@@ -604,6 +609,8 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                     if (appsToUpgrade.isNotEmpty()) {
                         // Show the "Downloading" Toast message here
                         Toast.makeText(this@MainActivity, getString(R.string.downloading), Toast.LENGTH_SHORT).show()
+                        isFirstDownload = true
+                        downloadProgressBar.visibility = View.VISIBLE
                         downloadCompleteReceiver.downloadNextApp(this@MainActivity)
                     } else {
                         // Show a message if no apps are selected
