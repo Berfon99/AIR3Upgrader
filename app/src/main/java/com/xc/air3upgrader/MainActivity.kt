@@ -508,7 +508,14 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                         delay(2000) // Wait for 2 seconds before retrying
                     }
                 } else {
-                    appInfos = newAppInfos
+                    appInfos = newAppInfos.map { appInfo ->
+                        val filteredVersion = if (appInfo.`package` == air3managerPackageName) {
+                            filterVersion(appInfo.highestServerVersion)
+                        } else {
+                            appInfo.highestServerVersion
+                        }
+                        appInfo.copy(highestServerVersion = filteredVersion)
+                    }
                     Log.d("MainActivity", "Successfully fetched ${appInfos.size} app infos from server")
                     for (appInfo in appInfos) {
                         Log.d("MainActivity", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}, Highest Server Version: ${appInfo.highestServerVersion}")
@@ -535,6 +542,14 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             return false
         }
         return true
+    }
+    private fun filterVersion(version: String): String {
+        val parts = version.split(".")
+        return if (parts.size > 2) {
+            "${parts[0]}.${parts[1]}"
+        } else {
+            version
+        }
     }
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
