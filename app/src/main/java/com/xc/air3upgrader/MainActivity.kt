@@ -43,6 +43,10 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
 
     companion object {
         private const val SETTINGS_REQUEST_CODE = 1
+        private var instance: MainActivity? = null
+        fun getInstance(): MainActivity? {
+            return instance
+        }
     }
     private var isFirstDownload = false
     lateinit var downloadProgressBar: ProgressBar
@@ -94,6 +98,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        instance = this // Add this line here
         supportActionBar = getSupportActionBar()
         // Restore the state of your variables
         if (savedInstanceState != null) {
@@ -365,6 +370,9 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             }
             continueSetup()
         }
+    }
+    internal fun hideProgressBar() {
+        downloadProgressBar.visibility = View.GONE
     }
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
