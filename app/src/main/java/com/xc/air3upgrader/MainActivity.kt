@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     companion object {
         private const val SETTINGS_REQUEST_CODE = 1
     }
-
+    private var isFirstDownload = false
     private lateinit var xctrackName: TextView
     private lateinit var xcguideName: TextView
     private lateinit var air3managerName: TextView
