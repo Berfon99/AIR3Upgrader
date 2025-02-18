@@ -305,7 +305,8 @@ class SettingsActivity : AppCompatActivity() {
             val isUnhiddenLaunchOnRebootEnabled = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
             Timber.d("SettingsActivity: updateFlagsValues - isAutomaticUpgradeReminderEnabled: $isAutomaticUpgradeReminderEnabled")
             Timber.d("SettingsActivity: updateFlagsValues - isUnhiddenLaunchOnRebootEnabled: $isUnhiddenLaunchOnRebootEnabled")
-            unhiddenLaunchCheckbox.isChecked = isUnhiddenLaunchOnRebootEnabled // Add this line
+            unhiddenLaunchCheckbox.isChecked = isUnhiddenLaunchOnRebootEnabled
+            unhiddenLaunchCheckbox.isEnabled = isUnhiddenLaunchOnRebootEnabled // Add this line
             enableBackgroundCheckCheckbox.isChecked = isAutomaticUpgradeReminderEnabled
             if (!isAutomaticUpgradeReminderEnabled) {
                 startingTimeValue.text = getString(R.string.not_set)
