@@ -31,6 +31,7 @@ class DataStoreManager(private val context: Context) {
             val IS_MANUAL_LAUNCH = booleanPreferencesKey("is_manual_launch")
             val WIFI_ONLY = booleanPreferencesKey("wifi_only")
             val IS_FIRST_LAUNCH = booleanPreferencesKey("is_first_launch")
+            val DATA_USAGE_WARNING_ACCEPTED = booleanPreferencesKey("data_usage_warning_accepted")
         }
     }
 
@@ -138,6 +139,17 @@ class DataStoreManager(private val context: Context) {
                 saveUnhiddenLaunchOnReboot(false)
                 saveIsFirstLaunch(false)
             }
+        }
+    }
+    suspend fun saveDataUsageWarningAccepted(isAccepted: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DATA_USAGE_WARNING_ACCEPTED] = isAccepted
+        }
+    }
+
+    fun getDataUsageWarningAccepted(): Flow<Boolean> {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.DATA_USAGE_WARNING_ACCEPTED] ?: false
         }
     }
 }

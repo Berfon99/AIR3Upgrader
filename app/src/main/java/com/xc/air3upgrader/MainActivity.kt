@@ -198,6 +198,22 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         Timber.d("continueSetup: called")
         setContentView(R.layout.activity_main)
         lifecycleScope.launch {
+            NetworkUtils.shouldShowDataUsageWarning(dataStoreManager).collect { shouldShowWarning ->
+                if (shouldShowWarning) {
+                    NetworkUtils.showDataUsageWarningDialog(this@MainActivity, dataStoreManager) {
+                        // This lambda is called when the user clicks "Accept and Continue"
+                        checkNetworkAndContinueLogic()
+                    }
+                } else {
+                    // If the warning should not be shown, proceed directly to checkNetworkAndContinueLogic
+                    checkNetworkAndContinueLogic()
+                }
+            }
+        }
+        Timber.d("continueSetup: end")
+    }
+    private fun checkNetworkAndContinueLogic() {
+        lifecycleScope.launch {
             val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
             val isNetworkOk = NetworkUtils.checkNetworkAndContinue(
                 this@MainActivity,
@@ -236,7 +252,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 showUI()
             }
         }
-        Timber.d("continueSetup: end")
     }
     private fun showUI() {
         Timber.d("showUI: called")

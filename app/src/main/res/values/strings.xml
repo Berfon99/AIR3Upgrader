@@ -113,4 +113,7 @@
     <string name="skip_no_reminder_at_next_start_up">CLOSE, don\'t remind me next start</string>
     <string name="continue_button">Continue</string>
     <string name="unhidden_launch">Visible Launch</string>
+    <string name="data_usage_warning_title">Data Usage Warning</string>
+    <string name="data_usage_warning_message">Downloading APK files can consume a significant amount of mobile data. Are you sure you want to continue?</string>
+    <string name="accept_and_continue">Accept and Continue</string>
 </resources>
