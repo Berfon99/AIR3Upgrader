@@ -61,6 +61,8 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                                                         flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
                                                     }
                                                     context.startActivity(installIntent)
+                                                    // Hide the progress bar after starting the install intent
+                                                    MainActivity.getInstance()?.hideProgressBar()
                                                 } else {
                                                     Timber.e("Failed to rename file to: $originalFileName")
                                                 }
@@ -75,6 +77,8 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                                                     flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
                                                 }
                                                 context.startActivity(installIntent)
+                                                // Hide the progress bar after starting the install intent
+                                                MainActivity.getInstance()?.hideProgressBar()
                                             } catch (e: IllegalArgumentException) {
                                                 Timber.e("Failed to get URI for file: ${apkFile.absolutePath}. Error: ${e.message}")
                                             }
