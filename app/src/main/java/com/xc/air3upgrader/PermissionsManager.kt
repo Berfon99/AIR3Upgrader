@@ -109,6 +109,7 @@ class PermissionsManager(private val context: Context) {
             .setPositiveButton(context.getString(R.string.ok)) { _, _ ->
                 (context as? Activity)?.finish()
             }
+            .setCancelable(false)
             .show()
         Timber.d("showInstallPermissionDeniedMessage: end")
     }
@@ -129,6 +130,7 @@ class PermissionsManager(private val context: Context) {
             onPermissionRequested()
             dialog.dismiss()
         }
+        builder.setCancelable(false)
         val dialog = builder.create()
         dialog.show()
         Timber.d("showPermissionExplanationDialog: end")
@@ -156,6 +158,7 @@ class PermissionsManager(private val context: Context) {
             .setTitle(context.getString(R.string.notification_permission_required))
             .setMessage(context.getString(R.string.notification_permission_required_message))
             .setPositiveButton(context.getString(R.string.ok)) { _, _ -> (context as? Activity)?.finish() }
+            .setCancelable(false)
             .show()
     }
 
