@@ -1,0 +1,120 @@
+<resources>
+    <string name="app_name">AIR³ Upgrader</string>
+    <string name="action_settings">Ajustes</string>
+    <string name="action_about">Acerca de</string>
+    <string name="select_device">Seleccionar Dispositivo</string>
+    <string name="no_file_selected">Ningún archivo seleccionado</string>
+    <string name="error_invalid_file">Error: Archivo inválido</string>
+    <string name="error_updating_device">Error al actualizar el dispositivo</string>
+    <string name="update_complete">¡Actualización completa!</string>
+    <string name="no_devices_found">No se encontraron dispositivos</string>
+    <string name="bluetooth_permission_denied">Permiso de Bluetooth denegado</string>
+    <string name="bluetooth_not_supported">Bluetooth no soportado</string>
+    <string name="bluetooth_not_enabled">Bluetooth no habilitado</string>
+    <string name="unknown_app">Aplicación desconocida</string>
+    <string name="not_installed">No instalado</string>
+    <string name="installed">Instalado:</string>
+    <string name="server">Servidor:</string>
+    <string name="apk_download_started">Descarga de APK iniciada…</string>
+    <string name="no_apps_selected_for_upgrade">Ninguna aplicación seleccionada para actualizar</string>
+    <string name="wait_for_next_download">Esperar a la siguiente descarga…</string>
+    <string name="downloading">Descargando</string>
+    <string name="downloading_latest_version_of">Descargando la última versión de</string>
+    <string name="install_unknown_apps_permission">Permiso para instalar aplicaciones desconocidas</string>
+    <string name="to_install_apps_from_unknown_sources_you_need_to_allow_this_permission_in_your_device_settings">Para instalar aplicaciones de fuentes desconocidas, necesitas permitir este permiso en la configuración de tu dispositivo.</string>
+    <string name="settings">Ajustes</string>
+    <string name="cancel">Cancelar</string>
+    <string name="permission_denied">Permiso denegado</string>
+    <string name="device_name">Nombre del dispositivo:</string>
+    <string name="device">Dispositivo:</string>
+    <string name="product">Producto:</string>
+    <string name="model">Modelo:</string>
+    <string name="brand">Marca:</string>
+    <string name="manufacturer">Fabricante:</string>
+    <string name="android_version">Versión de Android:</string>
+    <string name="sdk_version">Versión del SDK:</string>
+    <string name="unknown_device">Dispositivo desconocido</string>
+    <string name="na">N/D</string>
+    <string name="download_failed">Error en la descarga. Por favor, inténtalo de nuevo más tarde.</string>
+    <string name="xctrack_apk_signature">513134f67c4efc51f7650bb2657e1f45fc4244e224cd3f9d61051c252700f593</string>
+    <string name="xcguide_apk_signature">b97696fd760795f32b73459c01b836f4f211856e702b957b833cc887336ddfb3</string>
+    <string name="air3manager_apk_signature">fe36eab09d29b23132883494326ba732f0edfb31c0c85f4c78c4ccc84c50e1e0</string>
+    <string name="version_not_found">Versión no encontrada</string>
+    <string name="no_internet_connection">Sin conexión a internet</string>
+    <string name="no_internet_message">Esta aplicación requiere una conexión a internet para funcionar correctamente.</string>
+    <string name="ok">Aceptar</string>
+    <string name="retry">Reintentar</string>
+    <string name="xctrack">XCTrack</string>
+    <string name="upgrade">Actualizar</string>
+    <string name="xc_guide">XC Guide</string>
+    <string name="air3_manager">AIR³ Manager</string>
+    <string name="refresh">Refrescar</string>
+    <string name="close">Cerrar</string>
+    <string name="server_version">Servidor: %1$s</string>
+    <string name="refresh_data_title">Actualización requerida</string>
+    <string name="refresh_data_message">Por favor, actualice los datos para tenerlos en cuenta</string>
+    <string name="app_version">Versión</string>
+    <string name="copyright">Copyright: Bertrand Fontaine - 2025</string>
+    <string name="device_name_confirmation_message">¿Estás seguro de que quieres usar el nombre de tu dispositivo en lugar del modelo de dispositivo detectado? El nombre del dispositivo debe seguir estrictamente la siguiente estructura para funcionar "AIR3-?.?". Por favor, "Refresca" los datos para tenerlo en cuenta</string>
+    <string name="device_name_confirmation_title">Confirmación del nombre del dispositivo</string>
+    <string name="upgrade_check_interval_label">Intervalo de comprobación de actualizaciones:</string>
+    <string name="days">Días</string>
+    <string name="hours">Horas</string>
+    <string name="minutes">Minutos</string>
+    <string name="model_selection">Selección de modelo:</string>
+    <string name="time_remaining">Tiempo restante</string>
+    <string name="time_remaining_hours_minutes">%1$d horas %2$d minutos</string>
+    <string name="time_remaining_minutes">%1$d minutos</string>
+    <string name="time_remaining_seconds">%1$d segundos</string>
+    <string name="time_remaining_less_than_a_second">Menos de un segundo</string>
+    <string name="set">Establecer</string>
+    <string name="yes">Sí</string>
+    <string name="no">No</string>
+    <string name="less_than_a_second">Menos de un segundo</string>
+    <string name="day">día</string>
+    <string name="hour">hora</string>
+    <string name="minute">minuto</string>
+    <string name="second">segundo</string>
+    <string name="seconds">segundos</string>
+    <string name="error_interval_too_short">El intervalo debe ser de al menos 15 minutos</string>
+    <string name="enable_background_upgrade_check">Habilitar la comprobación de actualizaciones en segundo plano</string>
+    <string name="disabled">Deshabilitado</string>
+    <string name="starting_time">Hora de inicio:</string>
+    <string name="not_available">N/D</string>
+    <string name="automatic_upgrade_reminder">Recordatorio automático de actualización</string>
+    <string name="reminder_timeframe">Plazo del recordatorio</string>
+    <string name="not_set">No establecido</string>
+    <string name="permissions_required_title">Permisos requeridos</string>
+    <string name="permissions_required_message_tiramisu">
+        <![CDATA[
+            Por favor:\n
+            \n
+            - Permite instalar aplicaciones desconocidas\n
+            \n
+            - Permite enviar notificaciones
+        ]]>
+    </string>
+    <string name="permissions_required_message_pre_tiramisu">
+        <![CDATA[
+            Permite instalar aplicaciones desconocidas
+        ]]>
+    </string>
+    <string name="wifi_only">Solo Wi-Fi</string>
+    <string name="wifi_only_no_wifi">Solo WIFI está seleccionado y no hay conexión WIFI</string>
+    <string name="no_internet_title">Sin conexión a internet</string>
+    <string name="storage_permission_required">Permiso de almacenamiento requerido</string>
+    <string name="storage_permission_required_message">Se requiere permiso de almacenamiento para instalar aplicaciones. Por favor, concede el permiso.</string>
+    <string name="notification_permission_required">Permiso de notificación requerido</string>
+    <string name="notification_permission_required_message">Se requiere permiso de notificación para recibir notificaciones. Por favor, concede el permiso.</string>
+    <string name="storage_permission_denied">Permiso de almacenamiento denegado</string>
+    <string name="check_now_or_postpone">Comprobar ahora      o     posponer?</string>
+    <string name="skip_reminder_at_next_start_up">CERRAR, recordarme al próximo inicio</string>
+    <string name="skip_no_reminder_at_next_start_up">CERRAR, no recordarme al próximo inicio</string>
+    <string name="continue_button">Continuar</string>
+    <string name="unhidden_launch">Inicio visible</string>
+    <string name="data_usage_warning_title">Advertencia de uso de datos</string>
+    <string name="data_usage_warning_message">La descarga de archivos APK puede consumir una cantidad significativa de datos móviles. ¿Estás seguro de que quieres continuar?</string>
+    <string name="accept_and_continue">Aceptar y continuar</string>
+    <string name="permission_required">Permiso requerido</string>
+    <string name="overlay_permission_message">El permiso 'Mostrar sobre otras aplicaciones' es necesario para mostrar el recordatorio de actualización encima de otras aplicaciones.</string>
+</resources>

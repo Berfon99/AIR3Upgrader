@@ -1,0 +1,120 @@
+<resources>
+    <string name="app_name">AIR³ Upgrader</string>
+    <string name="action_settings">Instellingen</string>
+    <string name="action_about">Over</string>
+    <string name="select_device">Selecteer Apparaat</string>
+    <string name="no_file_selected">Geen bestand geselecteerd</string>
+    <string name="error_invalid_file">Fout: Ongeldig bestand</string>
+    <string name="error_updating_device">Fout bij het bijwerken van het apparaat</string>
+    <string name="update_complete">Update voltooid!</string>
+    <string name="no_devices_found">Geen apparaten gevonden</string>
+    <string name="bluetooth_permission_denied">Bluetooth-toestemming geweigerd</string>
+    <string name="bluetooth_not_supported">Bluetooth niet ondersteund</string>
+    <string name="bluetooth_not_enabled">Bluetooth niet ingeschakeld</string>
+    <string name="unknown_app">Onbekende App</string>
+    <string name="not_installed">Niet geïnstalleerd</string>
+    <string name="installed">Geïnstalleerd:</string>
+    <string name="server">Server:</string>
+    <string name="apk_download_started">APK download gestart…</string>
+    <string name="no_apps_selected_for_upgrade">Geen apps geselecteerd voor upgrade</string>
+    <string name="wait_for_next_download">Wacht op volgende download…</string>
+    <string name="downloading">Downloaden</string>
+    <string name="downloading_latest_version_of">De nieuwste versie van downloaden</string>
+    <string name="install_unknown_apps_permission">Toestemming voor installatie van onbekende apps</string>
+    <string name="to_install_apps_from_unknown_sources_you_need_to_allow_this_permission_in_your_device_settings">Om apps van onbekende bronnen te installeren, moet u deze toestemming in uw apparaatinstellingen toestaan.</string>
+    <string name="settings">Instellingen</string>
+    <string name="cancel">Annuleren</string>
+    <string name="permission_denied">Toestemming geweigerd</string>
+    <string name="device_name">Apparaatnaam:</string>
+    <string name="device">Apparaat:</string>
+    <string name="product">Product:</string>
+    <string name="model">Model:</string>
+    <string name="brand">Merk:</string>
+    <string name="manufacturer">Fabrikant:</string>
+    <string name="android_version">Android-versie:</string>
+    <string name="sdk_version">SDK-versie:</string>
+    <string name="unknown_device">Onbekend apparaat</string>
+    <string name="na">N.v.t.</string>
+    <string name="download_failed">Download mislukt. Probeer het later opnieuw.</string>
+    <string name="xctrack_apk_signature">513134f67c4efc51f7650bb2657e1f45fc4244e224cd3f9d61051c252700f593</string>
+    <string name="xcguide_apk_signature">b97696fd760795f32b73459c01b836f4f211856e702b957b833cc887336ddfb3</string>
+    <string name="air3manager_apk_signature">fe36eab09d29b23132883494326ba732f0edfb31c0c85f4c78c4ccc84c50e1e0</string>
+    <string name="version_not_found">Versie niet gevonden</string>
+    <string name="no_internet_connection">Geen internetverbinding</string>
+    <string name="no_internet_message">Deze app vereist een internetverbinding om correct te werken.</string>
+    <string name="ok">OK</string>
+    <string name="retry">Opnieuw</string>
+    <string name="xctrack">XCTrack</string>
+    <string name="upgrade">Upgraden</string>
+    <string name="xc_guide">XC Guide</string>
+    <string name="air3_manager">AIR³ Manager</string>
+    <string name="refresh">Vernieuwen</string>
+    <string name="close">Sluiten</string>
+    <string name="server_version">Server: %1$s</string>
+    <string name="refresh_data_title">Vernieuwen vereist</string>
+    <string name="refresh_data_message">Vernieuw de gegevens om ze in aanmerking te nemen</string>
+    <string name="app_version">Versie</string>
+    <string name="copyright">Copyright: Bertrand Fontaine - 2025</string>
+    <string name="device_name_confirmation_message">Weet u zeker dat u uw apparaatnaam wilt gebruiken in plaats van het gedetecteerde apparaatmodel? De apparaatnaam moet strikt de volgende structuur volgen om te werken "AIR3-?.?". "Vernieuw" de gegevens om ze in aanmerking te nemen</string>
+    <string name="device_name_confirmation_title">Bevestiging apparaatnaam</string>
+    <string name="upgrade_check_interval_label">Upgrade controle interval:</string>
+    <string name="days">Dagen</string>
+    <string name="hours">Uren</string>
+    <string name="minutes">Minuten</string>
+    <string name="model_selection">Model selectie:</string>
+    <string name="time_remaining">Resterende tijd</string>
+    <string name="time_remaining_hours_minutes">%1$d uren %2$d minuten</string>
+    <string name="time_remaining_minutes">%1$d minuten</string>
+    <string name="time_remaining_seconds">%1$d seconden</string>
+    <string name="time_remaining_less_than_a_second">Minder dan een seconde</string>
+    <string name="set">Instellen</string>
+    <string name="yes">Ja</string>
+    <string name="no">Nee</string>
+    <string name="less_than_a_second">Minder dan een seconde</string>
+    <string name="day">dag</string>
+    <string name="hour">uur</string>
+    <string name="minute">minuut</string>
+    <string name="second">seconde</string>
+    <string name="seconds">seconden</string>
+    <string name="error_interval_too_short">Interval moet minstens 15 minuten zijn</string>
+    <string name="enable_background_upgrade_check">Controle op achtergrond-upgrade inschakelen</string>
+    <string name="disabled">Uitgeschakeld</string>
+    <string name="starting_time">Starttijd:</string>
+    <string name="not_available">N.v.t.</string>
+    <string name="automatic_upgrade_reminder">Automatische upgrade-herinnering</string>
+    <string name="reminder_timeframe">Herinneringstijdsbestek</string>
+    <string name="not_set">Niet ingesteld</string>
+    <string name="permissions_required_title">Vereiste machtigingen</string>
+    <string name="permissions_required_message_tiramisu">
+        <![CDATA[
+            Alstublieft:\n
+            \n
+            - Sta toe om onbekende apps te installeren\n
+            \n
+            - Sta het verzenden van meldingen toe
+        ]]>
+    </string>
+    <string name="permissions_required_message_pre_tiramisu">
+        <![CDATA[
+            Sta toe om onbekende apps te installeren
+        ]]>
+    </string>
+    <string name="wifi_only">Alleen Wi-Fi</string>
+    <string name="wifi_only_no_wifi">Alleen WIFI is geselecteerd en er is geen WIFI-verbinding</string>
+    <string name="no_internet_title">Geen internetverbinding</string>
+    <string name="storage_permission_required">Opslagtoestemming vereist</string>
+    <string name="storage_permission_required_message">Opslagtoestemming is vereist om apps te installeren. Geef de toestemming.</string>
+    <string name="notification_permission_required">Machtigingen voor meldingen vereist</string>
+    <string name="notification_permission_required_message">Machtigingen voor meldingen zijn vereist om meldingen te ontvangen. Geef de toestemming.</string>
+    <string name="storage_permission_denied">Opslagtoestemming geweigerd</string>
+    <string name="check_now_or_postpone">Nu controleren of uitstellen?</string>
+    <string name="skip_reminder_at_next_start_up">SLUITEN, herinner me bij de volgende start</string>
+    <string name="skip_no_reminder_at_next_start_up">SLUITEN, herinner me niet bij de volgende start</string>
+    <string name="continue_button">Doorgaan</string>
+    <string name="unhidden_launch">Zichtbare start</string>
+    <string name="data_usage_warning_title">Waarschuwing voor datagebruik</string>
+    <string name="data_usage_warning_message">Het downloaden van APK-bestanden kan een aanzienlijke hoeveelheid mobiele data verbruiken. Weet u zeker dat u wilt doorgaan?</string>
+    <string name="accept_and_continue">Accepteren en doorgaan</string>
+    <string name="permission_required">Toestemming vereist</string>
+    <string name="overlay_permission_message">De toestemming 'Weergeven over andere apps' is nodig om de upgrade-herinnering bovenop andere apps weer te geven.</string>
+</resources>

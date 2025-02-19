@@ -1,0 +1,120 @@
+<resources>
+    <string name="app_name">AIR³ Upgrader</string>
+    <string name="action_settings">الإعدادات</string>
+    <string name="action_about">حول</string>
+    <string name="select_device">اختر الجهاز</string>
+    <string name="no_file_selected">لم يتم تحديد ملف</string>
+    <string name="error_invalid_file">خطأ: ملف غير صالح</string>
+    <string name="error_updating_device">خطأ في تحديث الجهاز</string>
+    <string name="update_complete">اكتمل التحديث!</string>
+    <string name="no_devices_found">لم يتم العثور على أجهزة</string>
+    <string name="bluetooth_permission_denied">تم رفض إذن البلوتوث</string>
+    <string name="bluetooth_not_supported">البلوتوث غير مدعوم</string>
+    <string name="bluetooth_not_enabled">البلوتوث غير مفعل</string>
+    <string name="unknown_app">تطبيق غير معروف</string>
+    <string name="not_installed">غير مثبت</string>
+    <string name="installed">مثبت:</string>
+    <string name="server">الخادم:</string>
+    <string name="apk_download_started">بدأ تنزيل APK…</string>
+    <string name="no_apps_selected_for_upgrade">لم يتم تحديد تطبيقات للترقية</string>
+    <string name="wait_for_next_download">انتظر التنزيل التالي…</string>
+    <string name="downloading">جارٍ التنزيل</string>
+    <string name="downloading_latest_version_of">جارٍ تنزيل أحدث إصدار من</string>
+    <string name="install_unknown_apps_permission">إذن تثبيت التطبيقات غير المعروفة</string>
+    <string name="to_install_apps_from_unknown_sources_you_need_to_allow_this_permission_in_your_device_settings">لتثبيت تطبيقات من مصادر غير معروفة، يجب عليك السماح بهذا الإذن في إعدادات جهازك.</string>
+    <string name="settings">الإعدادات</string>
+    <string name="cancel">إلغاء</string>
+    <string name="permission_denied">تم رفض الإذن</string>
+    <string name="device_name">اسم الجهاز:</string>
+    <string name="device">الجهاز:</string>
+    <string name="product">المنتج:</string>
+    <string name="model">الطراز:</string>
+    <string name="brand">العلامة التجارية:</string>
+    <string name="manufacturer">الشركة المصنعة:</string>
+    <string name="android_version">إصدار أندرويد:</string>
+    <string name="sdk_version">إصدار SDK:</string>
+    <string name="unknown_device">جهاز غير معروف</string>
+    <string name="na">غير متاح</string>
+    <string name="download_failed">فشل التنزيل. يرجى المحاولة مرة أخرى لاحقًا.</string>
+    <string name="xctrack_apk_signature">513134f67c4efc51f7650bb2657e1f45fc4244e224cd3f9d61051c252700f593</string>
+    <string name="xcguide_apk_signature">b97696fd760795f32b73459c01b836f4f211856e702b957b833cc887336ddfb3</string>
+    <string name="air3manager_apk_signature">fe36eab09d29b23132883494326ba732f0edfb31c0c85f4c78c4ccc84c50e1e0</string>
+    <string name="version_not_found">لم يتم العثور على الإصدار</string>
+    <string name="no_internet_connection">لا يوجد اتصال بالإنترنت</string>
+    <string name="no_internet_message">يتطلب هذا التطبيق اتصالاً بالإنترنت ليعمل بشكل صحيح.</string>
+    <string name="ok">موافق</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="xctrack">XCTrack</string>
+    <string name="upgrade">ترقية</string>
+    <string name="xc_guide">XC Guide</string>
+    <string name="air3_manager">AIR³ Manager</string>
+    <string name="refresh">تحديث</string>
+    <string name="close">إغلاق</string>
+    <string name="server_version">الخادم: %1$s</string>
+    <string name="refresh_data_title">التحديث مطلوب</string>
+    <string name="refresh_data_message">يرجى تحديث البيانات لأخذها في الاعتبار</string>
+    <string name="app_version">الإصدار</string>
+    <string name="copyright">حقوق النشر: Bertrand Fontaine - 2025</string>
+    <string name="device_name_confirmation_message">هل أنت متأكد من أنك تريد استخدام اسم جهازك بدلاً من طراز الجهاز المكتشف؟ يجب أن يتبع اسم الجهاز بدقة البنية التالية ليعمل "AIR3-?.?". يرجى "تحديث" البيانات لأخذها في الاعتبار</string>
+    <string name="device_name_confirmation_title">تأكيد اسم الجهاز</string>
+    <string name="upgrade_check_interval_label">الفاصل الزمني للتحقق من الترقية:</string>
+    <string name="days">أيام</string>
+    <string name="hours">ساعات</string>
+    <string name="minutes">دقائق</string>
+    <string name="model_selection">اختيار الطراز:</string>
+    <string name="time_remaining">الوقت المتبقي</string>
+    <string name="time_remaining_hours_minutes">%1$d ساعات %2$d دقائق</string>
+    <string name="time_remaining_minutes">%1$d دقائق</string>
+    <string name="time_remaining_seconds">%1$d ثوانٍ</string>
+    <string name="time_remaining_less_than_a_second">أقل من ثانية</string>
+    <string name="set">تعيين</string>
+    <string name="yes">نعم</string>
+    <string name="no">لا</string>
+    <string name="less_than_a_second">أقل من ثانية</string>
+    <string name="day">يوم</string>
+    <string name="hour">ساعة</string>
+    <string name="minute">دقيقة</string>
+    <string name="second">ثانية</string>
+    <string name="seconds">ثوانٍ</string>
+    <string name="error_interval_too_short">يجب أن يكون الفاصل الزمني 15 دقيقة على الأقل</string>
+    <string name="enable_background_upgrade_check">تمكين التحقق من الترقية في الخلفية</string>
+    <string name="disabled">معطل</string>
+    <string name="starting_time">وقت البدء:</string>
+    <string name="not_available">غير متاح</string>
+    <string name="automatic_upgrade_reminder">تذكير الترقية التلقائي</string>
+    <string name="reminder_timeframe">الإطار الزمني للتذكير</string>
+    <string name="not_set">غير معين</string>
+    <string name="permissions_required_title">الأذونات المطلوبة</string>
+    <string name="permissions_required_message_tiramisu">
+        <![CDATA[
+            الرجاء:\n
+            \n
+            - السماح بتثبيت التطبيقات غير المعروفة\n
+            \n
+            - السماح بإرسال الإشعارات
+        ]]>
+    </string>
+    <string name="permissions_required_message_pre_tiramisu">
+        <![CDATA[
+            السماح بتثبيت التطبيقات غير المعروفة
+        ]]>
+    </string>
+    <string name="wifi_only">واي فاي فقط</string>
+    <string name="wifi_only_no_wifi">تم تحديد واي فاي فقط ولا يوجد اتصال واي فاي</string>
+    <string name="no_internet_title">لا يوجد اتصال بالإنترنت</string>
+    <string name="storage_permission_required">إذن التخزين مطلوب</string>
+    <string name="storage_permission_required_message">إذن التخزين مطلوب لتثبيت التطبيقات. يرجى منح الإذن.</string>
+    <string name="notification_permission_required">إذن الإشعارات مطلوب</string>
+    <string name="notification_permission_required_message">إذن الإشعارات مطلوب لتلقي الإشعارات. يرجى منح الإذن.</string>
+    <string name="storage_permission_denied">تم رفض إذن التخزين</string>
+    <string name="check_now_or_postpone">التحقق الآن أو التأجيل؟</string>
+    <string name="skip_reminder_at_next_start_up">إغلاق، تذكيري في المرة القادمة</string>
+    <string name="skip_no_reminder_at_next_start_up">إغلاق، لا تذكرني في المرة القادمة</string>
+    <string name="continue_button">متابعة</string>
+    <string name="unhidden_launch">تشغيل مرئي</string>
+    <string name="data_usage_warning_title">تحذير استخدام البيانات</string>
+    <string name="data_usage_warning_message">يمكن أن تستهلك تنزيلات ملفات APK كمية كبيرة من بيانات الهاتف المحمول. هل أنت متأكد من رغبتك في المتابعة؟</string>
+    <string name="accept_and_continue">قبول ومتابعة</string>
+    <string name="permission_required">الإذن مطلوب</string>
+    <string name="overlay_permission_message">إذن "العرض فوق التطبيقات الأخرى" ضروري لإظهار تذكير الترقية فوق التطبيقات الأخرى.</string>
+</resources>

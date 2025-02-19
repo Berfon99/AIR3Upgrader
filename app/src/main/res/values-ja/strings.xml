@@ -1,0 +1,120 @@
+<resources>
+    <string name="app_name">AIR³ アップグレーダー</string>
+    <string name="action_settings">設定</string>
+    <string name="action_about">情報</string>
+    <string name="select_device">デバイスを選択</string>
+    <string name="no_file_selected">ファイルが選択されていません</string>
+    <string name="error_invalid_file">エラー：無効なファイル</string>
+    <string name="error_updating_device">デバイスの更新エラー</string>
+    <string name="update_complete">更新が完了しました！</string>
+    <string name="no_devices_found">デバイスが見つかりません</string>
+    <string name="bluetooth_permission_denied">Bluetoothの許可が拒否されました</string>
+    <string name="bluetooth_not_supported">Bluetoothはサポートされていません</string>
+    <string name="bluetooth_not_enabled">Bluetoothが無効です</string>
+    <string name="unknown_app">不明なアプリ</string>
+    <string name="not_installed">インストールされていません</string>
+    <string name="installed">インストール済み：</string>
+    <string name="server">サーバー：</string>
+    <string name="apk_download_started">APKのダウンロードを開始しました…</string>
+    <string name="no_apps_selected_for_upgrade">アップグレードするアプリが選択されていません</string>
+    <string name="wait_for_next_download">次のダウンロードをお待ちください…</string>
+    <string name="downloading">ダウンロード中</string>
+    <string name="downloading_latest_version_of">最新バージョンのダウンロード中</string>
+    <string name="install_unknown_apps_permission">不明なアプリのインストール許可</string>
+    <string name="to_install_apps_from_unknown_sources_you_need_to_allow_this_permission_in_your_device_settings">不明なソースからアプリをインストールするには、デバイスの設定でこの許可を許可する必要があります。</string>
+    <string name="settings">設定</string>
+    <string name="cancel">キャンセル</string>
+    <string name="permission_denied">許可が拒否されました</string>
+    <string name="device_name">デバイス名：</string>
+    <string name="device">デバイス：</string>
+    <string name="product">製品：</string>
+    <string name="model">モデル：</string>
+    <string name="brand">ブランド：</string>
+    <string name="manufacturer">メーカー：</string>
+    <string name="android_version">Androidバージョン：</string>
+    <string name="sdk_version">SDKバージョン：</string>
+    <string name="unknown_device">不明なデバイス</string>
+    <string name="na">N/A</string>
+    <string name="download_failed">ダウンロードに失敗しました。後でもう一度お試しください。</string>
+    <string name="xctrack_apk_signature">513134f67c4efc51f7650bb2657e1f45fc4244e224cd3f9d61051c252700f593</string>
+    <string name="xcguide_apk_signature">b97696fd760795f32b73459c01b836f4f211856e702b957b833cc887336ddfb3</string>
+    <string name="air3manager_apk_signature">fe36eab09d29b23132883494326ba732f0edfb31c0c85f4c78c4ccc84c50e1e0</string>
+    <string name="version_not_found">バージョンが見つかりません</string>
+    <string name="no_internet_connection">インターネット接続がありません</string>
+    <string name="no_internet_message">このアプリは正常に動作するためにインターネット接続が必要です。</string>
+    <string name="ok">OK</string>
+    <string name="retry">再試行</string>
+    <string name="xctrack">XCTrack</string>
+    <string name="upgrade">アップグレード</string>
+    <string name="xc_guide">XC Guide</string>
+    <string name="air3_manager">AIR³ Manager</string>
+    <string name="refresh">更新</string>
+    <string name="close">閉じる</string>
+    <string name="server_version">サーバー： %1$s</string>
+    <string name="refresh_data_title">更新が必要です</string>
+    <string name="refresh_data_message">データを反映させるには、更新してください</string>
+    <string name="app_version">バージョン</string>
+    <string name="copyright">著作権：Bertrand Fontaine - 2025</string>
+    <string name="device_name_confirmation_message">検出されたデバイスモデルの代わりにデバイス名を使用してもよろしいですか？デバイス名は、動作させるために次の構造「AIR3-?.?」に厳密に従う必要があります。データを反映させるには、「更新」してください</string>
+    <string name="device_name_confirmation_title">デバイス名の確認</string>
+    <string name="upgrade_check_interval_label">アップグレードチェックの間隔：</string>
+    <string name="days">日</string>
+    <string name="hours">時間</string>
+    <string name="minutes">分</string>
+    <string name="model_selection">モデルの選択：</string>
+    <string name="time_remaining">残り時間</string>
+    <string name="time_remaining_hours_minutes">%1$d時間%2$d分</string>
+    <string name="time_remaining_minutes">%1$d分</string>
+    <string name="time_remaining_seconds">%1$d秒</string>
+    <string name="time_remaining_less_than_a_second">1秒未満</string>
+    <string name="set">設定</string>
+    <string name="yes">はい</string>
+    <string name="no">いいえ</string>
+    <string name="less_than_a_second">1秒未満</string>
+    <string name="day">日</string>
+    <string name="hour">時間</string>
+    <string name="minute">分</string>
+    <string name="second">秒</string>
+    <string name="seconds">秒</string>
+    <string name="error_interval_too_short">間隔は15分以上にする必要があります</string>
+    <string name="enable_background_upgrade_check">バックグラウンドでのアップグレードチェックを有効にする</string>
+    <string name="disabled">無効</string>
+    <string name="starting_time">開始時間：</string>
+    <string name="not_available">N/A</string>
+    <string name="automatic_upgrade_reminder">自動アップグレードリマインダー</string>
+    <string name="reminder_timeframe">リマインダーの期間</string>
+    <string name="not_set">未設定</string>
+    <string name="permissions_required_title">必要な権限</string>
+    <string name="permissions_required_message_tiramisu">
+        <![CDATA[
+            以下を行ってください：\n
+            \n
+            - 不明なアプリのインストールを許可する\n
+            \n
+            - 通知の送信を許可する
+        ]]>
+    </string>
+    <string name="permissions_required_message_pre_tiramisu">
+        <![CDATA[
+            不明なアプリのインストールを許可する
+        ]]>
+    </string>
+    <string name="wifi_only">Wi-Fiのみ</string>
+    <string name="wifi_only_no_wifi">Wi-Fiのみが選択されており、Wi-Fi接続がありません</string>
+    <string name="no_internet_title">インターネット接続がありません</string>
+    <string name="storage_permission_required">ストレージの許可が必要です</string>
+    <string name="storage_permission_required_message">アプリをインストールするには、ストレージの許可が必要です。許可を付与してください。</string>
+    <string name="notification_permission_required">通知の許可が必要です</string>
+    <string name="notification_permission_required_message">通知を受信するには、通知の許可が必要です。許可を付与してください。</string>
+    <string name="storage_permission_denied">ストレージの許可が拒否されました</string>
+    <string name="check_now_or_postpone">今すぐ確認するか、延期しますか？</string>
+    <string name="skip_reminder_at_next_start_up">閉じる、次回起動時に通知する</string>
+    <string name="skip_no_reminder_at_next_start_up">閉じる、次回起動時に通知しない</string>
+    <string name="continue_button">続行</string>
+    <string name="unhidden_launch">可視起動</string>
+    <string name="data_usage_warning_title">データ使用量の警告</string>
+    <string name="data_usage_warning_message">APKファイルのダウンロードは、大量のモバイルデータを消費する可能性があります。続行してもよろしいですか？</string>
+    <string name="accept_and_continue">同意して続行</string>
+    <string name="permission_required">許可が必要です</string>
+    <string name="overlay_permission_message">他のアプリの上に表示する権限は、他のアプリの上にアップグレードのリマインダーを表示するために必要です。</string>
+</resources>
