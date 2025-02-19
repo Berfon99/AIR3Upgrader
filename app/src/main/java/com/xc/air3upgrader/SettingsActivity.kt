@@ -21,6 +21,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.glance.visibility
 import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
@@ -66,6 +67,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var unhiddenLaunchCheckbox: CheckBox
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
+    private lateinit var hoursTextView: TextView
+    private lateinit var minutesTextView: TextView
 
     // Checkbox listener
     private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
@@ -148,6 +151,9 @@ class SettingsActivity : AppCompatActivity() {
         enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
         wifiOnlyCheckbox = findViewById(R.id.wifi_only_checkbox)
         startingTimeValue = findViewById(R.id.starting_time_value)
+        hoursTextView = findViewById(R.id.upgrade_check_interval_hours)
+        minutesTextView = findViewById(R.id.upgrade_check_interval_minutes)
+
 
         // Initialize the model list
         modelList = allowedModels.toMutableList()
@@ -330,8 +336,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun updateUiState(isEnabled: Boolean) {
         Timber.d("updateUiState: Starting - isEnabled: $isEnabled")
         upgradeCheckIntervalDaysEditText.isEnabled = isEnabled
-        upgradeCheckIntervalHoursEditText.isEnabled = isEnabled
-        upgradeCheckIntervalMinutesEditText.isEnabled = isEnabled
+        // Hide hours and minutes
+        upgradeCheckIntervalHoursEditText.visibility = if (isEnabled) View.GONE else View.GONE
+        upgradeCheckIntervalMinutesEditText.visibility = if (isEnabled) View.GONE else View.GONE
+        hoursTextView.visibility = if (isEnabled) View.GONE else View.GONE
+        minutesTextView.visibility = if (isEnabled) View.GONE else View.GONE
         setUpgradeCheckIntervalButton.isEnabled = isEnabled
         if (!isEnabled) {
             timeRemainingValue.text = getString(R.string.disabled)
