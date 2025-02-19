@@ -184,9 +184,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         }
         lifecycleScope.launch {
             val isFirstLaunchDataStore = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
-            if (!isFirstLaunchDataStore) {
-                isFirstLaunch = false
-            }
         }
         Timber.d("onCreate: end")
     }
@@ -325,7 +322,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                         try {
                             getLatestVersionFromServer()
                         } finally {
-                            isFirstLaunch = false
                         }
                     } else {
                         xctrackServerVersion.text = getString(R.string.not_available)
@@ -583,6 +579,19 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             version
         }
     }
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        Timber.d("onConfigurationChanged: called")
+        // Check if the new configuration is landscape
+        if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+            Timber.d("onConfigurationChanged: Landscape mode")
+        } else {
+            Timber.d("onConfigurationChanged: Not landscape mode")
+            // Optionally, you can add code here to handle non-landscape orientations,
+            // such as showing a message to the user or preventing the change.
+            // But in our case, we don't want to do anything, we just want to stay in landscape mode.
+        }
+    }
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
             selectedModel = when {
@@ -670,6 +679,11 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("onDestroy: called")
+        lifecycleScope.launch {
+            if (isFirstLaunch && permissionsManager.checkAllPermissionsGranted()) {
+                dataStoreManager.saveIsFirstLaunch(false)
+            }
+        }
         finishAffinity() // Ensure the app is fully closed
         wakeLock?.let {
             if (it.isHeld) {
@@ -690,4 +704,3 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         Timber.d("onStop: called")
     }
 }
-
