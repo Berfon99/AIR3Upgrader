@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 import android.widget.ProgressBar
 import androidx.glance.visibility
+import kotlinx.coroutines.Job
 
 class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
 
@@ -197,15 +198,18 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     internal fun continueSetup() {
         Timber.d("continueSetup: called")
         setContentView(R.layout.activity_main)
-        lifecycleScope.launch {
+        var dataUsageWarningJob: Job? = null
+        dataUsageWarningJob = lifecycleScope.launch {
             NetworkUtils.shouldShowDataUsageWarning(dataStoreManager).collect { shouldShowWarning ->
                 if (shouldShowWarning) {
                     NetworkUtils.showDataUsageWarningDialog(this@MainActivity, dataStoreManager) {
                         // This lambda is called when the user clicks "Accept and Continue"
+                        dataUsageWarningJob?.cancel() // Cancel the current collection
                         checkNetworkAndContinueLogic()
                     }
                 } else {
                     // If the warning should not be shown, proceed directly to checkNetworkAndContinueLogic
+                    dataUsageWarningJob?.cancel() // Cancel the current collection
                     checkNetworkAndContinueLogic()
                 }
             }

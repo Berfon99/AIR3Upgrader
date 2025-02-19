@@ -116,4 +116,6 @@
     <string name="data_usage_warning_title">Data Usage Warning</string>
     <string name="data_usage_warning_message">Downloading APK files can consume a significant amount of mobile data. Are you sure you want to continue?</string>
     <string name="accept_and_continue">Accept and Continue</string>
+    <string name="permission_required">Permission Required</string>
+    <string name="overlay_permission_message">The \'Display over other apps\' permission is necessary to show the upgrade reminder on top of other apps.</string>
 </resources>

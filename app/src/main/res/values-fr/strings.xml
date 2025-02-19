@@ -116,4 +116,6 @@
     <string name="data_usage_warning_title">Avertissement d\'utilisation des données</string>
     <string name="data_usage_warning_message">Le téléchargement de fichiers APK peut consommer une quantité importante de données mobiles. Êtes-vous sûr de vouloir continuer ?</string>
     <string name="accept_and_continue">Accepter et continuer</string>
+    <string name="permission_required">Autorisation requise</string>
+    <string name="overlay_permission_message">L\'autorisation « Afficher par-dessus les autres applications » est nécessaire pour afficher le rappel de mise à niveau au-dessus des autres applications.</string>
 </resources>

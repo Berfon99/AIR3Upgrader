@@ -80,14 +80,14 @@ class SettingsActivity : AppCompatActivity() {
                 if (!Settings.canDrawOverlays(this@SettingsActivity)) {
                     // Show an alert dialog to explain the permission
                     val builder = AlertDialog.Builder(this@SettingsActivity)
-                    builder.setTitle("Permission Required") // You can change the title
-                    builder.setMessage("The 'Display over other apps' permission is necessary to show the upgrade reminder on top of other apps.") // You can change the message
-                    builder.setPositiveButton("OK") { dialog, _ ->
+                    builder.setTitle(getString(R.string.permission_required)) // Use string resource
+                    builder.setMessage(getString(R.string.overlay_permission_message)) // Use string resource
+                    builder.setPositiveButton(getString(R.string.ok)) { dialog, _ ->
                         // User clicked OK, proceed to check and request permission
                         permissionsManager.checkOverlayPermission(this@SettingsActivity, packageName, enableBackgroundCheckCheckbox)
                         dialog.dismiss()
                     }
-                    builder.setNegativeButton("Cancel") { dialog, _ ->
+                    builder.setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
                         // User clicked Cancel, do nothing
                         lifecycleScope.launch { // Add this line
                             enableBackgroundCheckCheckbox.isChecked = false
