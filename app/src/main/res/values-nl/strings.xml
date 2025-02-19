@@ -116,5 +116,5 @@
     <string name="data_usage_warning_message">Het downloaden van APK-bestanden kan een aanzienlijke hoeveelheid mobiele data verbruiken. Weet u zeker dat u wilt doorgaan?</string>
     <string name="accept_and_continue">Accepteren en doorgaan</string>
     <string name="permission_required">Toestemming vereist</string>
-    <string name="overlay_permission_message">De toestemming 'Weergeven over andere apps' is nodig om de upgrade-herinnering bovenop andere apps weer te geven.</string>
+    <string name="overlay_permission_message">De toestemming \'Weergeven over andere apps\' is nodig om de upgrade-herinnering bovenop andere apps weer te geven.</string>
 </resources>

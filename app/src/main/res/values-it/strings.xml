@@ -89,15 +89,13 @@
         <![CDATA[
             Per favore:\n
             \n
-            - Consenti l'installazione di app sconosciute\n
+            - Consenti l\'installazione di app sconosciute\n
             \n
-            - Consenti l'invio di notifiche
+            - Consenti l\'invio di notifiche
         ]]>
     </string>
     <string name="permissions_required_message_pre_tiramisu">
-        <![CDATA[
-            Consenti l\'installazione di app sconosciute
-        ]]>
+        >Consenti l\'installazione di app sconosciute>
     </string>
     <string name="wifi_only">Solo Wi-Fi</string>
     <string name="wifi_only_no_wifi">È selezionato solo Wi-Fi e non c\'è connessione Wi-Fi</string>

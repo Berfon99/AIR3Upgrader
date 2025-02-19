@@ -116,5 +116,5 @@
     <string name="data_usage_warning_message">La descarga de archivos APK puede consumir una cantidad significativa de datos móviles. ¿Estás seguro de que quieres continuar?</string>
     <string name="accept_and_continue">Aceptar y continuar</string>
     <string name="permission_required">Permiso requerido</string>
-    <string name="overlay_permission_message">El permiso 'Mostrar sobre otras aplicaciones' es necesario para mostrar el recordatorio de actualización encima de otras aplicaciones.</string>
+    <string name="overlay_permission_message">El permiso \'Mostrar sobre otras aplicaciones\' es necesario para mostrar el recordatorio de actualización encima de otras aplicaciones.</string>
 </resources>
