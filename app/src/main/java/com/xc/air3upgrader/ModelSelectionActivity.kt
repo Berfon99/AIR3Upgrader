@@ -25,13 +25,6 @@ class ModelSelectionActivity : AppCompatActivity() {
     private var previousSelection: String? = null
     private var isSpinnerInitialized = false
 
-    private val allowedModels = listOf(
-        "AIR3-7.2",
-        "AIR3-7.3",
-        "AIR3-7.3+",
-        "AIR3-7.35",
-        "AIR3-7.35+"
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,7 +33,10 @@ class ModelSelectionActivity : AppCompatActivity() {
         modelSpinner = findViewById(R.id.model_spinner)
         val buttonConfirm = findViewById<Button>(R.id.button_confirm)
         deviceName = getDeviceName()
-        initModelLists()
+        val (list, displayList, displayMap) = dataStoreManager.initModelLists(deviceName)
+        modelList = list
+        modelDisplayList = displayList
+        modelDisplayMap = displayMap
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelDisplayList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modelSpinner.adapter = adapter
@@ -52,6 +48,12 @@ class ModelSelectionActivity : AppCompatActivity() {
             modelList.indexOf(deviceName)
         }
         modelSpinner.setSelection(defaultModelIndex)
+        // Initialize previousSelection
+        previousSelection = if (defaultModelIndex != -1) {
+            modelList[defaultModelIndex]
+        } else {
+            deviceName
+        }
         // Set a listener to respond to user selections
         val spinnerListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
@@ -64,7 +66,6 @@ class ModelSelectionActivity : AppCompatActivity() {
                             showDeviceNameConfirmationDialog()
                         } else {
                             saveSelectedModel(selectedModel)
-                            previousSelection = selectedModel
                         }
                     }
                 } else {
@@ -91,26 +92,6 @@ class ModelSelectionActivity : AppCompatActivity() {
             checkNetworkAndContinueLogic()
         }
     }
-    private fun initModelLists() {
-        // Initialize the model list
-        modelList = allowedModels.toMutableList()
-        // Check if the device name is already in the allowed models
-        if (!modelList.contains(deviceName)) {
-            modelList.add(deviceName)
-        }
-        // Initialize the display list and map
-        modelDisplayList = mutableListOf()
-        modelDisplayMap = mutableMapOf()
-        for (model in allowedModels) {
-            modelDisplayList.add(model)
-            modelDisplayMap[model] = model
-        }
-        // Add the device name as the last item with the prefix
-        val deviceNameDisplay = getString(R.string.device_name) + " " + deviceName
-        modelDisplayList.add(deviceNameDisplay)
-        modelDisplayMap[deviceNameDisplay] = null
-    }
-
     private fun checkNetworkAndContinueLogic() {
         lifecycleScope.launch {
             dataStoreManager.saveManualModelSelected(true)
@@ -149,9 +130,6 @@ class ModelSelectionActivity : AppCompatActivity() {
     private fun getDeviceName(): String {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
             ?: getString(R.string.unknown_device) // Use string resource
-    }
-    internal fun getAllowedModels(): List<String> {
-        return allowedModels
     }
     override fun onBackPressed() {
         super.onBackPressed()

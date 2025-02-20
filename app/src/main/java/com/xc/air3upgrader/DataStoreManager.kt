@@ -35,7 +35,33 @@ class DataStoreManager(private val context: Context) {
             val MANUAL_MODEL_SELECTED = booleanPreferencesKey("manual_model_selected")
         }
     }
-
+    private val allowedModels = listOf(
+        "AIR3-7.2",
+        "AIR3-7.3",
+        "AIR3-7.3+",
+        "AIR3-7.35",
+        "AIR3-7.35+"
+    )
+    fun initModelLists(deviceName: String): Triple<MutableList<String>, MutableList<String>, MutableMap<String, String?>> {
+        // Initialize the model list
+        val modelList = allowedModels.toMutableList()
+        // Check if the device name is already in the allowed models
+        if (!modelList.contains(deviceName)) {
+            modelList.add(deviceName)
+        }
+        // Initialize the display list and map
+        val modelDisplayList = mutableListOf<String>()
+        val modelDisplayMap = mutableMapOf<String, String?>()
+        for (model in allowedModels) {
+            modelDisplayList.add(model)
+            modelDisplayMap[model] = model
+        }
+        // Add the device name as the last item with the prefix
+        val deviceNameDisplay = context.getString(R.string.device_name) + " " + deviceName
+        modelDisplayList.add(deviceNameDisplay)
+        modelDisplayMap[deviceNameDisplay] = null
+        return Triple(modelList, modelDisplayList, modelDisplayMap)
+    }
     fun isDeviceModelSupported(model: String, allowedModels: List<String>): Boolean {
         return allowedModels.contains(model)
     }

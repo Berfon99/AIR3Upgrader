@@ -7,21 +7,22 @@ import android.os.Looper
 import android.provider.Settings
 import android.text.format.DateFormat
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.CompoundButton
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.glance.visibility
 import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
-import com.xc.air3upgrader.R.string
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -57,6 +58,13 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
     private lateinit var hoursTextView: TextView
     private lateinit var minutesTextView: TextView
+    private lateinit var modelSpinner: Spinner
+    private lateinit var modelList: MutableList<String>
+    private lateinit var modelDisplayList: MutableList<String>
+    private lateinit var modelDisplayMap: MutableMap<String, String?>
+    private lateinit var deviceName: String
+    private var previousSelection: String? = null
+    private var isSpinnerInitialized = false
 
     // Checkbox listener
     private val checkboxListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
@@ -124,6 +132,8 @@ class SettingsActivity : AppCompatActivity() {
         startingTimeValue = findViewById(R.id.starting_time_value)
         hoursTextView = findViewById(R.id.upgrade_check_interval_hours)
         minutesTextView = findViewById(R.id.upgrade_check_interval_minutes)
+        modelSpinner = findViewById(R.id.model_spinner)
+        deviceName = getDeviceName()
 
         overlayPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             Timber.d("overlayPermissionLauncher: called")
@@ -212,6 +222,75 @@ class SettingsActivity : AppCompatActivity() {
         wifiOnlyCheckbox.setOnCheckedChangeListener(wifiOnlyCheckboxListener)
 
         Timber.d("SettingsActivity: onCreate - END")
+        // Initialize model lists and spinner
+        val (list, displayList, displayMap) = dataStoreManager.initModelLists(deviceName)
+        modelList = list
+        modelDisplayList = displayList
+        modelDisplayMap = displayMap
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelDisplayList)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        modelSpinner.adapter = adapter
+        // Retrieve the selected model from DataStore
+        lifecycleScope.launch {
+            val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
+            // Set the spinner selection based on the selected model
+            val selectedIndex = if (selectedModel != null) {
+                val selectedDisplayString = modelDisplayMap.entries.firstOrNull { it.value == selectedModel }?.key
+                if (selectedDisplayString != null) {
+                    modelDisplayList.indexOf(selectedDisplayString)
+                } else {
+                    modelList.indexOf(deviceName)
+                }
+            } else {
+                modelList.indexOf(deviceName)
+            }
+            modelSpinner.setSelection(selectedIndex)
+        }
+        // Set a listener to respond to user selections
+        val spinnerListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                Timber.d("onItemSelected called")
+                if (isSpinnerInitialized) {
+                    val selectedDisplayString = parent.getItemAtPosition(position).toString()
+                    val selectedModel = modelDisplayMap[selectedDisplayString]
+                    if (previousSelection != selectedModel) {
+                        if (selectedModel == null) {
+                            showDeviceNameConfirmationDialog()
+                        } else {
+                            saveSelectedModel(selectedModel)
+                            previousSelection = selectedModel
+                        }
+                    }
+                } else {
+                    isSpinnerInitialized = true
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                // Another interface callback
+            }
+        }
+        modelSpinner.onItemSelectedListener = spinnerListener
+    }
+    private fun showDeviceNameConfirmationDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(getString(R.string.device_name_confirmation_title))
+        builder.setMessage(getString(R.string.device_name_confirmation_message))
+        builder.setPositiveButton(getString(R.string.yes)) { dialog, _ ->
+            // Save the device name as the selected model
+            saveSelectedModel(deviceName)
+            previousSelection = deviceName
+            dialog.dismiss()
+        }
+        builder.setNegativeButton(getString(R.string.no)) { dialog, _ ->
+            // Reset the selection to the previous one
+            val previousSelectionIndex = modelList.indexOf(previousSelection)
+            if (previousSelectionIndex != -1) {
+                modelSpinner.setSelection(previousSelectionIndex)
+            }
+            dialog.dismiss()
+        }
+        builder.show()
     }
     private fun updateFlagsValues() {
         Timber.d("updateFlagsValues: Starting")
@@ -446,13 +525,15 @@ class SettingsActivity : AppCompatActivity() {
             else -> getString(R.string.less_than_a_second)
         }
     }
+    private fun getDeviceName(): String {
+        return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
+            ?: getString(R.string.unknown_device) // Use string resource
+    }
+
     private fun saveSelectedModel(selectedModel: String?) {
         lifecycleScope.launch {
             dataStoreManager.saveSelectedModel(selectedModel ?: getDeviceName())
         }
     }
-    private fun getDeviceName(): String {
-        return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
-            ?: getString(R.string.unknown_device) // Use string resource
-    }
 }
+
