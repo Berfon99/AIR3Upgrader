@@ -25,6 +25,9 @@ class ModelSelectionActivity : AppCompatActivity() {
     private var previousSelection: String? = null
     private var isSpinnerInitialized = false
 
+    companion object {
+        const val EXTRA_LAUNCH_FROM_MODEL_SELECTION = "launch_from_model_selection"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,7 +99,9 @@ class ModelSelectionActivity : AppCompatActivity() {
         lifecycleScope.launch {
             dataStoreManager.saveManualModelSelected(true)
         }
-        val intent = Intent(this@ModelSelectionActivity, MainActivity::class.java)
+        val intent = Intent(this@ModelSelectionActivity, MainActivity::class.java).apply {
+            putExtra(EXTRA_LAUNCH_FROM_MODEL_SELECTION, true)
+        }
         startActivity(intent)
         finish()
     }

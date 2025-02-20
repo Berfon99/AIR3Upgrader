@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     private val versionChecker by lazy { VersionChecker(this) }
     private var onCreateCounter = 0
     private var isFirstLaunch = true
+    var isLaunchFromModelSelectionActivity: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Timber.d("onCreate: called")
@@ -104,6 +105,14 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         supportActionBar = getSupportActionBar()
         dataStoreManager = DataStoreManager(this)
         dataStoreManager.initializeDataStore() // Add this line
+
+        // Check if launched from ModelSelectionActivity
+        isLaunchFromModelSelectionActivity = intent.getBooleanExtra(
+            ModelSelectionActivity.EXTRA_LAUNCH_FROM_MODEL_SELECTION,
+            false
+        )
+        Timber.d("onCreate: isLaunchFromModelSelectionActivity: $isLaunchFromModelSelectionActivity")
+
         // Register the ActivityResultLauncher in onCreate()
         requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -245,7 +254,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                     dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
                 val isLaunchFromCheckPromptActivity = intent.getBooleanExtra("isLaunchFromCheckPromptActivity", false)
                 // Modify the condition to include isLaunchFromCheckPromptActivity
-                if (isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot) || isLaunchFromCheckPromptActivity) {
+                if (isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot) || isLaunchFromCheckPromptActivity || isLaunchFromModelSelectionActivity) {
                     val success = getLatestVersionFromServer()
                     if (!success) {
                         withContext(Dispatchers.Main) {
