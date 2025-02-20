@@ -55,8 +55,7 @@
     <string name="refresh_data_message">يرجى تحديث البيانات لأخذها في الاعتبار</string>
     <string name="app_version">الإصدار</string>
     <string name="copyright">حقوق النشر: Bertrand Fontaine - 2025</string>
-    <string name="device_name_confirmation_message">هل أنت متأكد من أنك تريد استخدام اسم جهازك بدلاً من طراز الجهاز المكتشف؟ يجب أن يتبع اسم الجهاز بدقة البنية التالية ليعمل "AIR3-?.?". يرجى "تحديث" البيانات لأخذها في الاعتبار</string>
-    <string name="device_name_confirmation_title">تأكيد اسم الجهاز</string>
+    <string name="device_name_confirmation_message">هل تريد استخدام اسم الجهاز بدلاً من نموذج مسموح به؟ يجب أن يتبع اسم الجهاز بدقة البنية التالية لكي يعمل: "AIR3-?.?".</string>    <string name="device_name_confirmation_title">تأكيد اسم الجهاز</string>
     <string name="upgrade_check_interval_label">الفاصل الزمني للتحقق من الترقية:</string>
     <string name="days">أيام</string>
     <string name="hours">ساعات</string>

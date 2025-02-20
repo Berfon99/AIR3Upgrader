@@ -107,7 +107,6 @@ class ModelSelectionActivity : AppCompatActivity() {
         builder.setPositiveButton(getString(R.string.yes)) { dialog, _ ->
             // Save the device name as the selected model
             saveSelectedModel(deviceName)
-            previousSelection = deviceName
             dialog.dismiss()
         }
         builder.setNegativeButton(getString(R.string.no)) { dialog, _ ->
@@ -120,13 +119,12 @@ class ModelSelectionActivity : AppCompatActivity() {
         }
         builder.show()
     }
-
     private fun saveSelectedModel(selectedModel: String) {
         lifecycleScope.launch {
             dataStoreManager.saveSelectedModel(selectedModel)
+            previousSelection = selectedModel
         }
     }
-
     private fun getDeviceName(): String {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
             ?: getString(R.string.unknown_device) // Use string resource

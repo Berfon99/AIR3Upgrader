@@ -55,8 +55,7 @@
     <string name="refresh_data_message">Por favor, atualize os dados para que sejam considerados</string>
     <string name="app_version">Versão</string>
     <string name="copyright">Copyright: Bertrand Fontaine - 2025</string>
-    <string name="device_name_confirmation_message">Tem certeza de que deseja usar o nome do seu dispositivo em vez do modelo de dispositivo detectado? O nome do dispositivo deve seguir estritamente a seguinte estrutura para funcionar "AIR3-?.?". Por favor, "Atualize" os dados para que sejam considerados</string>
-    <string name="device_name_confirmation_title">Confirmação do Nome do Dispositivo</string>
+    <string name="device_name_confirmation_message">Usar o nome do dispositivo em vez de um modelo permitido? O nome do dispositivo deve seguir estritamente a seguinte estrutura para funcionar: "AIR3-?.?".</string>    <string name="device_name_confirmation_title">Confirmação do Nome do Dispositivo</string>
     <string name="upgrade_check_interval_label">Intervalo de Verificação de Atualização:</string>
     <string name="days">Dias</string>
     <string name="hours">Horas</string>

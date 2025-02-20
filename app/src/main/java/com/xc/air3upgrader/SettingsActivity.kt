@@ -245,6 +245,8 @@ class SettingsActivity : AppCompatActivity() {
                 modelList.indexOf(deviceName)
             }
             modelSpinner.setSelection(selectedIndex)
+            // Initialize previousSelection
+            previousSelection = selectedModel ?: deviceName
         }
         // Set a listener to respond to user selections
         val spinnerListener = object : AdapterView.OnItemSelectedListener {
@@ -258,7 +260,6 @@ class SettingsActivity : AppCompatActivity() {
                             showDeviceNameConfirmationDialog()
                         } else {
                             saveSelectedModel(selectedModel)
-                            previousSelection = selectedModel
                         }
                     }
                 } else {
@@ -279,7 +280,6 @@ class SettingsActivity : AppCompatActivity() {
         builder.setPositiveButton(getString(R.string.yes)) { dialog, _ ->
             // Save the device name as the selected model
             saveSelectedModel(deviceName)
-            previousSelection = deviceName
             dialog.dismiss()
         }
         builder.setNegativeButton(getString(R.string.no)) { dialog, _ ->
@@ -529,10 +529,11 @@ class SettingsActivity : AppCompatActivity() {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
             ?: getString(R.string.unknown_device) // Use string resource
     }
-
     private fun saveSelectedModel(selectedModel: String?) {
         lifecycleScope.launch {
-            dataStoreManager.saveSelectedModel(selectedModel ?: getDeviceName())
+            val modelToSave = selectedModel ?: getDeviceName()
+            dataStoreManager.saveSelectedModel(modelToSave)
+            previousSelection = modelToSave
         }
     }
 }

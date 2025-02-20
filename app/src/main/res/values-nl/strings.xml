@@ -55,8 +55,7 @@
     <string name="refresh_data_message">Vernieuw de gegevens om ze in aanmerking te nemen</string>
     <string name="app_version">Versie</string>
     <string name="copyright">Copyright: Bertrand Fontaine - 2025</string>
-    <string name="device_name_confirmation_message">Weet u zeker dat u uw apparaatnaam wilt gebruiken in plaats van het gedetecteerde apparaatmodel? De apparaatnaam moet strikt de volgende structuur volgen om te werken "AIR3-?.?". "Vernieuw" de gegevens om ze in aanmerking te nemen</string>
-    <string name="device_name_confirmation_title">Bevestiging apparaatnaam</string>
+    <string name="device_name_confirmation_message">De apparaatnaam gebruiken in plaats van een toegestaan model? De apparaatnaam moet strikt de volgende structuur volgen om te werken: "AIR3-?.?".</string>    <string name="device_name_confirmation_title">Bevestiging apparaatnaam</string>
     <string name="upgrade_check_interval_label">Upgrade controle interval:</string>
     <string name="days">Dagen</string>
     <string name="hours">Uren</string>
