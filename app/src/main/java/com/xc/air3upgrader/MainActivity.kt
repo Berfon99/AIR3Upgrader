@@ -44,6 +44,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
 
     companion object {
         private const val SETTINGS_REQUEST_CODE = 1
+        private const val MODEL_SELECTION_REQUEST_CODE = 2
         private var instance: MainActivity? = null
         fun getInstance(): MainActivity? {
             return instance
@@ -101,29 +102,56 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         super.onCreate(savedInstanceState)
         instance = this // Add this line here
         supportActionBar = getSupportActionBar()
-        // Restore the state of your variables
-        if (savedInstanceState != null) {
-            noInternetAgreed = savedInstanceState.getBoolean("noInternetAgreed")
-            onCreateCounter = savedInstanceState.getInt("onCreateCounter")
-            isFirstLaunch = savedInstanceState.getBoolean("isFirstLaunch")
-            selectedModel = savedInstanceState.getString("selectedModel") ?: ""
-            val restoredAppInfos = savedInstanceState.getParcelableArrayList<AppInfo>("appInfos")
-            if (restoredAppInfos != null) {
-                appInfos = restoredAppInfos.toList()
-            }
-            fileName = savedInstanceState.getString("fileName") ?: ""
-            isInstalling = savedInstanceState.getBoolean("isInstalling")
-            downloadIdToAppInfo = savedInstanceState.getSerializable("downloadIdToAppInfo") as? MutableMap<Long, AppInfo> ?: mutableMapOf()
-        }
-
-        noInternetAgreed = false
         dataStoreManager = DataStoreManager(this)
-        // Initialize the DataStore
-        dataStoreManager.initializeDataStore()
-        val isManualLaunchFromIntent =
-            intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-        permissionsManager = PermissionsManager(this)
+        dataStoreManager.initializeDataStore() // Add this line
+        // Register the ActivityResultLauncher in onCreate()
+        requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                Timber.d("Notification permission granted")
+                continueSetup()
+            } else {
+                permissionsManager.showNotificationPermissionDeniedMessage()
+                finish()
+            }
+        }
         lifecycleScope.launch {
+            val isManualModelSelected = dataStoreManager.getManualModelSelected().firstOrNull() ?: false
+            Timber.d("MainActivity: onCreate - isManualModelSelected: $isManualModelSelected")
+            if (!isManualModelSelected) {
+                // No manual model selected, launch ModelSelectionActivity
+                Timber.d("MainActivity: onCreate - Launching ModelSelectionActivity")
+                val intent = Intent(this@MainActivity, ModelSelectionActivity::class.java)
+                startActivity(intent)
+            } else {
+                continueOnCreate(savedInstanceState)
+            }
+        }
+    }
+    private fun continueOnCreate(savedInstanceState: Bundle?) {
+        lifecycleScope.launch {
+            // Restore the state of your variables
+            if (savedInstanceState != null) {
+                noInternetAgreed = savedInstanceState.getBoolean("noInternetAgreed")
+                onCreateCounter = savedInstanceState.getInt("onCreateCounter")
+                isFirstLaunch = savedInstanceState.getBoolean("isFirstLaunch")
+                selectedModel = savedInstanceState.getString("selectedModel") ?: ""
+                val restoredAppInfos = savedInstanceState.getParcelableArrayList<AppInfo>("appInfos")
+                if (restoredAppInfos != null) {
+                    appInfos = restoredAppInfos.toList()
+                }
+                fileName = savedInstanceState.getString("fileName") ?: ""
+                isInstalling = savedInstanceState.getBoolean("isInstalling")
+                downloadIdToAppInfo = savedInstanceState.getSerializable("downloadIdToAppInfo") as? MutableMap<Long, AppInfo> ?: mutableMapOf()
+            }
+
+            noInternetAgreed = false
+            // Initialize the DataStore
+            dataStoreManager.initializeDataStore()
+            val isManualLaunchFromIntent =
+                intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+            permissionsManager = PermissionsManager(this@MainActivity)
             val isFirstLaunch = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
             var currentIsManualLaunch = false
             var isLaunchFromCheckPromptActivity = false
@@ -152,40 +180,19 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 startActivity(intent)
                 return@launch
             }
-            // Modify the condition to check for isLaunchFromCheckPromptActivity
-            if (!currentIsManualLaunch && !unhiddenLaunchOnReboot && !isLaunchFromCheckPromptActivity) {
-                Timber.d("App launched hidden, finishing activity")
-                finish()
-                return@launch
-            }
-        }
-
-        // Register the ActivityResultLauncher in onCreate()
-        requestPermissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted: Boolean ->
-            if (isGranted) {
-                Timber.d("Notification permission granted")
+            // Check if the app was launched manually
+            Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
+            // Check permissions and continue
+            if (permissionsManager.checkAllPermissionsGranted()) {
                 continueSetup()
             } else {
-                permissionsManager.showNotificationPermissionDeniedMessage()
-                finish()
+                permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher) {
+                    continueSetup()
+                }
             }
-        }
-        // Check if the app was launched manually
-        Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
-        // Check permissions and continue
-        if (permissionsManager.checkAllPermissionsGranted()) {
-            continueSetup()
-        } else {
-            permissionsManager.checkAllPermissionsGrantedAndContinue(requestPermissionLauncher) {
-                continueSetup()
-            }
-        }
-        lifecycleScope.launch {
             val isFirstLaunchDataStore = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
+            Timber.d("onCreate: end")
         }
-        Timber.d("onCreate: end")
     }
     override fun onNoInternetAgreed() {
         Timber.d("onNoInternetAgreed: called")
@@ -456,6 +463,9 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 // Trigger your refresh logic here
                 refreshData()
             }
+        } else if (requestCode == MODEL_SELECTION_REQUEST_CODE) {
+            // ModelSelectionActivity has finished, continue with the rest of onCreate logic
+            continueOnCreate(null)
         }
     }
     private fun refreshData() {
@@ -474,32 +484,16 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         wakeLock?.acquire()
     }
     private fun setActionBarTitleWithSelectedModel() {
-        UiUpdater.setActionBarTitleWithSelectedModel(this, dataStoreManager, ::getSettingsAllowedModels, ::getDeviceName, lifecycleScope, supportActionBar)
+        UiUpdater.setActionBarTitleWithSelectedModel(this, dataStoreManager, lifecycleScope, supportActionBar)
     }
     private fun getDefaultModel(): String {
-        val deviceModel = Build.MODEL
-        return if (dataStoreManager.isDeviceModelSupported(deviceModel, getSettingsAllowedModels())) {
-            deviceModel
-        } else {
-            getDeviceName()
-        }
-    }
-    private fun getDeviceName(): String {
-        return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL
-    }
-    private fun getSettingsAllowedModels(): List<String> {
-        val settingsActivity = SettingsActivity()
-        return settingsActivity.getAllowedModels()
+        return Build.MODEL
     }
     private fun checkAppInstallation() {
         Log.d("MainActivity", "checkAppInstallation() called")
         lifecycleScope.launch {
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-            val finalSelectedModel = when {
-                selectedModel == null -> getDefaultModel()
-                dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
-                else -> getDefaultModel()
-            }
+            val finalSelectedModel = selectedModel ?: getDefaultModel()
             Log.d("MainActivity", "checkAppInstallation() - Selected model: $finalSelectedModel")
             checkAppInstallationForApp(xctrackPackageName, xctrackName, xctrackVersion, finalSelectedModel, xctrackPackageName)
             checkAppInstallationForApp(xcguidePackageName, xcguideName, xcguideVersion, finalSelectedModel, xcguidePackageName)
@@ -512,11 +506,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     internal suspend fun getLatestVersionFromServer(): Boolean {
         Log.d("MainActivity", "getLatestVersionFromServer() called")
         val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
-        val finalSelectedModel = when {
-            selectedModel == null -> getDefaultModel()
-            dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
-            else -> getDefaultModel()
-        }
+        val finalSelectedModel = selectedModel ?: getDefaultModel()
         Log.d("MainActivity", "Selected model: $finalSelectedModel")
 
         var retryCount = 0
@@ -594,15 +584,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     }
     private fun handleUpgradeButtonClick() {
         lifecycleScope.launch {
-            selectedModel = when {
-                dataStoreManager.getSelectedModel().firstOrNull() == null -> getDefaultModel()
-                dataStoreManager.isDeviceModelSupported(
-                    dataStoreManager.getSelectedModel().firstOrNull()!!,
-                    getSettingsAllowedModels()
-                ) -> dataStoreManager.getSelectedModel().firstOrNull()!!
-
-                else -> getDefaultModel()
-            }
+            selectedModel = dataStoreManager.getSelectedModel().firstOrNull() ?: getDefaultModel()
             val isWifiOnly = dataStoreManager.getWifiOnly().firstOrNull() ?: false
             val isNetworkOk = NetworkUtils.checkNetworkAndContinue(this@MainActivity, isWifiOnly, retryAction = {
                 handleUpgradeButtonClick()

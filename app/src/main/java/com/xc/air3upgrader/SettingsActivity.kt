@@ -1,22 +1,17 @@
 package com.xc.air3upgrader
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.text.format.DateFormat
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.CompoundButton
 import android.widget.EditText
-import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -40,14 +35,7 @@ class SettingsActivity : AppCompatActivity() {
         const val MODEL_CHANGED_RESULT_CODE = 100
     }
 
-    private lateinit var modelSpinner: Spinner
     private lateinit var dataStoreManager: DataStoreManager
-    private lateinit var deviceName: String
-    private var previousSelection: String? = null
-    private var isSpinnerInitialized = false
-    private var spinnerListener: AdapterView.OnItemSelectedListener? = null
-    private var isUserInteracting = false
-    private var isModelChanged = false
     private lateinit var upgradeCheckIntervalDaysEditText: EditText
     private lateinit var upgradeCheckIntervalHoursEditText: EditText
     private lateinit var upgradeCheckIntervalMinutesEditText: EditText
@@ -113,21 +101,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private val allowedModels = listOf(
-        "AIR3-7.2",
-        "AIR3-7.3",
-        "AIR3-7.3+",
-        "AIR3-7.35",
-        "AIR3-7.35+"
-    )
-
-    // List of models for the spinner
-    private lateinit var modelList: MutableList<String>
-    // List of models for the spinner display
-    private lateinit var modelDisplayList: MutableList<String>
-    // Map to link display strings to models
-    private lateinit var modelDisplayMap: MutableMap<String, String?>
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Timber.d("SettingsActivity: onCreate called")
@@ -140,81 +113,17 @@ class SettingsActivity : AppCompatActivity() {
         PermissionsManager.getClassName()
 
         // Initialize UI elements
-        modelSpinner = findViewById(R.id.model_spinner)
         upgradeCheckIntervalDaysEditText = findViewById(R.id.upgrade_check_interval_days)
         upgradeCheckIntervalHoursEditText = findViewById(R.id.upgrade_check_interval_hours)
         upgradeCheckIntervalMinutesEditText = findViewById(R.id.upgrade_check_interval_minutes)
         timeRemainingValue = findViewById(R.id.time_remaining_value)
         setUpgradeCheckIntervalButton = findViewById(R.id.set_upgrade_check_interval_button)
-        //unhiddenLaunchOnRebootValue = findViewById(R.id.unhidden_launch_on_reboot_value) // Remove this line
-        unhiddenLaunchCheckbox = findViewById(R.id.unhidden_launch_checkbox) // Add this line
+        unhiddenLaunchCheckbox = findViewById(R.id.unhidden_launch_checkbox)
         enableBackgroundCheckCheckbox = findViewById(R.id.enable_background_check_checkbox)
         wifiOnlyCheckbox = findViewById(R.id.wifi_only_checkbox)
         startingTimeValue = findViewById(R.id.starting_time_value)
         hoursTextView = findViewById(R.id.upgrade_check_interval_hours)
         minutesTextView = findViewById(R.id.upgrade_check_interval_minutes)
-
-
-        // Initialize the model list
-        modelList = allowedModels.toMutableList()
-        deviceName = getDeviceName()
-        // Check if the device name is already in the allowed models
-        if (!modelList.contains(deviceName)) {
-            modelList.add(deviceName)
-        }
-
-        // Initialize the display list and map
-        modelDisplayList = mutableListOf()
-        modelDisplayMap = mutableMapOf()
-        for (model in allowedModels) {
-            modelDisplayList.add(model)
-            modelDisplayMap[model] = model
-        }
-        // Add the device name as the last item with the prefix
-        val deviceNameDisplay = getString(string.device_name) + " " + deviceName
-        modelDisplayList.add(deviceNameDisplay)
-        modelDisplayMap[deviceNameDisplay] = null
-
-        // Create an ArrayAdapter for the spinner
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modelDisplayList)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        modelSpinner.adapter = adapter
-
-        // Set a listener to respond to user selections
-        spinnerListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                Timber.d("onItemSelected called")
-                val selectedDisplayString = parent.getItemAtPosition(position).toString()
-                val selectedModel = modelDisplayMap[selectedDisplayString]
-                if (previousSelection != selectedModel) {
-                    if (selectedModel == null) {
-                        showDeviceNameConfirmationDialog()
-                    } else {
-                        if (!dataStoreManager.isDeviceModelSupported(selectedModel, getAllowedModels())) {
-                            Toast.makeText(this@SettingsActivity, getString(string.error_invalid_file), Toast.LENGTH_SHORT).show()
-                            modelSpinner.setSelection(modelList.indexOf(previousSelection))
-                            return
-                        }
-                        saveSelectedModel(selectedModel)
-                        isModelChanged = true
-                        previousSelection = selectedModel
-                    }
-                }
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>) {
-                // Another interface callback
-            }
-        }
-        modelSpinner.onItemSelectedListener = spinnerListener
-
-        // Set the default selection based on the device model
-        lifecycleScope.launch {
-            val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
-            val defaultSelection = selectedModel ?: Build.MODEL
-            modelSpinner.setSelection(modelList.indexOf(defaultSelection))
-            previousSelection = defaultSelection
-        }
 
         overlayPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             Timber.d("overlayPermissionLauncher: called")
@@ -537,33 +446,13 @@ class SettingsActivity : AppCompatActivity() {
             else -> getString(R.string.less_than_a_second)
         }
     }
-    private fun showDeviceNameConfirmationDialog() {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle(getString(R.string.device_name_confirmation_title))
-        builder.setMessage(getString(R.string.device_name_confirmation_message))
-        builder.setPositiveButton(getString(R.string.yes)) { dialog, _ ->
-            // Save the device name as the selected model
-            saveSelectedModel(null)
-            isModelChanged = true
-            dialog.dismiss()
-        }
-        builder.setNegativeButton(getString(R.string.no)) { dialog, _ ->
-            // Reset the selection to the previous one
-            modelSpinner.setSelection(modelList.indexOf(previousSelection))
-            dialog.dismiss()
-        }
-        builder.show()
-    }
     private fun saveSelectedModel(selectedModel: String?) {
         lifecycleScope.launch {
-            dataStoreManager.saveSelectedModel(selectedModel ?: deviceName)
+            dataStoreManager.saveSelectedModel(selectedModel ?: getDeviceName())
         }
     }
     private fun getDeviceName(): String {
         return Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
             ?: getString(R.string.unknown_device) // Use string resource
-    }
-    internal fun getAllowedModels(): List<String> {
-        return allowedModels
     }
 }

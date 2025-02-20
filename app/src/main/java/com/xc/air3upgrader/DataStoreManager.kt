@@ -32,6 +32,7 @@ class DataStoreManager(private val context: Context) {
             val WIFI_ONLY = booleanPreferencesKey("wifi_only")
             val IS_FIRST_LAUNCH = booleanPreferencesKey("is_first_launch")
             val DATA_USAGE_WARNING_ACCEPTED = booleanPreferencesKey("data_usage_warning_accepted")
+            val MANUAL_MODEL_SELECTED = booleanPreferencesKey("manual_model_selected")
         }
     }
 
@@ -150,6 +151,16 @@ class DataStoreManager(private val context: Context) {
     fun getDataUsageWarningAccepted(): Flow<Boolean> {
         return context.dataStore.data.map { preferences ->
             preferences[PreferencesKeys.DATA_USAGE_WARNING_ACCEPTED] ?: false
+        }
+    }
+    suspend fun saveManualModelSelected(isManualModelSelected: Boolean) { // Add this function
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MANUAL_MODEL_SELECTED] = isManualModelSelected
+        }
+    }
+    fun getManualModelSelected(): Flow<Boolean> { // Add this function
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.MANUAL_MODEL_SELECTED] ?: false
         }
     }
 }

@@ -197,25 +197,15 @@ object UiUpdater {
     fun setActionBarTitleWithSelectedModel(
         context: Context,
         dataStoreManager: DataStoreManager,
-        getSettingsAllowedModels: () -> List<String>,
-        getDeviceName: () -> String,
         coroutineScope: CoroutineScope,
         supportActionBar: androidx.appcompat.app.ActionBar?
     ) {
         coroutineScope.launch {
             val selectedModel = dataStoreManager.getSelectedModel().firstOrNull()
-            val deviceModel = Build.MODEL
-            val finalSelectedModel = when {
-                selectedModel == null -> deviceModel
-                selectedModel.isEmpty() -> deviceModel
-                dataStoreManager.isDeviceModelSupported(selectedModel, getSettingsAllowedModels()) -> selectedModel
-                else -> {
-                    Log.e("MainActivity", "Unsupported model selected: $selectedModel")
-                    getDeviceName()
-                }
-            }
-            val androidVersion = Build.VERSION.RELEASE // Get the Android version
-            supportActionBar?.title = "AIR³ Upgrader - $finalSelectedModel - Android $androidVersion" // Set the title correctly
+            val defaultModel = Build.MODEL
+            val finalSelectedModel = selectedModel ?: defaultModel
+            val androidVersion = Build.VERSION.RELEASE
+            supportActionBar?.title = "AIR³ Upgrader - $finalSelectedModel - Android $androidVersion"
         }
     }
 }
