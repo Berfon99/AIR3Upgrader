@@ -8,9 +8,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.Worker
-import androidx.work.WorkerParameters
 
 class BootReceiver : BroadcastReceiver() {
 
@@ -43,42 +40,5 @@ class BootReceiver : BroadcastReceiver() {
             .addTag("BootWorker")
             .build()
         workManager.enqueue(bootWorkRequest)
-    }
-}
-
-class BootWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
-    override fun doWork(): Result {
-        Log.d("BootWorker", "BootWorker: doWork called")
-        val dataStoreManager = DataStoreManager(applicationContext)
-        val unhiddenLaunchOnReboot: Boolean = runBlocking {
-            dataStoreManager.getUnhiddenLaunchOnReboot().first()
-        }
-        val isAutomaticUpgradeReminderEnabled: Boolean = runBlocking {
-            dataStoreManager.getAutomaticUpgradeReminder().first()
-        }
-        Log.d("BootWorker", "BootWorker: unhiddenLaunchOnReboot: $unhiddenLaunchOnReboot")
-        Log.d("BootWorker", "BootWorker: isAutomaticUpgradeReminderEnabled: $isAutomaticUpgradeReminderEnabled")
-
-        // Only launch MainActivity if unhiddenLaunchOnReboot is true
-        if (unhiddenLaunchOnReboot) {
-            val intent = Intent(applicationContext, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                putExtra("unhiddenLaunchOnReboot", unhiddenLaunchOnReboot)
-            }
-            applicationContext.startActivity(intent)
-        } else {
-            // Schedule the upgrade check directly from here
-            if (isAutomaticUpgradeReminderEnabled) {
-                scheduleUpgradeCheck(applicationContext)
-            }
-        }
-        Log.d("BootWorker", "BootWorker: doWork - END")
-        return Result.success()
-    }
-
-    private fun scheduleUpgradeCheck(context: Context) {
-        // Implement your upgrade check scheduling logic here
-        // This is where you would use WorkManager to schedule the upgrade check
-        Log.d("BootWorker", "BootWorker: Scheduling upgrade check")
     }
 }

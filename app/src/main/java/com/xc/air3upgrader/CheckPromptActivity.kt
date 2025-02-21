@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.xc.air3upgrader.databinding.ActivityCheckPromptBinding
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 class CheckPromptActivity : AppCompatActivity() {
 
@@ -23,6 +24,11 @@ class CheckPromptActivity : AppCompatActivity() {
         binding.buttonSkipReminder.setOnClickListener {
             Log.d("CheckPromptActivity", "buttonSkipReminder clicked")
             lifecycleScope.launch {
+                // Update lastCheckTime to the current time
+                val currentTime = Calendar.getInstance().timeInMillis
+                dataStoreManager.saveLastCheckTime(currentTime)
+                Log.d("CheckPromptActivity", "lastCheckTime saved: $currentTime")
+
                 dataStoreManager.saveUnhiddenLaunchOnReboot(true)
                 Log.d("CheckPromptActivity", "Skip, reminder at next start-up")
                 finishAffinity() // Close the entire app
@@ -32,6 +38,11 @@ class CheckPromptActivity : AppCompatActivity() {
         binding.buttonSkipNoReminder.setOnClickListener {
             Log.d("CheckPromptActivity", "buttonSkipNoReminder clicked")
             lifecycleScope.launch {
+                // Update lastCheckTime to the current time
+                val currentTime = Calendar.getInstance().timeInMillis
+                dataStoreManager.saveLastCheckTime(currentTime)
+                Log.d("CheckPromptActivity", "lastCheckTime saved: $currentTime")
+
                 dataStoreManager.saveUnhiddenLaunchOnReboot(false)
                 Log.d("CheckPromptActivity", "Skip, no reminder at next start-up")
                 finishAffinity() // Close the entire app
@@ -41,6 +52,11 @@ class CheckPromptActivity : AppCompatActivity() {
         binding.buttonContinue.setOnClickListener {
             Log.d("CheckPromptActivity", "buttonContinue clicked")
             lifecycleScope.launch {
+                // Update lastCheckTime to the current time
+                val currentTime = Calendar.getInstance().timeInMillis
+                dataStoreManager.saveLastCheckTime(currentTime)
+                Log.d("CheckPromptActivity", "lastCheckTime saved: $currentTime")
+
                 dataStoreManager.saveUnhiddenLaunchOnReboot(false)
                 Log.d("CheckPromptActivity", "Continue, no reminder at next start-up")
                 val intent = Intent(this@CheckPromptActivity, MainActivity::class.java)
