@@ -324,11 +324,10 @@ class SettingsActivity : AppCompatActivity() {
     private fun updateUiState(isEnabled: Boolean) {
         Timber.d("updateUiState: Starting - isEnabled: $isEnabled")
         upgradeCheckIntervalDaysEditText.isEnabled = isEnabled
-        // Hide hours and minutes
+        upgradeCheckIntervalMinutesEditText.isEnabled = isEnabled
+        // Hide hours
         upgradeCheckIntervalHoursEditText.visibility = if (isEnabled) View.GONE else View.GONE
-        upgradeCheckIntervalMinutesEditText.visibility = if (isEnabled) View.GONE else View.GONE
         hoursTextView.visibility = if (isEnabled) View.GONE else View.GONE
-        minutesTextView.visibility = if (isEnabled) View.GONE else View.GONE
         setUpgradeCheckIntervalButton.isEnabled = isEnabled
         if (!isEnabled) {
             timeRemainingValue.text = getString(R.string.disabled)
