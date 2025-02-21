@@ -56,6 +56,7 @@
     <string name="app_version">Wersja</string>
     <string name="copyright">Copyright: Bertrand Fontaine - 2025</string>
     <string name="device_name_confirmation_message">Użyć nazwy urządzenia zamiast dozwolonego modelu? Nazwa urządzenia musi ściśle przestrzegać następującej struktury, aby działać: „AIR3-?.?”.</string>    <string name="upgrade_check_interval_label">Interwał sprawdzania aktualizacji:</string>
+    <string name="device_name_confirmation_title">Potwierdzenie nazwy urządzenia</string>
     <string name="days">Dni</string>
     <string name="hours">Godziny</string>
     <string name="minutes">Minuty</string>
