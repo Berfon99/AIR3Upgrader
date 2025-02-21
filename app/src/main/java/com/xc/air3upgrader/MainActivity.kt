@@ -200,8 +200,10 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 }
             }
             val isFirstLaunchDataStore = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
+            Timber.d("continueOnCreate: lifecycleScope.launch finished") // Added log
             Timber.d("onCreate: end")
         }
+        Timber.d("continueOnCreate: end") // Added log
     }
     override fun onNoInternetAgreed() {
         Timber.d("onNoInternetAgreed: called")
@@ -282,7 +284,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             Timber.plant(Timber.DebugTree())
         }
 
-        scheduleUpgradeCheck()
         // Set the action bar title with device info
         lifecycleScope.launch {
             setActionBarTitleWithSelectedModel()
