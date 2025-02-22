@@ -74,6 +74,8 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     private lateinit var air3managerApkName: TextView
     private lateinit var permissionsManager: PermissionsManager
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+    private val packageInstalledReceiver = PackageInstalledReceiver()
+
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""

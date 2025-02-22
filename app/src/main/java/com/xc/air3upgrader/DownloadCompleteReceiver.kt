@@ -10,6 +10,7 @@ import androidx.core.content.FileProvider
 import timber.log.Timber
 import java.io.File
 import java.util.LinkedList
+
 class DownloadCompleteReceiver : BroadcastReceiver() {
     internal val downloadQueue = LinkedList<AppInfo>()
     companion object {
@@ -25,7 +26,11 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
     private var fileName: String = ""
     override fun onReceive(context: Context, intent: Intent) {
         Timber.d("DownloadCompleteReceiver: onReceive called")
-        if (intent.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
+        val action = intent.action
+        if (action == null) {
+            return
+        }
+        if (action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
             Timber.d("Download complete")
             val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
             if (downloadId != -1L) {
@@ -102,8 +107,14 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                     Timber.e("Cursor is empty")
                 }
                 cursor.close()
-                getInstance(context).downloadNextApp(context) // Modify this line
+                getInstance(context).downloadNextApp(context)
             }
+        } else if (action == Intent.ACTION_PACKAGE_ADDED) {
+            Timber.d("Package installed")
+            val installedPackageName = intent.data?.schemeSpecificPart
+            Timber.d("Installed package: $installedPackageName")
+            // Trigger the refresh action
+            MainActivity.getInstance()?.continueSetup()
         }
     }
     private fun enqueueDownloadAndInstallApk(context: Context, appInfo: AppInfo) {
