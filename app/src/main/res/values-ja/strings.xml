@@ -54,7 +54,7 @@
     <string name="refresh_data_title">更新が必要です</string>
     <string name="refresh_data_message">データを反映させるには、更新してください</string>
     <string name="app_version">バージョン</string>
-    <string name="copyright">著作権：Bertrand Fontaine - 2025</string>
+    <string name="copyright">著作権：Bertrand Fontaine &amp; AI- 2025</string>
     <string name="device_name_confirmation_message">許可されたモデルの代わりにデバイス名を使用しますか？デバイス名が機能するには、「AIR3-?.?」という構造に厳密に従う必要があります。</string>
     <string name="device_name_confirmation_title">デバイス名の確認</string>
     <string name="upgrade_check_interval_label">アップグレードチェックの間隔：</string>
