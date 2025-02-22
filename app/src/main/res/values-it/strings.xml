@@ -54,7 +54,7 @@
     <string name="refresh_data_title">Aggiornamento richiesto</string>
     <string name="refresh_data_message">Aggiorna i dati per tenerne conto</string>
     <string name="app_version">Versione</string>
-    <string name="copyright">Copyright: Bertrand Fontaine - 2025</string>
+    <string name="copyright">Copyright: Bertrand Fontaine & AI- 2025</string>
     <string name="device_name_confirmation_message">Utilizzare il nome del dispositivo invece di un modello consentito? Il nome del dispositivo deve seguire rigorosamente la seguente struttura per funzionare: "AIR3-?.?".</string>    <string name="device_name_confirmation_title">Conferma nome dispositivo</string>
     <string name="upgrade_check_interval_label">Intervallo di controllo aggiornamenti:</string>
     <string name="days">Giorni</string>

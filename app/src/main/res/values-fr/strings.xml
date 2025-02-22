@@ -55,7 +55,7 @@
     <string name="refresh_data_title">Actualisation requise</string>
     <string name="refresh_data_message">Veuillez actualiser les données pour les prendre en compte</string>
     <string name="app_version">Version</string>
-    <string name="copyright">Copyright : Bertrand Fontaine - 2025</string>
+    <string name="copyright">Copyright : Bertrand Fontaine & IA- 2025</string>
     <string name="device_name_confirmation_message">Utiliser le nom de l\'appareil au lieu d\'un modèle autorisé ? Le nom de l\'appareil doit strictement respecter la structure suivante pour fonctionner : « AIR3-?.? ».</string>
     <string name="device_name_confirmation_title">Confirmation du nom de l\'appareil</string>
     <string name="upgrade_check_interval_label">Intervalle de vérification de mise à niveau :</string>
