@@ -40,6 +40,8 @@ import android.widget.ProgressBar
 import androidx.glance.visibility
 import kotlinx.coroutines.Job
 import android.content.IntentFilter
+import android.app.NotificationChannel
+import android.app.NotificationManager
 
 class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
 
@@ -216,6 +218,8 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     internal fun continueSetup() {
         Timber.d("continueSetup: called")
         setContentView(R.layout.activity_main)
+        startRefreshService()
+        createNotificationChannel()
         var dataUsageWarningJob: Job? = null
         dataUsageWarningJob = lifecycleScope.launch {
             NetworkUtils.shouldShowDataUsageWarning(dataStoreManager).collect { shouldShowWarning ->
@@ -672,6 +676,21 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 ExistingPeriodicWorkPolicy.KEEP,
                 periodicWorkRequest
             )
+        }
+    }
+    private fun startRefreshService() {
+        val intent = Intent(this, RefreshService::class.java)
+        startForegroundService(intent)
+    }
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                "default",
+                "AIR3 Upgrader",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(serviceChannel)
         }
     }
     override fun onDestroy() {
