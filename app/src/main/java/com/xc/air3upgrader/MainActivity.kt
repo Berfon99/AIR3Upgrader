@@ -39,6 +39,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import android.widget.ProgressBar
 import androidx.glance.visibility
 import kotlinx.coroutines.Job
+import android.content.IntentFilter
 
 class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
 
@@ -427,6 +428,9 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         super.onResume()
         Timber.d("onResume: called")
         setActionBarTitleWithSelectedModel()
+        val intentFilter = IntentFilter(Intent.ACTION_PACKAGE_ADDED)
+        intentFilter.addDataScheme("package")
+        registerReceiver(packageInstalledReceiver, intentFilter)
     }
     private fun setupCheckboxListener(
         checkBox: CheckBox,
@@ -692,6 +696,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     override fun onPause() {
         super.onPause()
         Timber.d("onPause: called")
+        unregisterReceiver(packageInstalledReceiver)
     }
     override fun onStop() {
         super.onStop()
