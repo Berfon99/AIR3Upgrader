@@ -79,7 +79,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
     private val packageInstalledReceiver = PackageInstalledReceiver()
 
-
     private var wakeLock: PowerManager.WakeLock? = null
     private var selectedModel: String = ""
     private var appInfos: List<AppInfo> = emptyList() // Corrected type
@@ -144,6 +143,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         }
     }
     private fun continueOnCreate(savedInstanceState: Bundle?) {
+        Timber.d("continueOnCreate: called")
         lifecycleScope.launch {
             // Restore the state of your variables
             if (savedInstanceState != null) {
@@ -166,36 +166,17 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             val isManualLaunchFromIntent =
                 intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
             permissionsManager = PermissionsManager(this@MainActivity)
-            val isFirstLaunch = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
             var currentIsManualLaunch = false
-            var isLaunchFromCheckPromptActivity = false
-            if (isFirstLaunch && isManualLaunchFromIntent) {
-                dataStoreManager.saveIsManualLaunch(true)
-                currentIsManualLaunch = true
-            }
             if (isManualLaunchFromIntent) {
                 dataStoreManager.saveIsManualLaunch(true)
                 currentIsManualLaunch = true
-            }
-            if (!isManualLaunchFromIntent) {
+            } else {
                 dataStoreManager.saveIsManualLaunch(false)
                 currentIsManualLaunch = false
             }
-            // Check if the app is launched from CheckPromptActivity
-            isLaunchFromCheckPromptActivity = intent.getBooleanExtra("isLaunchFromCheckPromptActivity", false)
-            val unhiddenLaunchOnReboot: Boolean = dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-            val isAutomaticUpgradeReminderEnabled: Boolean = dataStoreManager.getAutomaticUpgradeReminder().firstOrNull() ?: false
             if (isManualLaunchFromIntent || currentIsManualLaunch) {
                 acquireWakeLock()
             }
-            if (!currentIsManualLaunch && unhiddenLaunchOnReboot && isAutomaticUpgradeReminderEnabled) {
-                Timber.d("App launched unhidden, launching CheckPromptActivity")
-                val intent = Intent(this@MainActivity, CheckPromptActivity::class.java)
-                startActivity(intent)
-                return@launch
-            }
-            // Check if the app was launched manually
-            Timber.d("onCreate: isManualLaunchFromIntent: $isManualLaunchFromIntent")
             // Check permissions and continue
             if (permissionsManager.checkAllPermissionsGranted()) {
                 continueSetup()
@@ -204,11 +185,10 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                     continueSetup()
                 }
             }
-            val isFirstLaunchDataStore = dataStoreManager.getIsFirstLaunch().firstOrNull() ?: true
-            Timber.d("continueOnCreate: lifecycleScope.launch finished") // Added log
+            Timber.d("continueOnCreate: lifecycleScope.launch finished")
             Timber.d("onCreate: end")
         }
-        Timber.d("continueOnCreate: end") // Added log
+        Timber.d("continueOnCreate: end")
     }
     override fun onNoInternetAgreed() {
         Timber.d("onNoInternetAgreed: called")
@@ -217,8 +197,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     }
     internal fun continueSetup() {
         Timber.d("continueSetup: called")
-        setContentView(R.layout.activity_main)
-        startRefreshService()
         createNotificationChannel()
         var dataUsageWarningJob: Job? = null
         dataUsageWarningJob = lifecycleScope.launch {
@@ -236,6 +214,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 }
             }
         }
+        showUI()
         Timber.d("continueSetup: end")
     }
     private fun checkNetworkAndContinueLogic() {
@@ -256,32 +235,12 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 withContext(Dispatchers.IO) {
                     dataStoreManager.saveIsManualLaunch(false)
                 }
-                val isManualLaunchFromIntent =
-                    intent.action == Intent.ACTION_MAIN && intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-                val isManualLaunch: Boolean = dataStoreManager.getIsManualLaunch().firstOrNull() ?: false
-                val unhiddenLaunchOnReboot: Boolean =
-                    dataStoreManager.getUnhiddenLaunchOnReboot().firstOrNull() ?: false
-                val isLaunchFromCheckPromptActivity = intent.getBooleanExtra("isLaunchFromCheckPromptActivity", false)
-                // Modify the condition to include isLaunchFromCheckPromptActivity
-                if (isManualLaunchFromIntent || (!isManualLaunch && unhiddenLaunchOnReboot) || isLaunchFromCheckPromptActivity || isLaunchFromModelSelectionActivity) {
-                    val success = getLatestVersionFromServer()
-                    if (!success) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Unable to fetch server versions.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
-                }
-                showUI()
             }
         }
     }
     private fun showUI() {
         Timber.d("showUI: called")
-        //setContentView(R.layout.activity_main) // Removed this line
+        setContentView(R.layout.activity_main)
         // Set the status and navigation bar color
         window.statusBarColor = ContextCompat.getColor(this@MainActivity, R.color.black)
         window.navigationBarColor = ContextCompat.getColor(this@MainActivity, R.color.black)
@@ -332,46 +291,27 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         refreshButton.setOnClickListener {
             handleRefreshButtonClick()
         }
+        // Set up checkbox listeners
+        setupCheckboxListener(xctrackCheckbox, xctrackPackageName, xctrackName, xctrackServerVersion, xctrackVersion)
+        setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
+        setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
         lifecycleScope.launch {
-            checkAppInstallation()
-        }
-        lifecycleScope.launch {
-            val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
             if (!noInternetAgreed) {
-                // Get the latest version from the server
                 val isNetworkAvailable = NetworkUtils.isNetworkAvailable(this@MainActivity)
                 val isWifiConnected = NetworkUtils.isWifiConnected(this@MainActivity)
-                if (isFirstLaunch) {
-                    if (isNetworkAvailable) {
-                        try {
-                            getLatestVersionFromServer()
-                        } finally {
-                        }
-                    } else {
-                        xctrackServerVersion.text = getString(R.string.not_available)
-                        xcguideServerVersion.text = getString(R.string.not_available)
-                        air3managerServerVersion.text = getString(R.string.not_available)
-                        xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                        xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                        air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                val isWifiOnlyEnabled = dataStoreManager.getWifiOnly().firstOrNull() ?: false
+                if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
+                    try {
+                        getLatestVersionFromServer()
+                    } finally {
                     }
                 } else {
-                    if ((isWifiOnlyEnabled && isWifiConnected) || (!isWifiOnlyEnabled && isNetworkAvailable)) {
-                        try {
-                            getLatestVersionFromServer()
-                        } finally {
-                            //withContext(Dispatchers.Main) {
-                            //    checkAppInstallation()
-                            //}
-                        }
-                    } else {
-                        xctrackServerVersion.text = getString(R.string.not_available)
-                        xcguideServerVersion.text = getString(R.string.not_available)
-                        air3managerServerVersion.text = getString(R.string.not_available)
-                        xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                        xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                        air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
-                    }
+                    xctrackServerVersion.text = getString(R.string.not_available)
+                    xcguideServerVersion.text = getString(R.string.not_available)
+                    air3managerServerVersion.text = getString(R.string.not_available)
+                    xctrackServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                    xcguideServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
+                    air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
                 }
             } else {
                 xctrackCheckbox.isChecked = false
@@ -385,10 +325,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 air3managerServerVersion.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.gray))
             }
         }
-        // Set up checkbox listeners
-        setupCheckboxListener(xctrackCheckbox, xctrackPackageName, xctrackName, xctrackServerVersion, xctrackVersion)
-        setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
-        setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
         Timber.d("showUI: end")
     }
     private fun handleRefreshButtonClick() {
@@ -434,7 +370,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         setActionBarTitleWithSelectedModel()
         val intentFilter = IntentFilter(Intent.ACTION_PACKAGE_ADDED)
         intentFilter.addDataScheme("package")
-        registerReceiver(packageInstalledReceiver, intentFilter)
     }
     private fun setupCheckboxListener(
         checkBox: CheckBox,
@@ -449,6 +384,17 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 appInfo.isSelectedForUpgrade = isChecked
                 // Trigger UI update
                 UiUpdater.updateAppInfo(this@MainActivity, appInfo, nameTextView, serverVersionTextView, installedVersionTextView)
+                val apkNameTextView = when (packageName) {
+                    "org.xcontest.XCTrack" -> findViewById<TextView>(R.id.xctrack_apk_name)
+                    "indysoft.xc_guide" -> findViewById<TextView>(R.id.xcguide_apk_name)
+                    "com.xc.r3" -> findViewById<TextView>(R.id.air3manager_apk_name)
+                    else -> null
+                }
+                if (isChecked) {
+                    UiUpdater.updateApkNameDisplay(appInfo, apkNameTextView)
+                } else {
+                    apkNameTextView?.visibility = View.GONE
+                }
             } else {
                 Timber.w("App info not found for package: $packageName")
             }
@@ -489,10 +435,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         }
     }
     private fun refreshData() {
-        // Example: Re-fetch server versions (replace with your actual code)
-        lifecycleScope.launch {
-            getLatestVersionFromServer()
-        }
         setActionBarTitleWithSelectedModel()
     }
     private fun acquireWakeLock() {
@@ -510,18 +452,37 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         return Build.MODEL
     }
     private fun checkAppInstallation() {
-        Log.d("MainActivity", "checkAppInstallation() called")
+        Timber.d("checkAppInstallation() called")
         lifecycleScope.launch {
             val selectedModel: String? = dataStoreManager.getSelectedModel().firstOrNull()
             val finalSelectedModel = selectedModel ?: getDefaultModel()
-            Log.d("MainActivity", "checkAppInstallation() - Selected model: $finalSelectedModel")
-            checkAppInstallationForApp(xctrackPackageName, xctrackName, xctrackVersion, finalSelectedModel, xctrackPackageName)
-            checkAppInstallationForApp(xcguidePackageName, xcguideName, xcguideVersion, finalSelectedModel, xcguidePackageName)
-            checkAppInstallationForApp(air3managerPackageName, air3managerName, air3managerVersion, finalSelectedModel, air3managerPackageName)
+            Timber.d("checkAppInstallation() - Selected model: $finalSelectedModel")
+            appInfos.forEach { appInfo ->
+                val appNameTextView = when (appInfo.`package`) {
+                    xctrackPackageName -> xctrackName
+                    xcguidePackageName -> xcguideName
+                    air3managerPackageName -> air3managerName
+                    else -> null
+                }
+                val appVersionTextView = when (appInfo.`package`) {
+                    xctrackPackageName -> xctrackVersion
+                    xcguidePackageName -> xcguideVersion
+                    air3managerPackageName -> air3managerVersion
+                    else -> null
+                }
+                val appServerVersionTextView = when (appInfo.`package`) {
+                    xctrackPackageName -> xctrackServerVersion
+                    xcguidePackageName -> xcguideServerVersion
+                    air3managerPackageName -> air3managerServerVersion
+                    else -> null
+                }
+                if (appNameTextView != null && appVersionTextView != null && appServerVersionTextView != null) {
+                    UiUpdater.updateAppInfo(this@MainActivity, appInfo, appNameTextView, appServerVersionTextView, appVersionTextView)
+                }
+            }
         }
     }
     private fun checkAppInstallationForApp(packageName: String, appNameTextView: TextView, appVersionTextView: TextView, selectedModel: String, appPackageName: String) {
-        UiUpdater.checkAppInstallationForApp(this, packageName, appNameTextView, appVersionTextView, appInfos, xctrackPackageName, xctrackServerVersion, xctrackCheckbox, xcguidePackageName, xcguideServerVersion, xcguideCheckbox, air3managerPackageName, air3managerServerVersion, air3managerCheckbox, lifecycleScope)
     }
     internal suspend fun getLatestVersionFromServer(): Boolean {
         Log.d("MainActivity", "getLatestVersionFromServer() called")
@@ -559,6 +520,10 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                         Log.d("MainActivity", "AppInfo: ${appInfo.name}, Package: ${appInfo.`package`}, APK Path: ${appInfo.apkPath}, Highest Server Version: ${appInfo.highestServerVersion}")
                     }
                     success = true
+                    // Call UiUpdater.checkAppInstallationForApp() here
+                    UiUpdater.checkAppInstallationForApp(this, xctrackPackageName, xctrackName, xctrackVersion, appInfos, xctrackPackageName, xctrackServerVersion, xctrackCheckbox, xcguidePackageName, xcguideServerVersion, xcguideCheckbox, air3managerPackageName, air3managerServerVersion, air3managerCheckbox, lifecycleScope)
+                    UiUpdater.checkAppInstallationForApp(this, xcguidePackageName, xcguideName, xcguideVersion, appInfos, xctrackPackageName, xctrackServerVersion, xctrackCheckbox, xcguidePackageName, xcguideServerVersion, xcguideCheckbox, air3managerPackageName, air3managerServerVersion, air3managerCheckbox, lifecycleScope)
+                    UiUpdater.checkAppInstallationForApp(this, air3managerPackageName, air3managerName, air3managerVersion, appInfos, xctrackPackageName, xctrackServerVersion, xctrackCheckbox, xcguidePackageName, xcguideServerVersion, xcguideCheckbox, air3managerPackageName, air3managerServerVersion, air3managerCheckbox, lifecycleScope)
                 }
             } catch (e: CancellationException) {
                 Log.d("MainActivity", "getLatestVersionFromServer: Coroutine was cancelled")
@@ -615,6 +580,13 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             }
             // Request storage permission before proceeding
             permissionsManager.requestStoragePermission {
+                // Register the PackageInstalledReceiver here, before starting the download
+                val filter = IntentFilter().apply {
+                    addAction(Intent.ACTION_PACKAGE_ADDED)
+                    addAction(Intent.ACTION_PACKAGE_REPLACED)
+                    addDataScheme("package")
+                }
+                registerReceiver(packageInstalledReceiver, filter)
                 // Fetch the latest app information FIRST
                 lifecycleScope.launch {
                     getLatestVersionFromServer()
@@ -696,6 +668,11 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("onDestroy: called")
+        try {
+            unregisterReceiver(packageInstalledReceiver)
+        } catch (e: IllegalArgumentException) {
+            Timber.w("PackageInstalledReceiver was not registered: ${e.message}")
+        }
         lifecycleScope.launch {
             if (isFirstLaunch && permissionsManager.checkAllPermissionsGranted()) {
                 dataStoreManager.saveIsFirstLaunch(false)
@@ -715,7 +692,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     override fun onPause() {
         super.onPause()
         Timber.d("onPause: called")
-        unregisterReceiver(packageInstalledReceiver)
     }
     override fun onStop() {
         super.onStop()

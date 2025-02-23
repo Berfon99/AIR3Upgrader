@@ -15,9 +15,10 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import android.os.Build
 import android.util.Log
+import androidx.glance.visibility
 
 object UiUpdater {
-    private fun updateApkNameDisplay(appInfo: AppInfo, apkNameTextView: TextView?) {
+    internal fun updateApkNameDisplay(appInfo: AppInfo, apkNameTextView: TextView?) {
         Timber.d("updateApkNameDisplay() called for app: ${appInfo.name}")
         val apkName = appInfo.apkPath.substringAfterLast('/')
         Timber.d("APK name: $apkName")
@@ -110,6 +111,7 @@ object UiUpdater {
         xcguideServerVersion.text = context.getString(R.string.version_not_found)
         air3managerServerVersion.text = context.getString(R.string.version_not_found)
     }
+
     fun checkAppInstallationForApp(
         context: Context,
         packageName: String,
@@ -131,7 +133,18 @@ object UiUpdater {
         val installedVersion = AppUtils.getAppVersion(context, packageName)
         Timber.d("  Installed version for $packageName: $installedVersion")
         appVersionTextView.text = if (installedVersion != context.getString(R.string.na)) context.getString(R.string.installed) + " " + installedVersion else context.getString(R.string.not_installed)
-
+        val apkNameTextView = when (packageName) {
+            "org.xcontest.XCTrack" -> (context as Activity).findViewById<TextView>(R.id.xctrack_apk_name)
+            "indysoft.xc_guide" -> (context as Activity).findViewById<TextView>(R.id.xcguide_apk_name)
+            "com.xc.r3" -> (context as Activity).findViewById<TextView>(R.id.air3manager_apk_name)
+            else -> null
+        }
+        val appInfo = appInfos.find { it.`package` == packageName }
+        if (appInfo != null && appInfo.isSelectedForUpgrade) {
+            updateApkNameDisplay(appInfo, apkNameTextView)
+        } else {
+            apkNameTextView?.visibility = View.GONE
+        }
         coroutineScope.launch {
             val appInfo = appInfos.find { it.`package` == packageName }
             Timber.d("  appInfo for $packageName: $appInfo")
@@ -194,6 +207,7 @@ object UiUpdater {
             }
         }
     }
+
     fun setActionBarTitleWithSelectedModel(
         context: Context,
         dataStoreManager: DataStoreManager,
