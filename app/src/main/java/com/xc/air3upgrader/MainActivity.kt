@@ -144,6 +144,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         }
     }
     private fun continueOnCreate(savedInstanceState: Bundle?) {
+        Timber.d("continueOnCreate: called")
         lifecycleScope.launch {
             // Restore the state of your variables
             if (savedInstanceState != null) {
@@ -218,7 +219,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     internal fun continueSetup() {
         Timber.d("continueSetup: called")
         setContentView(R.layout.activity_main)
-        startRefreshService()
         createNotificationChannel()
         var dataUsageWarningJob: Job? = null
         dataUsageWarningJob = lifecycleScope.launch {
@@ -434,7 +434,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         setActionBarTitleWithSelectedModel()
         val intentFilter = IntentFilter(Intent.ACTION_PACKAGE_ADDED)
         intentFilter.addDataScheme("package")
-        registerReceiver(packageInstalledReceiver, intentFilter)
     }
     private fun setupCheckboxListener(
         checkBox: CheckBox,
@@ -615,6 +614,13 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
             }
             // Request storage permission before proceeding
             permissionsManager.requestStoragePermission {
+                // Register the PackageInstalledReceiver here, before starting the download
+                val filter = IntentFilter().apply {
+                    addAction(Intent.ACTION_PACKAGE_ADDED)
+                    addAction(Intent.ACTION_PACKAGE_REPLACED)
+                    addDataScheme("package")
+                }
+                registerReceiver(packageInstalledReceiver, filter)
                 // Fetch the latest app information FIRST
                 lifecycleScope.launch {
                     getLatestVersionFromServer()
@@ -696,6 +702,11 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("onDestroy: called")
+        try {
+            unregisterReceiver(packageInstalledReceiver)
+        } catch (e: IllegalArgumentException) {
+            Timber.w("PackageInstalledReceiver was not registered: ${e.message}")
+        }
         lifecycleScope.launch {
             if (isFirstLaunch && permissionsManager.checkAllPermissionsGranted()) {
                 dataStoreManager.saveIsFirstLaunch(false)
@@ -715,7 +726,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
     override fun onPause() {
         super.onPause()
         Timber.d("onPause: called")
-        unregisterReceiver(packageInstalledReceiver)
     }
     override fun onStop() {
         super.onStop()
