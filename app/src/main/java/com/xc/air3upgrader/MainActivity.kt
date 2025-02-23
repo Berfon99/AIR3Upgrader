@@ -390,6 +390,29 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         setupCheckboxListener(xcguideCheckbox, xcguidePackageName, xcguideName, xcguideServerVersion, xcguideVersion)
         setupCheckboxListener(air3managerCheckbox, air3managerPackageName, air3managerName, air3managerServerVersion, air3managerVersion)
         Timber.d("showUI: end")
+
+        // Update APK file name display for checkboxes that are already checked
+        if (xctrackCheckbox.isChecked) {
+            val appInfo = appInfos.firstOrNull { it.`package` == xctrackPackageName }
+            if (appInfo != null) {
+                appInfo.isSelectedForUpgrade = true
+                UiUpdater.updateAppInfo(this, appInfo, xctrackName, xctrackServerVersion, xctrackVersion)
+            }
+        }
+        if (xcguideCheckbox.isChecked) {
+            val appInfo = appInfos.firstOrNull { it.`package` == xcguidePackageName }
+            if (appInfo != null) {
+                appInfo.isSelectedForUpgrade = true
+                UiUpdater.updateAppInfo(this, appInfo, xcguideName, xcguideServerVersion, xcguideVersion)
+            }
+        }
+        if (air3managerCheckbox.isChecked) {
+            val appInfo = appInfos.firstOrNull { it.`package` == air3managerPackageName }
+            if (appInfo != null) {
+                appInfo.isSelectedForUpgrade = true
+                UiUpdater.updateAppInfo(this, appInfo, air3managerName, air3managerServerVersion, air3managerVersion)
+            }
+        }
     }
     private fun handleRefreshButtonClick() {
         lifecycleScope.launch {
@@ -435,6 +458,7 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         val intentFilter = IntentFilter(Intent.ACTION_PACKAGE_ADDED)
         intentFilter.addDataScheme("package")
     }
+
     private fun setupCheckboxListener(
         checkBox: CheckBox,
         packageName: String,
@@ -452,61 +476,6 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
                 Timber.w("App info not found for package: $packageName")
             }
         }
-    }
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                // Handle settings item click
-                val intent = Intent(this, SettingsActivity::class.java)
-                startActivityForResult(intent, SETTINGS_REQUEST_CODE)
-                true
-            }
-            R.id.action_about -> {
-                // Handle about item click
-                val intent = Intent(this, AboutActivity::class.java)
-                startActivity(intent)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        Timber.d("onActivityResult: called")
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == SETTINGS_REQUEST_CODE) {
-            if (resultCode == SettingsActivity.MODEL_CHANGED_RESULT_CODE) {
-                // Trigger your refresh logic here
-                refreshData()
-            }
-        } else if (requestCode == MODEL_SELECTION_REQUEST_CODE) {
-            // ModelSelectionActivity has finished, continue with the rest of onCreate logic
-            continueOnCreate(null)
-        }
-    }
-    private fun refreshData() {
-        // Example: Re-fetch server versions (replace with your actual code)
-        lifecycleScope.launch {
-            getLatestVersionFromServer()
-        }
-        setActionBarTitleWithSelectedModel()
-    }
-    private fun acquireWakeLock() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "AIR3Upgrader:KeepScreenOn"
-        )
-        wakeLock?.acquire()
-    }
-    private fun setActionBarTitleWithSelectedModel() {
-        UiUpdater.setActionBarTitleWithSelectedModel(this, dataStoreManager, lifecycleScope, supportActionBar)
-    }
-    private fun getDefaultModel(): String {
-        return Build.MODEL
     }
     private fun checkAppInstallation() {
         Log.d("MainActivity", "checkAppInstallation() called")
@@ -580,6 +549,63 @@ class MainActivity : AppCompatActivity(), NetworkUtils.NetworkDialogListener {
         }
         return true
     }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                // Handle settings item click
+                val intent = Intent(this, SettingsActivity::class.java)
+                startActivityForResult(intent, SETTINGS_REQUEST_CODE)
+                true
+            }
+            R.id.action_about -> {
+                // Handle about item click
+                val intent = Intent(this, AboutActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        Timber.d("onActivityResult: called")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == SETTINGS_REQUEST_CODE) {
+            if (resultCode == SettingsActivity.MODEL_CHANGED_RESULT_CODE) {
+                // Trigger your refresh logic here
+                refreshData()
+            }
+        } else if (requestCode == MODEL_SELECTION_REQUEST_CODE) {
+            // ModelSelectionActivity has finished, continue with the rest of onCreate logic
+            continueOnCreate(null)
+        }
+    }
+    private fun refreshData() {
+        // Example: Re-fetch server versions (replace with your actual code)
+        lifecycleScope.launch {
+            getLatestVersionFromServer()
+        }
+        setActionBarTitleWithSelectedModel()
+    }
+    private fun acquireWakeLock() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "AIR3Upgrader:KeepScreenOn"
+        )
+        wakeLock?.acquire()
+    }
+    private fun setActionBarTitleWithSelectedModel() {
+        UiUpdater.setActionBarTitleWithSelectedModel(this, dataStoreManager, lifecycleScope, supportActionBar)
+    }
+    private fun getDefaultModel(): String {
+        return Build.MODEL
+    }
+
     private fun filterVersion(version: String): String {
         val parts = version.split(".")
         return if (parts.size > 2) {
