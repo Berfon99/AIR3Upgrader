@@ -118,4 +118,5 @@
     <string name="accept_and_continue">Accepter et continuer</string>
     <string name="permission_required">Autorisation requise</string>
     <string name="overlay_permission_message">L\'autorisation « Afficher par-dessus les autres applications » est nécessaire pour afficher le rappel de mise à niveau au-dessus des autres applications.</string>
+    <string name="what_is_my_air3_version">Vous n\'êtes pas sûr de votre appareil ? Cliquez ici (nécessite internet).</string>
 </resources>

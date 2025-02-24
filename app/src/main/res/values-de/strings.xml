@@ -116,4 +116,5 @@
     <string name="accept_and_continue">Akzeptieren und fortfahren</string>
     <string name="permission_required">Berechtigung erforderlich</string>
     <string name="overlay_permission_message">Die Berechtigung "Über anderen Apps einblenden" ist erforderlich, um die Upgrade-Erinnerung über anderen Apps anzuzeigen.</string>
+    <string name="what_is_my_air3_version">Sie sind sich nicht sicher, welches Gerät Sie haben? Klicken Sie hier (Internet erforderlich).</string>
 </resources>

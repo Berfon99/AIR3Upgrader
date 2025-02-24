@@ -116,4 +116,6 @@
     <string name="accept_and_continue">قبول ومتابعة</string>
     <string name="permission_required">الإذن مطلوب</string>
     <string name="overlay_permission_message">إذن "العرض فوق التطبيقات الأخرى" ضروري لإظهار تذكير الترقية فوق التطبيقات الأخرى.</string>
+    <string name="what_is_my_air3_version">ما هو إصدار جهاز AIR³ الخاص بي؟</string>
+
 </resources>

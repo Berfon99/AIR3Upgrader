@@ -116,4 +116,5 @@
     <string name="accept_and_continue">Accepteren en doorgaan</string>
     <string name="permission_required">Toestemming vereist</string>
     <string name="overlay_permission_message">De toestemming \'Weergeven over andere apps\' is nodig om de upgrade-herinnering bovenop andere apps weer te geven.</string>
+    <string name="what_is_my_air3_version">Weet u niet zeker welk apparaat u heeft? Klik hier (internet vereist).</string>
 </resources>

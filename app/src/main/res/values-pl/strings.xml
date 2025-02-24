@@ -116,4 +116,5 @@
     <string name="accept_and_continue">Akceptuj i kontynuuj</string>
     <string name="permission_required">Wymagane uprawnienie</string>
     <string name="overlay_permission_message">Uprawnienie "Wyświetlaj nad innymi aplikacjami" jest niezbędne, aby wyświetlać przypomnienie o aktualizacji nad innymi aplikacjami.</string>
+    <string name="what_is_my_air3_version">Nie jesteś pewien, jakie masz urządzenie? Kliknij tutaj (wymagane połączenie z internetem).</string>
 </resources>

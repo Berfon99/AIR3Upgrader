@@ -1,6 +1,7 @@
 package com.xc.air3upgrader
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
@@ -8,6 +9,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +26,7 @@ class ModelSelectionActivity : AppCompatActivity() {
     private lateinit var deviceName: String
     private var previousSelection: String? = null
     private var isSpinnerInitialized = false
+    private lateinit var linkTextView: TextView
 
     companion object {
         const val EXTRA_LAUNCH_FROM_MODEL_SELECTION = "launch_from_model_selection"
@@ -35,6 +38,7 @@ class ModelSelectionActivity : AppCompatActivity() {
         dataStoreManager = DataStoreManager(this)
         modelSpinner = findViewById(R.id.model_spinner)
         val buttonConfirm = findViewById<Button>(R.id.button_confirm)
+        linkTextView = findViewById(R.id.linkTextView)
         deviceName = getDeviceName()
         val (list, displayList, displayMap) = dataStoreManager.initModelLists(deviceName)
         modelList = list
@@ -93,6 +97,12 @@ class ModelSelectionActivity : AppCompatActivity() {
                 saveSelectedModel(selectedModel)
             }
             checkNetworkAndContinueLogic()
+        }
+        // Set the click listener for the linkTextView
+        linkTextView.setOnClickListener {
+            val url = "https://www.fly-air3.com/ufaqs/which-version-of-air3-is-it/"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
         }
     }
     private fun checkNetworkAndContinueLogic() {

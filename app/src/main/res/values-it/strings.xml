@@ -114,4 +114,5 @@
     <string name="accept_and_continue">Accetta e continua</string>
     <string name="permission_required">Autorizzazione richiesta</string>
     <string name="overlay_permission_message">L\'autorizzazione "Visualizza sopra altre app" è necessaria per mostrare il promemoria di aggiornamento sopra altre app.</string>
+    <string name="what_is_my_air3_version">Non sei sicuro del tuo dispositivo? Clicca qui (richiede internet).</string>
 </resources>
